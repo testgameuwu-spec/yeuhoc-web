@@ -46,59 +46,80 @@ export default function ProfilePage() {
       }
     }, 8000);
 
-    // Lắng nghe trạng thái đăng nhập (Cách này hoạt động tốt trên Vercel vì nó đọc từ Local Storage ngay lập tức)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const loadData = async (sessionUser) => {
       if (!isMounted) return;
+      setUser(sessionUser);
 
-      if (!session?.user) {
-        // Đợi 1 chút để tránh chớp nhoáng
-        setTimeout(() => {
-          if (isMounted) window.location.href = '/yeuhoc/login';
-        }, 500);
-        return;
-      }
-
-      const currentUser = session.user;
-      setUser(currentUser);
-
-      // Tải thông tin Profile (Độc lập)
       try {
-        const { data: profileData, error: profileError } = await supabase
+        const profilePromise = supabase
           .from('profiles')
           .select('*')
-          .eq('id', currentUser.id)
+          .eq('id', sessionUser.id)
           .single();
 
-        if (!profileError && profileData && isMounted) {
-          setProfile(profileData);
-          setFullName(profileData.full_name || '');
-          setUsername(profileData.username || '');
-          setBio(profileData.bio || '');
-          setAvatarUrl(profileData.avatar_url || '');
-        }
-      } catch (e) {
-        console.error("Lỗi khi tải Profile:", e);
-      }
-
-      // Tải thông tin Lịch sử làm bài (Độc lập)
-      try {
-        const { data: historyData, error: historyError } = await supabase
+        const historyPromise = supabase
           .from('exam_attempts')
           .select('*, exams(title, subject)')
-          .eq('user_id', currentUser.id)
+          .eq('user_id', sessionUser.id)
           .order('created_at', { ascending: false });
 
-        if (!historyError && historyData && isMounted) {
-          setAttempts(historyData);
-        }
-      } catch (e) {
-        console.error("Lỗi khi tải Lịch sử:", e);
-      }
+        const [profileRes, historyRes] = await Promise.allSettled([profilePromise, historyPromise]);
 
-      // Tắt loading sau khi fetch xong (nếu chưa bị timeout)
-      if (isMounted && !isTimeoutHit) {
-        clearTimeout(emergencyTimer);
-        setLoading(false);
+        if (isMounted) {
+          if (profileRes.status === 'fulfilled' && profileRes.value.data) {
+            const profileData = profileRes.value.data;
+            setProfile(profileData);
+            setFullName(profileData.full_name || '');
+            setUsername(profileData.username || '');
+            setBio(profileData.bio || '');
+            setAvatarUrl(profileData.avatar_url || '');
+          }
+
+          if (historyRes.status === 'fulfilled' && historyRes.value.data) {
+            setAttempts(historyRes.value.data);
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu:", error);
+      } finally {
+        if (isMounted && !isTimeoutHit) {
+          clearTimeout(emergencyTimer);
+          setLoading(false);
+        }
+      }
+    };
+
+    const init = async () => {
+      try {
+        // 1. Dùng getSession() để lấy ngay session hiện tại (không phụ thuộc event)
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session?.user) {
+          if (isMounted) window.location.href = '/yeuhoc/login';
+          return;
+        }
+
+        // 2. Fetch dữ liệu
+        await loadData(session.user);
+      } catch (err) {
+        console.error("Lỗi khởi tạo session:", err);
+        if (isMounted && !isTimeoutHit) {
+          clearTimeout(emergencyTimer);
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    // 3. Lắng nghe thay đổi đăng xuất (nếu có)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/yeuhoc/login';
+      } else if (event === 'SIGNED_IN' && session?.user && !user) {
+        // Dự phòng trường hợp getSession() bị miss
+        loadData(session.user);
       }
     });
 
