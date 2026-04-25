@@ -46,6 +46,7 @@ const OPTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 export default function QuestionEditorCard({ question, index, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(true);
   const [showSolution, setShowSolution] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const q = question;
   const typeStyle = TYPE_STYLES[q.type] || TYPE_STYLES.MCQ;
@@ -122,6 +123,26 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
       base.answer = q.answer || '';
     }
     onUpdate(base);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      update('imageFile', file);
+      update('image', URL.createObjectURL(file));
+    }
   };
 
   return (
@@ -343,9 +364,20 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
 
           {/* ── Image ── */}
           <div className="space-y-3">
-            <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/30 hover:text-white/60 text-xs transition-all hover:border-white/20 cursor-pointer w-fit">
-              <ImageIcon className="w-3.5 h-3.5" />
-              {q.image ? 'Đổi ảnh khác' : 'Tải ảnh minh hoạ lên'}
+            <label 
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center gap-2 w-full sm:w-[400px] py-6 px-4 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                isDragging
+                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 scale-[1.01]'
+                  : 'border-white/10 bg-white/5 text-white/40 hover:text-white/70 hover:border-white/20 hover:bg-white/10'
+              }`}
+            >
+              <ImageIcon className={`w-6 h-6 transition-transform ${isDragging ? '-translate-y-1' : ''}`} />
+              <span className="text-xs font-medium text-center">
+                {isDragging ? 'Thả ảnh vào đây...' : (q.image ? 'Kéo thả hoặc click để đổi ảnh khác' : 'Kéo thả hoặc click để tải ảnh minh hoạ lên')}
+              </span>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) {
