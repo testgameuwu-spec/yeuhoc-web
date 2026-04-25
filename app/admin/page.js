@@ -13,6 +13,30 @@ import {
   BookOpen, Plus, ArrowLeft,
 } from 'lucide-react';
 import UserProfile from '@/components/UserProfile';
+import { supabase } from '@/lib/supabase';
+
+// ── Custom UI Modal cho Admin ──
+const CustomModal = ({ isOpen, type, title, message, onConfirm, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#14142a] border border-white/10 rounded-2xl w-[90%] max-w-sm p-6 shadow-xl transform transition-all scale-100">
+        <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+        <p className="text-sm text-white/60 mb-6 whitespace-pre-wrap">{message}</p>
+        <div className="flex justify-end gap-3">
+          {type === 'confirm' && (
+            <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-white/60 bg-white/5 hover:bg-white/10 transition-colors">
+              Hủy
+            </button>
+          )}
+          <button onClick={() => { if (onConfirm) onConfirm(); onClose(); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md">
+            {type === 'confirm' ? 'Xác nhận' : 'Đóng'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Seed data (only used if store is empty)
 const SEED_EXAMS = [
@@ -40,6 +64,12 @@ export default function AdminDashboard() {
   // Upload & parse flow
   const [parsedQuestions, setParsedQuestions] = useState([]);
   const [parseError, setParseError] = useState('');
+
+  // Modal state
+  const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
+  const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null });
+  const showConfirm = (title, message, onConfirm) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm });
+  const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
 
   // Load exams from store when tab becomes active
   useEffect(() => {
@@ -102,13 +132,38 @@ export default function AdminDashboard() {
 
   const handleSaveExam = async (examData) => {
     try {
+      // 1. Pre-process and upload images to Supabase Storage
+      const updatedQuestions = [...examData.questions];
+      for (let i = 0; i < updatedQuestions.length; i++) {
+        const q = updatedQuestions[i];
+        if (q.imageFile) {
+          const fileExt = q.imageFile.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `images/${fileName}`; // Lưu vào folder images/ trong bucket
+          
+          const { error: uploadError } = await supabase.storage
+            .from('exam-images') // Bucket name
+            .upload(filePath, q.imageFile);
+            
+          if (uploadError) {
+             throw new Error(`Lỗi tải ảnh (Câu ${i+1}): ` + uploadError.message + '\n\n💡 Vui lòng đảm bảo bạn đã tạo Bucket tên "exam-images" và public trên Supabase.');
+          }
+          
+          const { data } = supabase.storage.from('exam-images').getPublicUrl(filePath);
+          q.image = data.publicUrl;
+          delete q.imageFile;
+        }
+      }
+      examData.questions = updatedQuestions;
+
+      // 2. Save Exam
       await saveExam(examData);
       await refreshExams();
       handleBackToList();
-      alert('Lưu đề thi thành công!');
+      showAlert('Thành công', 'Lưu đề thi thành công!');
     } catch (error) {
       console.error("Save exam error:", error);
-      alert('Lỗi khi lưu đề thi: ' + (error.message || JSON.stringify(error)));
+      showAlert('Lỗi', 'Lỗi khi lưu đề thi: ' + (error.message || JSON.stringify(error)));
     }
   };
 
@@ -182,6 +237,13 @@ export default function AdminDashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <button 
+                onClick={() => window.open('/yeuhoc/', '_blank')} 
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                title="Về trang chủ"
+              >
+                <BookOpen className="w-4 h-4" /> Về trang chủ
+              </button>
               <UserProfile />
             </div>
           </div>
@@ -192,6 +254,7 @@ export default function AdminDashboard() {
           {renderContent()}
         </div>
       </div>
+      {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
     </main>
   );
 }

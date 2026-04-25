@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BookOpen, User, ArrowLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import UserProfile from '@/components/UserProfile';
-import { getPublishedExams } from '@/lib/examStore';
+import { getPublishedExams, getExamById } from '@/lib/examStore';
 import FilterBar from '@/components/FilterBar';
 import ExamCard from '@/components/ExamCard';
 import QuestionCard from '@/components/QuestionCard';
@@ -89,6 +89,26 @@ export default function HomePage() {
     async function init() {
       const exams = await getPublishedExams();
       setAllExams(exams);
+
+      // Auto preview if from Admin
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pid = urlParams.get('preview_exam_id');
+        if (pid) {
+           let ex = exams.find(e => e.id.toString() === pid);
+           if (!ex) {
+             ex = await getExamById(pid); // Fetch directly in case it's a draft
+           }
+           if (ex) {
+             setActiveExam(ex); 
+             setAnswers({}); 
+             setCurrentQ(0); 
+             setBookmarks(new Set());
+             setQuizPhase('preview');
+             window.history.replaceState({}, '', window.location.pathname);
+           }
+        }
+      }
     }
     init();
   }, []);
@@ -297,7 +317,13 @@ export default function HomePage() {
           <div className="et-sidebar">
             <Timer initialMinutes={activeExam.duration || 90} onTimeUp={handleTimeUp} isRunning={timerRunning} />
 
-            <button className="et-btn-submit" onClick={() => { showConfirm('Xác nhận nộp bài', `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`, () => handleSubmit()); }}>
+            <button className="et-btn-submit" onClick={() => { 
+              const unanswered = questions.length - answeredCount;
+              const msg = unanswered > 0 
+                ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+                : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+              showConfirm('Xác nhận nộp bài', msg, () => handleSubmit()); 
+            }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><polyline points="20 6 9 17 4 12"/></svg>
               Nộp bài
             </button>

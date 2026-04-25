@@ -138,26 +138,32 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
                 </button>
               </div>
               {/* Actions */}
-              <div className="relative">
-                <button onClick={() => setOpenMenu(openMenu === exam.id ? null : exam.id)}
-                  className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
-                  <MoreVertical className="w-4 h-4" />
+              <div className="flex items-center gap-1 relative">
+                <button onClick={() => window.open(`/yeuhoc/?preview_exam_id=${exam.id}`, '_blank')}
+                  className="p-2 rounded-lg hover:bg-white/10 text-indigo-400 hover:text-indigo-300 transition-colors" title="Xem trước đề thi">
+                  <Eye className="w-4 h-4" />
                 </button>
-                {openMenu === exam.id && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
-                    <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-white/10 bg-[#14142a] shadow-2xl shadow-black/50 py-1 animate-scaleIn">
-                      <button onClick={() => { onEdit(exam); setOpenMenu(null); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                        <Pencil className="w-3.5 h-3.5" /> Chỉnh sửa
-                      </button>
-                      <button onClick={() => { onDelete(exam.id); setOpenMenu(null); }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" /> Xoá
-                      </button>
-                    </div>
-                  </>
-                )}
+                <div className="relative">
+                  <button onClick={() => setOpenMenu(openMenu === exam.id ? null : exam.id)}
+                    className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {openMenu === exam.id && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
+                      <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-white/10 bg-[#14142a] shadow-2xl shadow-black/50 py-1 animate-scaleIn">
+                        <button onClick={() => { onEdit(exam); setOpenMenu(null); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <Pencil className="w-3.5 h-3.5" /> Chỉnh sửa
+                        </button>
+                        <button onClick={() => { onDelete(exam.id); setOpenMenu(null); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" /> Xoá
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           );

@@ -22,6 +22,29 @@ const ROLE_STYLES = {
   },
 };
 
+// ── Custom UI Modal cho Admin ──
+const CustomModal = ({ isOpen, type, title, message, onConfirm, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#14142a] border border-white/10 rounded-2xl w-[90%] max-w-sm p-6 shadow-xl transform transition-all scale-100">
+        <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+        <p className="text-sm text-white/60 mb-6 whitespace-pre-wrap">{message}</p>
+        <div className="flex justify-end gap-3">
+          {type === 'confirm' && (
+            <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-white/60 bg-white/5 hover:bg-white/10 transition-colors">
+              Hủy
+            </button>
+          )}
+          <button onClick={() => { if (onConfirm) onConfirm(); onClose(); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md">
+            {type === 'confirm' ? 'Xác nhận' : 'Đóng'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +58,12 @@ export default function UserManagement() {
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [attemptDetails, setAttemptDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Modal state
+  const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
+  const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null });
+  const showConfirm = (title, message, onConfirm) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm });
+  const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
 
   useEffect(() => {
     fetchUsers();
@@ -112,10 +141,10 @@ export default function UserManagement() {
       .eq('id', userId);
 
     if (error) {
-      alert("Lỗi: " + error.message + "\n(Có thể do chưa cấp quyền Admin update trong RLS Policy)");
+      showAlert("Lỗi", error.message + "\n(Có thể do chưa cấp quyền Admin update trong RLS Policy)");
     } else {
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-      alert(`Đã đổi vai trò thành ${newRole === 'admin' ? 'Admin' : 'Học sinh'}!`);
+      showAlert('Thành công', `Đã đổi vai trò thành ${newRole === 'admin' ? 'Admin' : 'Học sinh'}!`);
     }
     setOpenMenu(null);
   };
@@ -127,28 +156,29 @@ export default function UserManagement() {
       .eq('id', userId);
 
     if (error) {
-      alert("Lỗi: " + error.message);
+      showAlert('Lỗi', error.message);
     } else {
       setUsers(users.map(u => u.id === userId ? { ...u, is_banned: !currentStatus } : u));
-      alert(`Đã ${!currentStatus ? 'khóa' : 'mở khóa'} tài khoản này!`);
+      showAlert('Thành công', `Đã ${!currentStatus ? 'khóa' : 'mở khóa'} tài khoản này!`);
     }
     setOpenMenu(null);
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này? Thao tác này không thể hoàn tác!')) return;
-    const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: userId });
-    
-    if (error) {
-      if (error.message && error.message.includes('does not exist')) {
-        alert("Lỗi: Bạn chưa tạo hàm xóa trên Supabase. Vui lòng chạy đoạn SQL (delete_user_by_admin) trong mục SQL Editor!");
+    showConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này? Thao tác này không thể hoàn tác!', async () => {
+      const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: userId });
+      
+      if (error) {
+        if (error.message && error.message.includes('does not exist')) {
+          showAlert("Lỗi", "Bạn chưa tạo hàm xóa trên Supabase. Vui lòng chạy đoạn SQL (delete_user_by_admin) trong mục SQL Editor!");
+        } else {
+          showAlert("Lỗi khi xóa", error.message);
+        }
       } else {
-        alert("Lỗi khi xóa: " + error.message);
+        setUsers(users.filter(u => u.id !== userId));
+        showAlert("Thành công", "Đã xóa hoàn toàn tài khoản khỏi hệ thống (có thể đăng ký lại email này)!");
       }
-    } else {
-      setUsers(users.filter(u => u.id !== userId));
-      alert("Đã xóa hoàn toàn tài khoản khỏi hệ thống (có thể đăng ký lại email này)!");
-    }
+    });
     setOpenMenu(null);
   };
 
@@ -196,7 +226,7 @@ export default function UserManagement() {
         answers: attempt.user_answers || {}
       });
     } else {
-      alert("Lỗi tải chi tiết đề thi hoặc đề thi đã bị xóa.");
+      showAlert("Lỗi", "Tải chi tiết đề thi thất bại hoặc đề thi đã bị xóa.");
     }
     setLoadingDetails(false);
   };
@@ -499,6 +529,7 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+      {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
     </div>
   );
 }
