@@ -133,8 +133,17 @@ export default function ProfilePage() {
         .single();
       
       if (examData) {
+        // Map DB column names to JS property names for TF questions
+        const mappedExam = {
+          ...examData,
+          questions: (examData.questions || []).map(q => ({
+            ...q,
+            tfSubQuestions: q.tf_sub_questions || undefined,
+            statements: q.statements || undefined,
+          }))
+        };
         setAttemptDetails({
-          exam: examData,
+          exam: mappedExam,
           answers: attempt.user_answers || {}
         });
       } else {
