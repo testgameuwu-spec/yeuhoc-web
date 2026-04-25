@@ -1,0 +1,63 @@
+====START====
+[ID] MATH_001
+[TYPE] MCQ
+[LEVEL] Khó
+[CONTENT] Tính tích phân xác định $I = \int_{0}^{1} \frac{x^3}{\sqrt{1 - x^2}} \, dx$.
+[OPTIONS]
+A. $\dfrac{2}{3}$
+B. $\dfrac{1}{3}$
+C. $\dfrac{\pi}{4}$
+D. $\dfrac{1}{2}$
+[ANSWER] A
+[SOL] Đặt $x = \sin t$, suy ra $dx = \cos t \, dt$.
+
+Khi $x = 0 \Rightarrow t = 0$; $x = 1 \Rightarrow t = \dfrac{\pi}{2}$.
+
+$$I = \int_{0}^{\pi/2} \frac{\sin^3 t}{\cos t} \cdot \cos t \, dt = \int_{0}^{\pi/2} \sin^3 t \, dt$$
+
+$$= \int_{0}^{\pi/2} \sin t (1 - \cos^2 t) \, dt = \left[-\cos t + \frac{\cos^3 t}{3}\right]_{0}^{\pi/2}$$
+
+$$= \left(0 + 0\right) - \left(-1 + \frac{1}{3}\right) = \frac{2}{3}$$
+
+Vậy $I = \dfrac{2}{3}$.
+====END====
+
+====START====
+[ID] PHYS_002
+[TYPE] SA
+[LEVEL] Trung bình
+[CONTENT] Một ô tô đang chạy với vận tốc $v_0 = 72 \, \text{km/h}$ thì hãm phanh chuyển động chậm dần đều với gia tốc $a = -2 \, \text{m/s}^2$. Tính quãng đường ô tô đi được cho đến khi dừng lại (đơn vị: mét).
+[ANSWER] 100
+[SOL] Đổi đơn vị: $v_0 = 72 \, \text{km/h} = 20 \, \text{m/s}$.
+
+Khi dừng lại: $v = 0$. Áp dụng công thức:
+
+$$v^2 - v_0^2 = 2aS$$
+
+$$0 - 20^2 = 2 \cdot (-2) \cdot S$$
+
+$$-400 = -4S \Rightarrow S = 100 \, \text{m}$$
+
+Vậy quãng đường ô tô đi được là $100$ mét.
+====END====
+
+====START====
+[ID] GEO_003
+[TYPE] MCQ
+[LEVEL] Dễ
+[CONTENT] Cho tam giác $ABC$ vuông tại $A$ có $AB = 3 \, \text{cm}$, $AC = 4 \, \text{cm}$. Tính độ dài cạnh $BC$.
+[OPTIONS]
+A. $7 \, \text{cm}$
+B. $5 \, \text{cm}$
+C. $\sqrt{7} \, \text{cm}$
+D. $12 \, \text{cm}$
+[ANSWER] B
+[SOL] Áp dụng định lý Pythagore trong tam giác $ABC$ vuông tại $A$:
+
+$$BC^2 = AB^2 + AC^2 = 3^2 + 4^2 = 9 + 16 = 25$$
+
+$$BC = \sqrt{25} = 5 \, \text{cm}$$
+
+Vậy $BC = 5 \, \text{cm}$.
+[IMAGE] https://via.placeholder.com/400x300/1a1a2e/6366f1?text=Tam+giac+ABC
+====END====
