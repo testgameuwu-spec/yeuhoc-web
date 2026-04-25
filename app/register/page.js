@@ -67,7 +67,7 @@ export default function RegisterPage() {
 
     if (data && data.session) {
       // Auto logged in because email confirmation is disabled
-      router.push('/');
+      window.location.href = '/yeuhoc/';
       return;
     }
 
