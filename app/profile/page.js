@@ -34,97 +34,108 @@ export default function ProfilePage() {
 
 
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
+    let isTimeoutHit = false;
 
-    async function loadInitialData() {
+    // Lưới an toàn: Không bao giờ được phép loading quá 8 giây. 
+    // Nếu quá 8 giây mà vẫn chưa xong, Vercel/Nextjs có thể đang chặn request, ta ép buộc mở giao diện.
+    const emergencyTimer = setTimeout(() => {
+      if (isMounted) {
+        isTimeoutHit = true;
+        setLoading(false);
+        console.warn("Đã kích hoạt Emergency Timeout: Quá trình tải dữ liệu bị treo.");
+      }
+    }, 8000);
+
+    const initializeProfile = async () => {
       try {
-        if (mounted) setLoading(true);
-
-        // 1. Get auth session safely
+        // 1. Kiểm tra session hiện tại
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (sessionError) throw sessionError;
-        if (!session?.user) {
-          window.location.href = '/yeuhoc/login';
+        if (sessionError || !session?.user) {
+          if (isMounted) window.location.href = '/yeuhoc/login';
           return;
         }
 
-        if (mounted) setUser(session.user);
+        const currentUser = session.user;
+        if (isMounted) setUser(currentUser);
 
-        // 2. Fetch Profile and History at the same time
-        const profilePromise = supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        // 2. Tải thông tin Profile (Độc lập)
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
 
-        const historyPromise = supabase
-          .from('exam_attempts')
-          .select('*, exams(title, subject)')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false });
-
-        const [profileResult, historyResult] = await Promise.all([profilePromise, historyPromise]);
-
-        // Process Profile
-        if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-          console.error('Failed to fetch profile:', profileResult.error);
-        } else if (profileResult.data && mounted) {
-          setProfile(profileResult.data);
-          setFullName(profileResult.data.full_name || '');
-          setUsername(profileResult.data.username || '');
-          setBio(profileResult.data.bio || '');
-          setAvatarUrl(profileResult.data.avatar_url || '');
+          if (!profileError && profileData && isMounted) {
+            setProfile(profileData);
+            setFullName(profileData.full_name || '');
+            setUsername(profileData.username || '');
+            setBio(profileData.bio || '');
+            setAvatarUrl(profileData.avatar_url || '');
+          }
+        } catch (e) {
+          console.error("Lỗi khi tải Profile:", e);
         }
 
-        // Process History
-        if (historyResult.error) {
-          console.error('Failed to fetch history:', historyResult.error);
-          if (mounted) setHistoryError('Không thể tải lịch sử: ' + historyResult.error.message);
-        } else if (historyResult.data && mounted) {
-          setAttempts(historyResult.data);
+        // 3. Tải thông tin Lịch sử làm bài (Độc lập)
+        try {
+          const { data: historyData, error: historyError } = await supabase
+            .from('exam_attempts')
+            .select('*, exams(title, subject)')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+          if (!historyError && historyData && isMounted) {
+            setAttempts(historyData);
+          }
+        } catch (e) {
+          console.error("Lỗi khi tải Lịch sử:", e);
         }
 
-      } catch (err) {
-        console.error('Profile initialization error:', err);
+      } catch (error) {
+        console.error("Lỗi tổng quát:", error);
       } finally {
-        if (mounted) setLoading(false);
+        // Bất luận thành công hay thất bại, đều phải tắt loading
+        if (isMounted && !isTimeoutHit) {
+          clearTimeout(emergencyTimer);
+          setLoading(false);
+        }
       }
-    }
+    };
 
-    loadInitialData();
-
-    // Only use auth listener to catch global sign-out events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        window.location.href = '/yeuhoc/login';
-      }
-    });
+    initializeProfile();
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      isMounted = false;
+      clearTimeout(emergencyTimer);
     };
   }, []);
 
   const handleViewAttemptDetails = async (attempt) => {
     setSelectedAttempt(attempt);
     setLoadingDetails(true);
-    const { data: examData } = await supabase
-      .from('exams')
-      .select('*, questions(*)')
-      .eq('id', attempt.exam_id)
-      .single();
-    
-    if (examData) {
-      setAttemptDetails({
-        exam: examData,
-        answers: attempt.user_answers || {}
-      });
-    } else {
-      alert("Lỗi tải chi tiết đề thi hoặc đề thi đã bị xóa.");
+    try {
+      const { data: examData } = await supabase
+        .from('exams')
+        .select('*, questions(*)')
+        .eq('id', attempt.exam_id)
+        .single();
+      
+      if (examData) {
+        setAttemptDetails({
+          exam: examData,
+          answers: attempt.user_answers || {}
+        });
+      } else {
+        alert("Không tìm thấy chi tiết đề thi.");
+      }
+    } catch (e) {
+      alert("Lỗi khi tải chi tiết đề thi.");
+    } finally {
+      setLoadingDetails(false);
     }
-    setLoadingDetails(false);
   };
 
   const handleSave = async (e) => {
@@ -136,44 +147,55 @@ export default function ProfilePage() {
     }
 
     setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: fullName.trim(),
-        username: username.trim() || null,
-        bio: bio.trim() || null,
-        avatar_url: avatarUrl.trim() || null,
-      })
-      .eq('id', user.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName.trim(),
+          username: username.trim() || null,
+          bio: bio.trim() || null,
+          avatar_url: avatarUrl.trim() || null,
+        })
+        .eq('id', user.id);
 
-    if (error) {
-      setMessage({ type: 'error', text: 'Có lỗi xảy ra. Vui lòng thử lại.' });
-    } else {
-      setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
-      // Refresh profile data locally
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      if (data) setProfile(data);
+      if (error) {
+        setMessage({ type: 'error', text: 'Lưu thất bại: ' + error.message });
+      } else {
+        setMessage({ type: 'success', text: 'Đã lưu thay đổi!' });
+        // Cập nhật lại state nội bộ
+        setProfile(prev => ({
+          ...prev,
+          full_name: fullName.trim(),
+          username: username.trim(),
+          bio: bio.trim(),
+          avatar_url: avatarUrl.trim()
+        }));
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Lỗi hệ thống.' });
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     }
-
-    setSaving(false);
-    setTimeout(() => setMessage({ type: '', text: '' }), 4000);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/yeuhoc/';
+    window.location.href = '/yeuhoc/login';
   };
 
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
   const isAdmin = profile?.role === 'admin';
+
 
   // ── Loading State ──
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
         <Navbar />
-        <div className="flex items-center justify-center py-32">
-          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        <div className="flex flex-col items-center justify-center py-40">
+          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+          <p className="text-gray-500 font-medium animate-pulse">Đang tải dữ liệu hồ sơ...</p>
         </div>
       </div>
     );
