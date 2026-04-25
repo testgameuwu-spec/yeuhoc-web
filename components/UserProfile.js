@@ -17,75 +17,25 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef(null);
 
-  // 1. Initial Session Check
-  useEffect(() => {
-    let mounted = true;
+  const dataLoadedRef = useRef(false);
 
-    async function checkSession() {
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async (sessionUser) => {
+      if (dataLoadedRef.current || !isMounted) return;
+      dataLoadedRef.current = true; // Chống double fetch
+
+      setUser(sessionUser);
+
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-
-        if (error) throw error;
-        
-        if (mounted) {
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            // Fetch profile data
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-              
-            if (profileData) {
-              if (profileData.is_banned) {
-                alert('Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin để biết thêm chi tiết.');
-                await supabase.auth.signOut();
-                window.location.href = '/yeuhoc/login';
-                return;
-              }
-              setProfile(profileData);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('UserProfile: Session check failed:', err.message);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    checkSession();
-
-    // Safety timeout: Never stay in loading state more than 4 seconds
-    const safetyTimer = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 4000);
-
-    return () => { 
-      mounted = false; 
-      clearTimeout(safetyTimer);
-    };
-  }, []);
-
-  // 2. Auth State Listener (separate to avoid loops)
-  useEffect(() => {
-    let mounted = true;
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      
-      console.log('UserProfile Auth Event:', event);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', sessionUser.id)
           .single();
           
-        if (profileData) {
+        if (profileData && isMounted) {
           if (profileData.is_banned) {
             alert('Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin để biết thêm chi tiết.');
             await supabase.auth.signOut();
@@ -94,14 +44,49 @@ export default function UserProfile() {
           }
           setProfile(profileData);
         }
-      } else {
+      } catch (err) {
+        console.warn('UserProfile fetch profile failed:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    const init = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (session?.user) {
+          await loadData(session.user);
+        } else if (isMounted) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.warn('UserProfile session check failed:', err.message);
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        setUser(null);
         setProfile(null);
+        setLoading(false);
+      } else if (session?.user) {
+        loadData(session.user);
       }
     });
 
     return () => {
-      mounted = false;
-      if (subscription) subscription.unsubscribe();
+      isMounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
