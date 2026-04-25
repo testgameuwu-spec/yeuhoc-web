@@ -144,7 +144,7 @@ export default function HomePage() {
         const ua = answers[q.id] || '';
         if (q.type === 'MCQ') {
           if (ua === q.answer) correctCount++;
-        } else if (q.type === 'TF' && typeof q.answer === 'object') {
+        } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
           const s = typeof ua === 'object' ? ua : {};
           if (Object.keys(q.answer).every(k => s[k] === q.answer[k])) correctCount++;
         } else {
@@ -411,7 +411,7 @@ export default function HomePage() {
                   const ua = answers[q.id] || '';
                   let ok = false;
                   if (q.type === 'MCQ') ok = ua === q.answer;
-                  else if (q.type === 'TF' && typeof q.answer === 'object') {
+                  else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
                     const s = typeof ua === 'object' ? ua : {};
                     ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
                   } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();

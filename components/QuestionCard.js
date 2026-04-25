@@ -25,8 +25,8 @@ export default function QuestionCard({
     const isMCQCorrect = type === 'MCQ' && showResult && selectedAnswer === answer;
 
     // ── TF answer stored as object { a: 'D', b: 'S', ... } ──
-    const tfAnswer = (type === 'TF' && typeof answer === 'object') ? answer : {};
-    const tfSelected = (type === 'TF' && typeof selectedAnswer === 'object') ? selectedAnswer : {};
+    const tfAnswer = (type === 'TF' && answer && typeof answer === 'object') ? answer : {};
+    const tfSelected = (type === 'TF' && selectedAnswer && typeof selectedAnswer === 'object') ? selectedAnswer : {};
     const handleTFChange = (stmtKey, val) => {
         if (disabled) return;
         onAnswerChange({ ...tfSelected, [stmtKey]: val });

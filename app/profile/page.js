@@ -136,11 +136,26 @@ export default function ProfilePage() {
         // Map DB column names to JS property names for TF questions
         const mappedExam = {
           ...examData,
-          questions: (examData.questions || []).map(q => ({
-            ...q,
-            tfSubQuestions: q.tf_sub_questions || undefined,
-            statements: q.statements || undefined,
-          }))
+          questions: (examData.questions || []).map(q => {
+            const tfSubs = q.tf_sub_questions || undefined;
+            const stmts = q.statements || undefined;
+            // Reconstruct TF answer object from tfSubQuestions
+            let answer = q.answer;
+            if (q.type === 'TF' && tfSubs && Array.isArray(tfSubs)) {
+              const obj = {};
+              tfSubs.forEach((sub, i) => {
+                const letter = String.fromCharCode(97 + i);
+                obj[letter] = sub.answer ? 'D' : 'S';
+              });
+              answer = obj;
+            }
+            return {
+              ...q,
+              answer,
+              tfSubQuestions: tfSubs,
+              statements: stmts,
+            };
+          })
         };
         setAttemptDetails({
           exam: mappedExam,

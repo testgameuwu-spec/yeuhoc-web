@@ -10,7 +10,7 @@ export default function ResultsView({ questions, answers, onReset }) {
         const ua = answers[q.id] || '';
         if (q.type === 'MCQ') {
             if (ua === q.answer) correct++;
-        } else if (q.type === 'TF' && typeof q.answer === 'object') {
+        } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
             // TF: count full-correct only
             const tfSel = typeof ua === 'object' ? ua : {};
             const allOk = Object.keys(q.answer).every(k => tfSel[k] === q.answer[k]);
