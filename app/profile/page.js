@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User, Mail, Camera, LogOut, Save, Shield, BookOpen,
@@ -33,21 +33,15 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('info'); // info | history
 
 
+  const dataLoadedRef = useRef(false);
+
   useEffect(() => {
     let isMounted = true;
-    let isTimeoutHit = false;
-
-    // Lưới an toàn: Không bao giờ được phép loading quá 8 giây.
-    const emergencyTimer = setTimeout(() => {
-      if (isMounted) {
-        isTimeoutHit = true;
-        setLoading(false);
-        console.warn("Emergency Timeout: Quá trình tải dữ liệu bị treo.");
-      }
-    }, 8000);
 
     const loadData = async (sessionUser) => {
-      if (!isMounted) return;
+      if (dataLoadedRef.current || !isMounted) return;
+      dataLoadedRef.current = true; // Prevent double fetching immediately
+
       setUser(sessionUser);
 
       try {
@@ -82,8 +76,7 @@ export default function ProfilePage() {
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
       } finally {
-        if (isMounted && !isTimeoutHit) {
-          clearTimeout(emergencyTimer);
+        if (isMounted) {
           setLoading(false);
         }
       }
@@ -103,8 +96,7 @@ export default function ProfilePage() {
         await loadData(session.user);
       } catch (err) {
         console.error("Lỗi khởi tạo session:", err);
-        if (isMounted && !isTimeoutHit) {
-          clearTimeout(emergencyTimer);
+        if (isMounted) {
           setLoading(false);
         }
       }
@@ -117,15 +109,15 @@ export default function ProfilePage() {
       if (!isMounted) return;
       if (event === 'SIGNED_OUT') {
         window.location.href = '/yeuhoc/login';
-      } else if (event === 'SIGNED_IN' && session?.user && !user) {
+      } else if (event === 'SIGNED_IN' && session?.user) {
         // Dự phòng trường hợp getSession() bị miss
+        // loadData sẽ tự kiểm tra dataLoadedRef để không fetch 2 lần
         loadData(session.user);
       }
     });
 
     return () => {
       isMounted = false;
-      clearTimeout(emergencyTimer);
       subscription.unsubscribe();
     };
   }, []);
