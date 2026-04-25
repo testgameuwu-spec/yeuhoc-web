@@ -37,79 +37,75 @@ export default function ProfilePage() {
     let isMounted = true;
     let isTimeoutHit = false;
 
-    // Lưới an toàn: Không bao giờ được phép loading quá 8 giây. 
-    // Nếu quá 8 giây mà vẫn chưa xong, Vercel/Nextjs có thể đang chặn request, ta ép buộc mở giao diện.
+    // Lưới an toàn: Không bao giờ được phép loading quá 8 giây.
     const emergencyTimer = setTimeout(() => {
       if (isMounted) {
         isTimeoutHit = true;
         setLoading(false);
-        console.warn("Đã kích hoạt Emergency Timeout: Quá trình tải dữ liệu bị treo.");
+        console.warn("Emergency Timeout: Quá trình tải dữ liệu bị treo.");
       }
     }, 8000);
 
-    const initializeProfile = async () => {
-      try {
-        // 1. Kiểm tra session hiện tại
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError || !session?.user) {
+    // Lắng nghe trạng thái đăng nhập (Cách này hoạt động tốt trên Vercel vì nó đọc từ Local Storage ngay lập tức)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
+      if (!session?.user) {
+        // Đợi 1 chút để tránh chớp nhoáng
+        setTimeout(() => {
           if (isMounted) window.location.href = '/yeuhoc/login';
-          return;
-        }
-
-        const currentUser = session.user;
-        if (isMounted) setUser(currentUser);
-
-        // 2. Tải thông tin Profile (Độc lập)
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-
-          if (!profileError && profileData && isMounted) {
-            setProfile(profileData);
-            setFullName(profileData.full_name || '');
-            setUsername(profileData.username || '');
-            setBio(profileData.bio || '');
-            setAvatarUrl(profileData.avatar_url || '');
-          }
-        } catch (e) {
-          console.error("Lỗi khi tải Profile:", e);
-        }
-
-        // 3. Tải thông tin Lịch sử làm bài (Độc lập)
-        try {
-          const { data: historyData, error: historyError } = await supabase
-            .from('exam_attempts')
-            .select('*, exams(title, subject)')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-
-          if (!historyError && historyData && isMounted) {
-            setAttempts(historyData);
-          }
-        } catch (e) {
-          console.error("Lỗi khi tải Lịch sử:", e);
-        }
-
-      } catch (error) {
-        console.error("Lỗi tổng quát:", error);
-      } finally {
-        // Bất luận thành công hay thất bại, đều phải tắt loading
-        if (isMounted && !isTimeoutHit) {
-          clearTimeout(emergencyTimer);
-          setLoading(false);
-        }
+        }, 500);
+        return;
       }
-    };
 
-    initializeProfile();
+      const currentUser = session.user;
+      setUser(currentUser);
+
+      // Tải thông tin Profile (Độc lập)
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (!profileError && profileData && isMounted) {
+          setProfile(profileData);
+          setFullName(profileData.full_name || '');
+          setUsername(profileData.username || '');
+          setBio(profileData.bio || '');
+          setAvatarUrl(profileData.avatar_url || '');
+        }
+      } catch (e) {
+        console.error("Lỗi khi tải Profile:", e);
+      }
+
+      // Tải thông tin Lịch sử làm bài (Độc lập)
+      try {
+        const { data: historyData, error: historyError } = await supabase
+          .from('exam_attempts')
+          .select('*, exams(title, subject)')
+          .eq('user_id', currentUser.id)
+          .order('created_at', { ascending: false });
+
+        if (!historyError && historyData && isMounted) {
+          setAttempts(historyData);
+        }
+      } catch (e) {
+        console.error("Lỗi khi tải Lịch sử:", e);
+      }
+
+      // Tắt loading sau khi fetch xong (nếu chưa bị timeout)
+      if (isMounted && !isTimeoutHit) {
+        clearTimeout(emergencyTimer);
+        setLoading(false);
+      }
+    });
 
     return () => {
       isMounted = false;
       clearTimeout(emergencyTimer);
+      subscription.unsubscribe();
     };
   }, []);
 
