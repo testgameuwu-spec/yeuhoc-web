@@ -51,19 +51,23 @@ function renderMathInText(text) {
     });
 
     // 4. Handle inline math $...$
-    // More restrictive regex to avoid matching currency symbols ($100)
-    // Matches $...$ where the content starts and ends with a non-whitespace character
-    result = result.replace(/\$([^\s$](?:[^$]*[^\s$])?)\$/g, (match, latex) => {
+    // Matches $...$ where content is non-empty and not just digits (to avoid $100 style)
+    // Uses negative lookahead to skip $$
+    result = result.replace(/(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g, (match, latex) => {
+        // Skip if the content looks like a plain number (currency): $100, $5.99
+        if (/^\d[\d,.]*$/.test(latex.trim())) return match;
         const id = `__MATH_INLINE_${placeholders.length}__`;
         placeholders.push({ id, html: renderKatex(latex.trim(), false) });
         return id;
     });
 
-    // 5. Special fallback for \sqrt{...} without delimiters (often used in simple text)
-    // Handles up to one level of nested braces
-    result = result.replace(/\\sqrt\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g, (match) => {
+    // 5. Fallback: detect common bare LaTeX commands outside any delimiters
+    // Handles patterns like \sqrt{...}, \frac{...}{...}, \boxed{...}
+    // Up to two levels of nested braces
+    result = result.replace(/\\(?:frac|dfrac|sqrt|boxed|overline|underline|vec|hat|bar|tilde)(?:\[[^\]]*\])?(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})+/g, (match) => {
+        if (match.includes('__MATH_')) return match;
         const id = `__MATH_INLINE_${placeholders.length}__`;
-        placeholders.push({ id, html: renderKatex(match, false) });
+        placeholders.push({ id, html: renderKatex(match.trim(), false) });
         return id;
     });
 

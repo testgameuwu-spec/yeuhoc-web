@@ -6,24 +6,8 @@ import {
   Image as ImageIcon, FileText, CheckCircle2, XCircle, Type,
   ToggleLeft, Hash, AlertCircle
 } from 'lucide-react';
-import katex from 'katex';
 import 'katex/dist/katex.min.css';
-
-const renderLatex = (text) => {
-  if (!text) return '';
-  const parts = text.split(/(\$.*?\$)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('$') && part.endsWith('$')) {
-      const math = part.slice(1, -1);
-      try {
-        return <span key={i} dangerouslySetInnerHTML={{ __html: katex.renderToString(math, { throwOnError: false }) }} />;
-      } catch (e) {
-        return <span key={i} className="text-red-400">{part}</span>;
-      }
-    }
-    return <span key={i} className="whitespace-pre-wrap">{part}</span>;
-  });
-};
+import MathRenderer from '@/components/MathRenderer';
 
 const TYPE_STYLES = {
   MCQ: { label: 'Trắc nghiệm', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', icon: CheckCircle2 },
@@ -266,7 +250,7 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
             {/* Preview LaTeX */}
             <div className="bg-white/5 rounded-xl border border-white/10 p-4 text-sm text-white/80 overflow-y-auto max-h-[300px]">
               <span className="text-[10px] font-semibold text-white/30 uppercase tracking-wider block mb-2">Xem trước</span>
-              {renderLatex(q.content)}
+              <MathRenderer text={q.content} />
             </div>
           </div>
 
@@ -385,7 +369,7 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
                   className="w-full min-h-[100px] px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm placeholder-white/15 focus:outline-none focus:border-indigo-500/50 transition-all resize-y" />
                 <div className="bg-white/5 rounded-xl border border-white/10 p-4 text-sm text-white/80 overflow-y-auto max-h-[300px]">
                   <span className="text-[10px] font-semibold text-white/30 uppercase tracking-wider block mb-2">Xem trước Lời giải</span>
-                  {renderLatex(q.solution)}
+                  <MathRenderer text={q.solution} />
                 </div>
               </div>
             )}
