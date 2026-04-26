@@ -30,6 +30,7 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
   const [scoringPreset, setScoringPreset] = useState('THPT Toán');
   const [scoringConfig, setScoringConfig] = useState(SCORING_PRESETS['THPT Toán']);
   const [activeSection, setActiveSection] = useState('upload'); // upload | settings | questions
+  const [draggedIndex, setDraggedIndex] = useState(null);
   const hasQuestions = questions.length > 0;
 
   // Sync local state when parent passes new exam data (e.g. after file upload)
@@ -81,6 +82,35 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
       image: null,
     };
     setQuestions(prev => [...prev, newQ]);
+  };
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    setQuestions(prev => {
+      const newQuestions = [...prev];
+      const draggedItem = newQuestions[draggedIndex];
+      newQuestions.splice(draggedIndex, 1);
+      newQuestions.splice(index, 0, draggedItem);
+      return newQuestions;
+    });
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const handleSave = () => {
@@ -278,11 +308,16 @@ D. Đáp án D
               </div>
               {questions.map((q, i) => (
                 <QuestionEditorCard
-                  key={q.id}
+                  key={`${q.id}-${i}`}
                   question={q}
                   index={i}
                   onUpdate={(updated) => handleQuestionUpdate(i, updated)}
                   onDelete={() => handleQuestionDelete(i)}
+                  isDragged={draggedIndex === i}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
                 />
               ))}
             </>

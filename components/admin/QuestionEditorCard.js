@@ -43,10 +43,11 @@ const LEVEL_COLORS = {
 
 const OPTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-export default function QuestionEditorCard({ question, index, onUpdate, onDelete }) {
+export default function QuestionEditorCard({ question, index, onUpdate, onDelete, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [expanded, setExpanded] = useState(true);
   const [showSolution, setShowSolution] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [draggable, setDraggable] = useState(false);
 
   const q = question;
   const typeStyle = TYPE_STYLES[q.type] || TYPE_STYLES.MCQ;
@@ -55,6 +56,10 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
   // ── Generic field updater ──
   const update = useCallback((field, value) => {
     onUpdate({ ...q, [field]: value });
+  }, [q, onUpdate]);
+
+  const updateMultiple = useCallback((updates) => {
+    onUpdate({ ...q, ...updates });
   }, [q, onUpdate]);
 
   // ── MCQ helpers ──
@@ -137,20 +142,44 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      update('imageFile', file);
-      update('image', URL.createObjectURL(file));
+      updateMultiple({ imageFile: file, image: URL.createObjectURL(file) });
     }
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden transition-all hover:border-white/15">
+    <div 
+      className={`rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden transition-all hover:border-white/15 ${isDragged ? 'opacity-50 scale-[0.98] shadow-lg shadow-indigo-500/20 z-10 relative' : ''}`}
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (onDragStart) onDragStart(e, index);
+      }}
+      onDragOver={(e) => {
+        if (onDragOver) onDragOver(e, index);
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) return;
+        if (onDrop) onDrop(e, index);
+      }}
+      onDragEnd={(e) => {
+        setDraggable(false);
+        if (onDragEnd) onDragEnd(e);
+      }}
+    >
       {/* ── Header ── */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/8 cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}>
-        <GripVertical className="w-4 h-4 text-white/15 flex-shrink-0 cursor-grab" />
+        <div 
+          className="p-1 -ml-1 cursor-grab active:cursor-grabbing"
+          onMouseEnter={() => setDraggable(true)}
+          onMouseLeave={() => setDraggable(false)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-4 h-4 text-white/15 flex-shrink-0" />
+        </div>
         <span className="text-sm font-black text-white/30 w-8">#{index + 1}</span>
 
         {/* Type badge */}
@@ -381,8 +410,7 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
               <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  update('imageFile', file);
-                  update('image', URL.createObjectURL(file));
+                  updateMultiple({ imageFile: file, image: URL.createObjectURL(file) });
                 }
               }} />
             </label>
@@ -390,7 +418,7 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
             {q.image && (
               <div className="relative w-fit">
                 <img src={q.image} alt="Preview" className="max-w-xs max-h-48 rounded-xl border border-white/10 object-contain bg-white/5" />
-                <button onClick={() => { update('imageFile', null); update('image', null); }}
+                <button onClick={() => { updateMultiple({ imageFile: null, image: null }); }}
                   className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
                   title="Xoá ảnh">
                   <X className="w-3 h-3" />
