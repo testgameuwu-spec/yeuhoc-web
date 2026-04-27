@@ -36,10 +36,10 @@ function Chip({ label, active, onClick }) {
 function FilterRow({ label, children }) {
   return (
     <div className="flex items-start gap-4">
-      <span className="min-w-[72px] pt-1.5 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+      <span className="min-w-[72px] pt-1.5 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider shrink-0">
         {label}
       </span>
-      <div className="flex flex-wrap gap-2 flex-1">
+      <div className="flex flex-nowrap sm:flex-wrap gap-2 flex-1 overflow-x-auto pb-2 -mb-2 scrollbar-hide">
         {children}
       </div>
     </div>

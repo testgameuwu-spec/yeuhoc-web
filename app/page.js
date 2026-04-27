@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, User, ArrowLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { BookOpen, User, ArrowLeft, ChevronRight, RotateCcw, Clock, X } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import UserProfile from '@/components/UserProfile';
 import { getPublishedExams, getExamById } from '@/lib/examStore';
@@ -90,6 +90,7 @@ export default function HomePage() {
   const [isPaused, setIsPaused] = useState(false);
   const [savedSecondsLeft, setSavedSecondsLeft] = useState(null);
   const [savedExams, setSavedExams] = useState(new Set());
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
@@ -398,11 +399,19 @@ export default function HomePage() {
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset}>
-           <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause}>
+           <div className="mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
+             <Clock className="w-4 h-4 text-indigo-600" />
+             <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+           </div>
+           <button className="et-btn-outline desktop-only" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause}>
              <PauseIcon /> Tạm dừng
            </button>
         </Topbar>
         <div className="et-screen" style={{ position: 'relative' }}>
+          
+          <button className="et-fab mobile-only" onClick={() => setIsDrawerOpen(true)}>
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </button>
           
           {isPaused && (
             <div style={{
@@ -455,10 +464,77 @@ export default function HomePage() {
                 />
               </div>
             ))}
+
+            {/* Bottom Submit Button */}
+            <div className="mt-8 mb-24 flex justify-center">
+              <button 
+                onClick={() => {
+                  const unanswered = questions.length - answeredCount;
+                  const msg = unanswered > 0 
+                    ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+                    : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+                  showConfirm('Xác nhận nộp bài', msg, () => handleSubmit()); 
+                }}
+                className="px-8 py-3.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-md flex items-center gap-2"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 18, height: 18 }}><polyline points="20 6 9 17 4 12"/></svg>
+                Hoàn thành & Nộp bài
+              </button>
+            </div>
+          </div>
+
+          {/* Drawer Overlay for Mobile */}
+          <div className={`et-drawer-overlay mobile-only ${isDrawerOpen ? 'open' : ''}`} onClick={() => setIsDrawerOpen(false)} />
+          
+          {/* Mobile Drawer */}
+          <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`}>
+             <div className="flex justify-between items-center mb-2">
+                <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Danh sách câu hỏi</div>
+                <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
+                  <X className="w-4 h-4" />
+                </button>
+             </div>
+             
+             <div className="et-prog-row mt-2"><span>Đã làm</span><span>{answeredCount} / {questions.length}</span></div>
+             <div className="et-prog-bg mb-4"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
+             
+             <div className="et-nav-grid mb-4">
+                {questions.map((q, i) => {
+                  const a = answers[q.id];
+                  const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
+                  const isBookmarked = bookmarks.has(q.id);
+                  let cls = '';
+                  if (i === currentQ) cls = 'current';
+                  else if (isBookmarked) cls = 'bookmarked';
+                  else if (isAnswered) cls = 'answered';
+                  return (
+                    <button key={i} className={`et-nav-btn ${cls}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
+                      {i + 1}
+                    </button>
+                  );
+                })}
+             </div>
+
+             <div className="flex items-center gap-2 mb-4">
+                <button className="flex-1 py-3 bg-red-50 text-red-600 font-bold rounded-xl" onClick={() => { setIsDrawerOpen(false); handlePause(); }}>
+                  Tạm dừng
+                </button>
+                <button className="flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2" onClick={() => { 
+                  setIsDrawerOpen(false);
+                  const unanswered = questions.length - answeredCount;
+                  const msg = unanswered > 0 
+                    ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+                    : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+                  showConfirm('Xác nhận nộp bài', msg, () => handleSubmit()); 
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 16, height: 16 }}><polyline points="20 6 9 17 4 12"/></svg>
+                  Nộp bài
+                </button>
+             </div>
           </div>
 
           {/* Sidebar */}
-          <div className="et-sidebar">
+          <div className="et-sidebar desktop-only">
             <Timer initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
 
             <button className="et-btn-submit" onClick={() => { 

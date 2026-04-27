@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true }) {
+export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true, compact = false }) {
     const [secondsLeft, setSecondsLeft] = useState(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
     const intervalRef = useRef(null);
 
@@ -30,6 +30,14 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
     const minutes = Math.floor(secondsLeft / 60);
     const seconds = secondsLeft % 60;
     const warnCls = pct <= 10 ? 'danger' : pct <= 25 ? 'warn' : '';
+
+    if (compact) {
+        return (
+            <div className={`font-bold tabular-nums ${warnCls === 'danger' ? 'text-red-500 animate-pulse' : warnCls === 'warn' ? 'text-amber-500' : 'text-indigo-600'}`}>
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            </div>
+        );
+    }
 
     return (
         <div className="et-timer-block">

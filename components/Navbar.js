@@ -18,7 +18,7 @@ export default function Navbar() {
         </a>
 
         {/* ─── Center: Nav Links ─── */}
-        <nav className="hidden sm:flex items-center gap-1">
+        <nav className="flex items-center gap-1">
           <a
             href="/yeuhoc/"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all no-underline"
