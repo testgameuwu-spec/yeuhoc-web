@@ -16,21 +16,21 @@ import { supabase } from '@/lib/supabase';
 // ── Topbar (exam-tool style) ──
 const Topbar = ({ activeExam, handleReset, children }) => (
   <div className="et-topbar">
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={handleReset}>
+    <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleReset}>
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--et-blue)" strokeWidth="2.2" strokeLinecap="round" style={{ width: 22, height: 22 }}>
         <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
       </svg>
-      <span style={{ fontWeight: 700, fontSize: 17, color: 'var(--et-blue)' }}>YeuHoc</span>
+      <span className="hidden sm:inline font-bold text-[17px] text-[var(--et-blue)]">YeuHoc</span>
     </div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--et-gray-400)' }}>
-      <span style={{ cursor: 'pointer' }} onClick={handleReset}>Trang chủ</span>
-      <svg style={{ width: 13, height: 13 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-      <span style={{ color: 'var(--et-gray-800)', fontWeight: 600 }}>{activeExam?.title || 'Đề thi'}</span>
+    <div className="hidden sm:flex items-center gap-1.5 text-[13px] text-gray-400 flex-1 min-w-0 ml-4">
+      <span className="cursor-pointer shrink-0 hover:text-indigo-600 transition-colors" onClick={handleReset}>Trang chủ</span>
+      <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+      <span className="text-gray-800 font-semibold truncate">{activeExam?.title || 'Đề thi'}</span>
     </div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div className="flex items-center gap-3 shrink-0 ml-auto">
       {children}
       <UserProfile />
-      <button className="et-btn-outline" onClick={handleReset} style={{ fontSize: 12, padding: '5px 11px' }}>
+      <button className="et-btn-outline desktop-only" onClick={handleReset} style={{ fontSize: 12, padding: '5px 11px' }}>
         <ArrowLeft style={{ width: 13, height: 13 }} /> Quay lại
       </button>
     </div>
@@ -332,16 +332,16 @@ export default function HomePage() {
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--et-gray-200)', padding: 32, textAlign: 'center', boxShadow: 'var(--et-sh)' }}>
+        <div className="flex-1 overflow-y-auto w-full p-4 sm:p-8">
+          <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center shadow-sm">
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
               <span className="et-tag et-tag-blue">📚 {activeExam.subject}</span>
               <span className="et-tag et-tag-amber">⏱ {activeExam.duration} phút</span>
               <span className="et-tag et-tag-green">📝 {questions.length} câu</span>
               {activeExam.examType && <span className="et-tag">{activeExam.examType} · {activeExam.year}</span>}
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>{activeExam.title}</h1>
-            <p style={{ fontSize: 13, color: 'var(--et-gray-400)', marginBottom: 24 }}>
+            <h1 className="text-xl sm:text-2xl font-bold mb-2 text-gray-800">{activeExam.title}</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mb-6">
               Nhấn "Bắt đầu" để vào làm bài. Thời gian sẽ được tính ngay khi bắt đầu.
             </p>
             <button
@@ -370,12 +370,12 @@ export default function HomePage() {
                   border: '1px solid var(--et-gray-100)', background: 'var(--et-gray-50)',
                 }}>
                   <span style={{
-                    width: 26, height: 26, borderRadius: 6,
+                    width: 26, height: 26, borderRadius: 6, flexShrink: 0,
                     background: 'var(--et-gray-100)', color: 'var(--et-gray-600)',
                     fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{i + 1}</span>
-                  <span style={{ fontSize: 12, color: 'var(--et-gray-600)', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    {(q.content || '').slice(0, 80)}…
+                  <span style={{ fontSize: 12, color: 'var(--et-gray-600)', flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                    {q.content || q.text || ''}
                   </span>
                   <span className="et-tag" style={{ fontSize: 10 }}>{q.type}</span>
                 </div>
