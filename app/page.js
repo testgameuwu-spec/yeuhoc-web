@@ -612,6 +612,19 @@ export default function HomePage() {
 
   // ── RESULTS DETAIL (2-column layout) ──
   if (quizPhase === 'results-detail' && activeExam) {
+    let correctCount = 0;
+    questions.forEach(q => {
+        const ua = answers[q.id] || '';
+        let ok = false;
+        if (q.type === 'MCQ') ok = ua === q.answer;
+        else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
+            const s = typeof ua === 'object' ? ua : {};
+            ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
+        } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+        if (ok) correctCount++;
+    });
+    const pct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
@@ -644,8 +657,58 @@ export default function HomePage() {
             </div>
           </div>
 
+          <button className="et-fab mobile-only" onClick={() => setIsDrawerOpen(true)}>
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </button>
+
+          {/* Drawer Overlay for Mobile */}
+          <div className={`et-drawer-overlay mobile-only ${isDrawerOpen ? 'open' : ''}`} onClick={() => setIsDrawerOpen(false)} />
+          
+          {/* Mobile Drawer */}
+          <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`}>
+             <div className="flex justify-between items-center mb-4">
+                <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Chi tiết bài làm</div>
+                <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
+                  <X className="w-4 h-4" />
+                </button>
+             </div>
+             
+             {/* Score Summary */}
+             <div className="flex items-center justify-between bg-indigo-50 rounded-xl p-4 mb-5">
+               <div>
+                 <div className="text-2xl font-black text-indigo-600">{correctCount}/{questions.length}</div>
+                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
+               </div>
+               <div className="text-right">
+                 <div className="text-2xl font-black text-indigo-600">{pct}%</div>
+                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
+               </div>
+             </div>
+
+             <div className="et-nav-grid mb-5">
+                {questions.map((q, i) => {
+                  const ua = answers[q.id] || '';
+                  let ok = false;
+                  if (q.type === 'MCQ') ok = ua === q.answer;
+                  else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
+                    const s = typeof ua === 'object' ? ua : {};
+                    ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
+                  } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+                  return (
+                    <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
+                      {i + 1}
+                    </button>
+                  );
+                })}
+             </div>
+             <div className="et-nav-legend flex-row justify-center gap-6 mt-0">
+                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
+                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
+             </div>
+          </div>
+
           {/* Results sidebar with nav */}
-          <div className="et-sidebar">
+          <div className="et-sidebar desktop-only">
             <div className="et-timer-block">
               <div className="et-timer-lbl">📊 Kết quả</div>
               <div className="et-timer-disp" style={{ fontSize: 28 }}>Hoàn thành</div>
