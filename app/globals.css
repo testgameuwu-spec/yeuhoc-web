@@ -296,57 +296,6 @@ body {
   .mobile-only { display: none !important; }
 }
 
-/* ─── Landscape Mobile (phone rotated) ─── */
-@media (max-width: 900px) and (orientation: landscape) {
-  .et-topbar {
-    height: 44px;
-    padding: 0 14px;
-  }
-  .et-screen {
-    min-height: calc(100dvh - 44px);
-    grid-template-columns: 1fr;
-  }
-  .et-main {
-    max-height: calc(100dvh - 44px);
-    padding: 12px 16px;
-  }
-  .et-sidebar {
-    display: none;
-  }
-  .et-desktop-panel {
-    display: none !important;
-  }
-  /* Compact question header in landscape */
-  .et-q-card-hd {
-    padding: 7px 12px;
-  }
-  .et-q-card-body {
-    padding: 10px 13px;
-  }
-  /* FAB in landscape - move to avoid overlap */
-  .et-fab {
-    bottom: 12px;
-    right: 16px;
-    width: 48px;
-    height: 48px;
-  }
-  /* Drawer in landscape - side panel instead of bottom sheet */
-  .et-drawer {
-    top: 0;
-    bottom: 0;
-    left: auto;
-    right: 0;
-    border-radius: 0;
-    border-top-left-radius: 18px;
-    border-bottom-left-radius: 18px;
-    width: 260px;
-    max-height: 100dvh;
-    transform: translateX(100%);
-  }
-  .et-drawer.open {
-    transform: translateX(0);
-  }
-}
 
 /* ─── Collapsible Sidebar Panel (Desktop) ─── */
 .et-sidebar-collapsed {
@@ -604,4 +553,57 @@ body {
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+}
+
+/* ─── Landscape Mobile (phone rotated) ─── */
+@media (max-width: 900px) and (orientation: landscape) {
+  .et-topbar {
+    height: 44px;
+    padding: 0 14px;
+  }
+  .et-screen {
+    min-height: calc(100dvh - 44px);
+    grid-template-columns: 1fr;
+  }
+  .et-main {
+    max-height: calc(100dvh - 44px);
+    padding: 12px 16px;
+  }
+  .et-sidebar {
+    display: none;
+  }
+  .et-desktop-panel {
+    display: none !important;
+  }
+  /* Compact question header in landscape */
+  .et-q-card-hd {
+    padding: 7px 12px;
+  }
+  .et-q-card-body {
+    padding: 10px 13px;
+  }
+  /* FAB in landscape - move to avoid overlap */
+  .et-fab {
+    bottom: 12px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+  }
+  /* Drawer in landscape - side panel instead of bottom sheet */
+  .et-drawer {
+    top: 0;
+    bottom: 0;
+    left: auto !important;
+    right: 0 !important;
+    border-radius: 0;
+    border-top-left-radius: 18px;
+    border-bottom-left-radius: 18px;
+    width: 320px;
+    max-height: 100dvh;
+    transform: translateX(100%) !important;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+  }
+  .et-drawer.open {
+    transform: translateX(0) !important;
+  }
 }
