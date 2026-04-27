@@ -8,6 +8,7 @@ import {
   TrendingUp, Award, Clock, History, X, BookOpen, ChevronRight
 } from 'lucide-react';
 import QuestionCard from '@/components/QuestionCard';
+import Pagination from '@/components/Pagination';
 
 const ROLE_STYLES = {
   admin: {
@@ -58,6 +59,10 @@ export default function UserManagement() {
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [attemptDetails, setAttemptDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Pagination
+  const itemsPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Modal state
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
@@ -246,6 +251,13 @@ export default function UserManagement() {
       return 0;
     });
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const visibleUsers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterRole, sortBy]);
+
   const totalAttempts = users.reduce((s, u) => s + (u.attempts || 0), 0);
   const avgAttempts = users.length > 0 ? (totalAttempts / users.length).toFixed(1) : 0;
 
@@ -329,7 +341,7 @@ export default function UserManagement() {
             <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-sm text-white/40">Đang tải danh sách người dùng...</p>
           </div>
-        ) : filtered.length > 0 ? filtered.map(user => {
+        ) : visibleUsers.length > 0 ? visibleUsers.map(user => {
           const role = ROLE_STYLES[user.role] || ROLE_STYLES.student;
           const RoleIcon = role.icon;
           const initials = user.name.split(' ').map(w => w[0]).join('').slice(-2).toUpperCase();
@@ -412,6 +424,18 @@ export default function UserManagement() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {!loading && (
+        <div className="mt-4 mb-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            variant="dark"
+          />
+        </div>
+      )}
 
       {/* Footer info */}
       <div className="flex items-center justify-between px-2">

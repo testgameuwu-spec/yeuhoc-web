@@ -296,6 +296,142 @@ body {
   .mobile-only { display: none !important; }
 }
 
+/* ─── Landscape Mobile (phone rotated) ─── */
+@media (max-width: 900px) and (orientation: landscape) {
+  .et-topbar {
+    height: 44px;
+    padding: 0 14px;
+  }
+  .et-screen {
+    min-height: calc(100dvh - 44px);
+    grid-template-columns: 1fr;
+  }
+  .et-main {
+    max-height: calc(100dvh - 44px);
+    padding: 12px 16px;
+  }
+  .et-sidebar {
+    display: none;
+  }
+  .et-desktop-panel {
+    display: none !important;
+  }
+  /* Compact question header in landscape */
+  .et-q-card-hd {
+    padding: 7px 12px;
+  }
+  .et-q-card-body {
+    padding: 10px 13px;
+  }
+  /* FAB in landscape - move to avoid overlap */
+  .et-fab {
+    bottom: 12px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+  }
+  /* Drawer in landscape - side panel instead of bottom sheet */
+  .et-drawer {
+    top: 0;
+    bottom: 0;
+    left: auto;
+    right: 0;
+    border-radius: 0;
+    border-top-left-radius: 18px;
+    border-bottom-left-radius: 18px;
+    width: 260px;
+    max-height: 100dvh;
+    transform: translateX(100%);
+  }
+  .et-drawer.open {
+    transform: translateX(0);
+  }
+}
+
+/* ─── Collapsible Sidebar Panel (Desktop) ─── */
+.et-sidebar-collapsed {
+  width: 0;
+  overflow: hidden;
+  border-left: none;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.et-sidebar {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 290px;
+  min-width: 0;
+}
+.et-screen.sidebar-hidden {
+  grid-template-columns: 1fr;
+}
+
+/* ─── Exam Section Divider ─── */
+.et-section-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0 14px;
+  margin-top: 8px;
+}
+.et-section-hd-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, #e2e6ed, transparent);
+  border-radius: 2px;
+}
+.et-section-hd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, #eef3fc, #e0e7ff);
+  color: var(--et-blue);
+  border: 1.5px solid #c7d7f5;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(59,111,212,0.07);
+}
+.et-section-hint {
+  margin: -6px 0 12px;
+  font-size: 12px;
+  color: #d97706;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 7px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+/* ─── Sidebar Toggle Button ─── */
+.et-sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid var(--et-gray-200);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  color: var(--et-gray-600);
+  transition: all 0.2s;
+}
+.et-sidebar-toggle:hover {
+  border-color: var(--et-blue);
+  color: var(--et-blue);
+  box-shadow: 0 2px 12px rgba(59,111,212,0.2);
+}
+
 /* ─── Mobile FAB & Drawer ─── */
 .et-fab {
   position: fixed;
@@ -357,6 +493,10 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.25); }
+
+/* ─── Scrollbar hide utility ─── */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 
 /* KaTeX */
 .katex-display { overflow-x: auto; overflow-y: hidden; padding: .5rem 0; }

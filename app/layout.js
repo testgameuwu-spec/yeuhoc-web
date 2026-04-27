@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased bg-gray-100 text-gray-900 min-h-screen">
+      <body className="antialiased bg-gray-100 text-gray-900 min-h-screen" suppressHydrationWarning>
         {children}
       </body>
     </html>

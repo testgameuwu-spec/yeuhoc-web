@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, User, ArrowLeft, ChevronRight, RotateCcw, Clock, X } from 'lucide-react';
+import { BookOpen, User, ArrowLeft, ChevronRight, RotateCcw, Clock, X, BarChart2, Award, Calendar } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import UserProfile from '@/components/UserProfile';
 import { getPublishedExams, getExamById } from '@/lib/examStore';
 import FilterBar from '@/components/FilterBar';
 import ExamCard from '@/components/ExamCard';
 import QuestionCard from '@/components/QuestionCard';
+import Pagination from '@/components/Pagination';
 import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
 import { supabase } from '@/lib/supabase';
@@ -91,6 +92,21 @@ export default function HomePage() {
   const [savedSecondsLeft, setSavedSecondsLeft] = useState(null);
   const [savedExams, setSavedExams] = useState(new Set());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Browse filter & pagination states (must be before any conditional returns)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selYear, setSelYear] = useState(null);
+  const [selType, setSelType] = useState(null);
+  const [selSubject, setSelSubject] = useState(null);
+  const [sortOrder, setSortOrder] = useState('newest');
+  const ITEMS_PER_PAGE = 9;
+  const [browsePage, setBrowsePage] = useState(1);
+
+  // Preview Stats
+  const [examStats, setExamStats] = useState(null);
+  const [examLeaderboard, setExamLeaderboard] = useState([]);
+  const [loadingPreviewStats, setLoadingPreviewStats] = useState(false);
 
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
@@ -116,6 +132,54 @@ export default function HomePage() {
       setSavedExams(saved);
     }
   }, [user, quizPhase]);
+
+  // Reset browse pagination when filters change
+  useEffect(() => {
+    setBrowsePage(1);
+  }, [searchQuery, selYear, selType, selSubject, sortOrder]);
+
+  // Fetch preview stats
+  useEffect(() => {
+    if (quizPhase === 'preview' && activeExam) {
+      async function fetchStats() {
+        setLoadingPreviewStats(true);
+        const { data, error } = await supabase
+          .from('exam_attempts')
+          .select('*, profiles(name, avatar_url)')
+          .eq('exam_id', activeExam.id)
+          .order('score', { ascending: false })
+          .order('time_spent', { ascending: true });
+        
+        if (data) {
+          const totalParticipants = data.length;
+          const totalScore = data.reduce((acc, curr) => acc + curr.score, 0);
+          const avgScore = totalParticipants ? (totalScore / totalParticipants).toFixed(2) : 0;
+          
+          const sortedScores = [...data].map(d => d.score).sort((a,b) => a - b);
+          let medianScore = 0;
+          if (totalParticipants > 0) {
+            const mid = Math.floor(totalParticipants / 2);
+            medianScore = totalParticipants % 2 !== 0 ? sortedScores[mid] : ((sortedScores[mid - 1] + sortedScores[mid]) / 2).toFixed(2);
+          }
+
+          const totalTime = data.reduce((acc, curr) => acc + curr.time_spent, 0);
+          const avgTime = totalParticipants ? Math.floor(totalTime / totalParticipants) : 0;
+
+          const ranges = {
+            '9-10': data.filter(d => d.score > 9 && d.score <= 10).length,
+            '8-9': data.filter(d => d.score > 8 && d.score <= 9).length,
+            '7-8': data.filter(d => d.score > 7 && d.score <= 8).length,
+            '6-7': data.filter(d => d.score >= 6 && d.score <= 7).length,
+          };
+
+          setExamStats({ totalParticipants, avgScore, medianScore, avgTime, ranges });
+          setExamLeaderboard(data.slice(0, 10)); // top 10
+        }
+        setLoadingPreviewStats(false);
+      }
+      fetchStats();
+    }
+  }, [quizPhase, activeExam]);
 
   // Load published exams from store
   useEffect(() => {
@@ -319,6 +383,47 @@ export default function HomePage() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const renderNavButtons = (renderBtn) => {
+    const isTHPT = activeExam?.examType === 'THPT';
+    if (!isTHPT) {
+      return (
+        <div className="et-nav-grid">
+          {questions.map((q, i) => renderBtn(q, i))}
+        </div>
+      );
+    }
+
+    let p1 = [], p2 = [], p3 = [];
+    questions.forEach((q, i) => {
+      if (q.type === 'MCQ') p1.push({ q, i });
+      else if (q.type === 'TF') p2.push({ q, i });
+      else if (q.type === 'SA') p3.push({ q, i });
+    });
+
+    return (
+      <div className="flex flex-col gap-4">
+        {p1.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần I</div>
+            <div className="et-nav-grid">{p1.map(({ q, i }) => renderBtn(q, i))}</div>
+          </div>
+        )}
+        {p2.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần II</div>
+            <div className="et-nav-grid">{p2.map(({ q, i }) => renderBtn(q, i))}</div>
+          </div>
+        )}
+        {p3.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần III</div>
+            <div className="et-nav-grid">{p3.map(({ q, i }) => renderBtn(q, i))}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!authLoaded || !user) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -358,33 +463,131 @@ export default function HomePage() {
               Bắt đầu làm bài <ChevronRight style={{ width: 18, height: 18 }} />
             </button>
 
-            {/* Preview questions list */}
-            <div style={{ marginTop: 30, textAlign: 'left' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .5, color: 'var(--et-gray-400)', marginBottom: 10 }}>
-                Danh sách câu hỏi
-              </div>
-              {questions.slice(0, 8).map((q, i) => (
-                <div key={q.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '8px 12px', borderRadius: 8, marginBottom: 4,
-                  border: '1px solid var(--et-gray-100)', background: 'var(--et-gray-50)',
-                }}>
-                  <span style={{
-                    width: 26, height: 26, borderRadius: 6, flexShrink: 0,
-                    background: 'var(--et-gray-100)', color: 'var(--et-gray-600)',
-                    fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{i + 1}</span>
-                  <span style={{ fontSize: 12, color: 'var(--et-gray-600)', flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    {q.content || q.text || ''}
-                  </span>
-                  <span className="et-tag" style={{ fontSize: 10 }}>{q.type}</span>
+            {/* Preview Statistics & Leaderboard */}
+            <div className="mt-12 text-left">
+              {loadingPreviewStats ? (
+                <div className="flex flex-col items-center justify-center py-10">
+                  <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                  <p className="mt-4 text-sm text-gray-500 font-medium animate-pulse">Đang tải dữ liệu thống kê...</p>
                 </div>
-              ))}
-              {questions.length > 8 && (
-                <p style={{ fontSize: 11, color: 'var(--et-gray-400)', textAlign: 'center', padding: 8 }}>
-                  và {questions.length - 8} câu nữa…
-                </p>
-              )}
+              ) : examStats ? (
+                <div className="space-y-8 animate-fadeIn">
+                  
+                  {/* --- Thống kê --- */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <BarChart2 className="w-5 h-5 text-indigo-600" />
+                      <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Chi tiết thống kê</h3>
+                    </div>
+                    <div className="flex bg-white border border-gray-200/60 rounded-xl overflow-hidden shadow-sm">
+                      <div className="bg-indigo-600 text-white w-12 flex items-center justify-center shrink-0">
+                         <span className="font-bold tracking-widest text-sm" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CHI TIẾT</span>
+                      </div>
+                      <div className="flex-1 p-4 grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50/50">
+                        {/* Hàng 1 */}
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Tổng thí sinh</div>
+                          <div className="text-2xl font-black text-indigo-900">{examStats.totalParticipants} <span className="text-xs font-normal text-gray-400">(Thí sinh tham gia)</span></div>
+                        </div>
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Điểm trung bình</div>
+                          <div className="text-2xl font-black text-indigo-900">{examStats.avgScore} <span className="text-xs font-normal text-gray-400">(Điểm)</span></div>
+                        </div>
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Điểm trung vị</div>
+                          <div className="text-2xl font-black text-indigo-900">{examStats.medianScore} <span className="text-xs font-normal text-gray-400">(Điểm)</span></div>
+                        </div>
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Thời gian làm bài tb</div>
+                          <div className="text-xl font-black text-indigo-900">
+                            {Math.floor(examStats.avgTime / 60)} <span className="text-sm font-medium text-gray-500">Phút</span> {examStats.avgTime % 60} <span className="text-sm font-medium text-gray-500">Giây</span>
+                          </div>
+                        </div>
+                        {/* Hàng 2 */}
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">9</span> đến <span className="text-indigo-600 font-bold">10</span></div>
+                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['9-10']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['9-10']/examStats.totalParticipants*100) : 0}%)</span></div>
+                        </div>
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">8</span> đến <span className="text-indigo-600 font-bold">9</span></div>
+                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['8-9']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['8-9']/examStats.totalParticipants*100) : 0}%)</span></div>
+                        </div>
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">7</span> đến <span className="text-indigo-600 font-bold">8</span></div>
+                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['7-8']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['7-8']/examStats.totalParticipants*100) : 0}%)</span></div>
+                        </div>
+                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
+                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">6</span> đến <span className="text-indigo-600 font-bold">7</span></div>
+                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['6-7']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['6-7']/examStats.totalParticipants*100) : 0}%)</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* --- Bảng xếp hạng --- */}
+                  {examLeaderboard.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Award className="w-5 h-5 text-amber-500" />
+                        <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Bảng xếp hạng (Top 10)</h3>
+                      </div>
+                      <div className="bg-white border border-gray-200/60 rounded-xl overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-[#1f4e79] text-white text-xs font-semibold uppercase tracking-wider">
+                              <tr>
+                                <th className="px-4 py-3 text-center w-12">Stt</th>
+                                <th className="px-4 py-3 text-center w-16">Ảnh</th>
+                                <th className="px-4 py-3">Tên học sinh</th>
+                                <th className="px-4 py-3 text-center">Điểm thi</th>
+                                <th className="px-4 py-3 text-center">Ngày thi</th>
+                                <th className="px-4 py-3 text-right">Thời gian làm bài</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {examLeaderboard.map((attempt, index) => (
+                                <tr key={attempt.id} className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-4 py-3 text-center">
+                                    <div className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center text-xs font-bold text-white
+                                      ${index === 0 ? 'bg-amber-500 shadow-md shadow-amber-500/20' : 
+                                        index === 1 ? 'bg-slate-400 shadow-md shadow-slate-400/20' : 
+                                        index === 2 ? 'bg-amber-700 shadow-md shadow-amber-700/20' : 'bg-gray-300'}
+                                    `}>
+                                      {index + 1}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {attempt.profiles?.avatar_url ? (
+                                      <img src={`${supabase.storage.from('avatars').getPublicUrl(attempt.profiles.avatar_url).data.publicUrl}`} alt="Avatar" className="w-8 h-8 rounded-full mx-auto object-cover ring-2 ring-gray-100" />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xs">
+                                        {(attempt.profiles?.name || 'U').charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className={`px-4 py-3 font-semibold ${index < 3 ? 'text-indigo-600' : 'text-gray-700'}`}>
+                                    {attempt.profiles?.name || 'Học sinh ẩn danh'}
+                                  </td>
+                                  <td className={`px-4 py-3 text-center font-bold ${index < 3 ? 'text-red-500' : 'text-gray-900'}`}>
+                                    {attempt.score.toFixed(2)}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-gray-500 text-xs font-medium">
+                                    {new Date(attempt.created_at).toLocaleDateString('vi-VN')}
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-gray-600 font-medium">
+                                    {Math.floor(attempt.time_spent / 60)} phút {attempt.time_spent % 60} giây
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -398,7 +601,9 @@ export default function HomePage() {
     const pct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
-        <Topbar activeExam={activeExam} handleReset={handleReset}>
+        <Topbar activeExam={activeExam} handleReset={() => {
+          showConfirm('Xác nhận thoát', 'Tiến trình làm bài của bạn sẽ được lưu lại tự động. Bạn có chắc chắn muốn thoát?', () => handleReset());
+        }}>
           <div className="mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
             <Clock className="w-4 h-4 text-indigo-600" />
             <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
@@ -407,7 +612,7 @@ export default function HomePage() {
             <PauseIcon /> <span className="hidden sm:inline">Tạm dừng</span>
           </button>
         </Topbar>
-        <div className="et-screen" style={{ position: 'relative' }}>
+        <div className={`et-screen ${isSidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ position: 'relative' }}>
 
           <button className="et-fab mobile-only" onClick={() => setIsDrawerOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
@@ -447,23 +652,61 @@ export default function HomePage() {
               </div>
             </div>
 
-            {questions.map((q, i) => (
-              <div key={q.id} id={`q-card-${i}`} onClick={() => setCurrentQ(i)}>
-                <QuestionCard
-                  question={q}
-                  index={i}
-                  selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
-                  onAnswerChange={(val) => handleAnswerChange(q.id, val)}
-                  isBookmarked={bookmarks.has(q.id)}
-                  onToggleBookmark={() => {
-                    const next = new Set(bookmarks);
-                    if (next.has(q.id)) next.delete(q.id);
-                    else next.add(q.id);
-                    setBookmarks(next);
-                  }}
-                />
-              </div>
-            ))}
+            {questions.map((q, i) => {
+              // Section Logic (Phần 1, 2, 3) - Only for THPT
+              const isTHPT = activeExam?.examType === 'THPT';
+              const isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || questions[i-1].type !== 'MCQ');
+              const isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || questions[i-1].type !== 'TF');
+              const isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || questions[i-1].type !== 'SA');
+
+              return (
+                <div key={q.id} id={`q-card-${i}`} onClick={() => setCurrentQ(i)}>
+                  {isFirstMCQ && (
+                    <div className="et-section-hd">
+                      <div className="et-section-hd-line" />
+                      <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
+                      <div className="et-section-hd-line" />
+                    </div>
+                  )}
+                  {isFirstTF && (
+                    <div className="et-section-hd">
+                      <div className="et-section-hd-line" />
+                      <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
+                      <div className="et-section-hd-line" />
+                    </div>
+                  )}
+                  {isFirstSA && (
+                    <div className="et-section-hd">
+                      <div className="et-section-hd-line" />
+                      <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
+                      <div className="et-section-hd-line" />
+                    </div>
+                  )}
+                  
+                  {/* Context hint logic (VD nhìn câu đề 16 để làm câu 17,18) */}
+                  {q.contextHint && (
+                    <div className="et-section-hint">
+                      <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{q.contextHint}</span>
+                    </div>
+                  )}
+
+                  <QuestionCard
+                    question={q}
+                    index={i}
+                    selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
+                    onAnswerChange={(val) => handleAnswerChange(q.id, val)}
+                    isBookmarked={bookmarks.has(q.id)}
+                    onToggleBookmark={() => {
+                      const next = new Set(bookmarks);
+                      if (next.has(q.id)) next.delete(q.id);
+                      else next.add(q.id);
+                      setBookmarks(next);
+                    }}
+                  />
+                </div>
+              );
+            })}
 
             {/* Bottom Submit Button */}
             <div className="mt-8 mb-24 flex justify-center">
@@ -498,8 +741,8 @@ export default function HomePage() {
             <div className="et-prog-row mt-2"><span>Đã làm</span><span>{answeredCount} / {questions.length}</span></div>
             <div className="et-prog-bg mb-4"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
 
-            <div className="et-nav-grid mb-4">
-              {questions.map((q, i) => {
+            <div className="mb-4">
+              {renderNavButtons((q, i) => {
                 const a = answers[q.id];
                 const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
                 const isBookmarked = bookmarks.has(q.id);
@@ -534,8 +777,18 @@ export default function HomePage() {
           </div>
 
           {/* Sidebar */}
-          <div className="et-sidebar desktop-only">
-            <Timer initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+          <div className={`et-sidebar desktop-only ${isSidebarCollapsed ? 'et-sidebar-collapsed' : ''}`}>
+            {isSidebarCollapsed && (
+              <button className="et-sidebar-toggle" onClick={() => setIsSidebarCollapsed(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+            )}
+            <div style={{ position: 'relative' }}>
+              <button className="absolute right-3 top-3 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setIsSidebarCollapsed(true)} title="Đóng panel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+              <Timer initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+            </div>
 
             <button className="et-btn-submit" onClick={() => {
               const unanswered = questions.length - answeredCount;
@@ -555,23 +808,21 @@ export default function HomePage() {
 
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
-              <div className="et-nav-grid">
-                {questions.map((q, i) => {
-                  const a = answers[q.id];
-                  const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
-                  const isBookmarked = bookmarks.has(q.id);
-                  let cls = '';
-                  if (i === currentQ) cls = 'current';
-                  else if (isBookmarked) cls = 'bookmarked';
-                  else if (isAnswered) cls = 'answered';
-                  return (
-                    <button key={i} className={`et-nav-btn ${cls}`} onClick={() => scrollToQ(i)}>
-                      {i + 1}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="et-nav-legend">
+              {renderNavButtons((q, i) => {
+                const a = answers[q.id];
+                const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
+                const isBookmarked = bookmarks.has(q.id);
+                let cls = '';
+                if (i === currentQ) cls = 'current';
+                else if (isBookmarked) cls = 'bookmarked';
+                else if (isAnswered) cls = 'answered';
+                return (
+                  <button key={i} className={`et-nav-btn ${cls}`} onClick={() => scrollToQ(i)}>
+                    {i + 1}
+                  </button>
+                );
+              })}
+              <div className="et-nav-legend mt-4">
                 <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#e0e7ff', border: '1.5px solid #4f46e5' }} />Đã trả lời</div>
                 <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fef3c7', border: '1.5px solid #d97706' }} />Đánh dấu</div>
                 <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fff', border: '1.5px solid #d1d5db' }} />Chưa làm</div>
@@ -628,7 +879,7 @@ export default function HomePage() {
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
-        <div className="et-screen">
+        <div className={`et-screen ${isSidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ position: 'relative' }}>
           <div className="et-main">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <button className="et-btn-outline" style={{ fontSize: 13, padding: '6px 12px' }} onClick={() => setQuizPhase('results')}>
@@ -638,18 +889,47 @@ export default function HomePage() {
                 Chi tiết từng câu
               </div>
             </div>
-            {questions.map((q, i) => (
-              <div key={q.id} id={`q-card-${i}`}>
-                <QuestionCard
-                  question={q}
-                  index={i}
-                  selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
-                  onAnswerChange={() => { }}
-                  showResult
-                  disabled
-                />
-              </div>
-            ))}
+            {questions.map((q, i) => {
+              // Section Logic (Phần 1, 2, 3) - Only for THPT
+              const isTHPT = activeExam?.examType === 'THPT';
+              const isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || questions[i-1].type !== 'MCQ');
+              const isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || questions[i-1].type !== 'TF');
+              const isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || questions[i-1].type !== 'SA');
+
+              return (
+                <div key={q.id} id={`q-card-${i}`}>
+                  {isFirstMCQ && (
+                    <div className="et-section-hd">
+                      <div className="et-section-hd-line" />
+                      <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
+                      <div className="et-section-hd-line" />
+                    </div>
+                  )}
+                  {isFirstTF && (
+                    <div className="et-section-hd">
+                      <div className="et-section-hd-line" />
+                      <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
+                      <div className="et-section-hd-line" />
+                    </div>
+                  )}
+                  {isFirstSA && (
+                    <div className="et-section-hd">
+                      <div className="et-section-hd-line" />
+                      <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
+                      <div className="et-section-hd-line" />
+                    </div>
+                  )}
+                  <QuestionCard
+                    question={q}
+                    index={i}
+                    selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
+                    onAnswerChange={() => { }}
+                    showResult
+                    disabled
+                  />
+                </div>
+              );
+            })}
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, padding: '24px 0' }}>
               <button className="et-btn-outline" onClick={handleRetry}><RotateCcw style={{ width: 13, height: 13 }} /> Làm lại đề này</button>
@@ -680,13 +960,13 @@ export default function HomePage() {
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-indigo-600">{pct}%</div>
+                <div className="text-2xl font-black text-indigo-600">{(correctCount / questions.length * 10).toFixed(1)}</div>
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
               </div>
             </div>
 
-            <div className="et-nav-grid mb-5">
-              {questions.map((q, i) => {
+            <div className="mb-4">
+              {renderNavButtons((q, i) => {
                 const ua = answers[q.id] || '';
                 let ok = false;
                 if (q.type === 'MCQ') ok = ua === q.answer;
@@ -708,30 +988,36 @@ export default function HomePage() {
           </div>
 
           {/* Results sidebar with nav */}
-          <div className="et-sidebar desktop-only">
-            <div className="et-timer-block">
+          <div className={`et-sidebar desktop-only ${isSidebarCollapsed ? 'et-sidebar-collapsed' : ''}`}>
+            {isSidebarCollapsed && (
+              <button className="et-sidebar-toggle" onClick={() => setIsSidebarCollapsed(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+            )}
+            <div className="et-timer-block" style={{ position: 'relative' }}>
+              <button className="absolute right-3 top-3 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setIsSidebarCollapsed(true)} title="Đóng panel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
               <div className="et-timer-lbl">📊 Kết quả</div>
               <div className="et-timer-disp" style={{ fontSize: 28 }}>Hoàn thành</div>
             </div>
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
-              <div className="et-nav-grid">
-                {questions.map((q, i) => {
-                  const ua = answers[q.id] || '';
-                  let ok = false;
-                  if (q.type === 'MCQ') ok = ua === q.answer;
-                  else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-                    const s = typeof ua === 'object' ? ua : {};
-                    ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-                  } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
-                  return (
-                    <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => scrollToQ(i)}>
-                      {i + 1}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="et-nav-legend">
+              {renderNavButtons((q, i) => {
+                const ua = answers[q.id] || '';
+                let ok = false;
+                if (q.type === 'MCQ') ok = ua === q.answer;
+                else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
+                  const s = typeof ua === 'object' ? ua : {};
+                  ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
+                } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+                return (
+                  <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => scrollToQ(i)}>
+                    {i + 1}
+                  </button>
+                );
+              })}
+              <div className="et-nav-legend mt-4">
                 <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
                 <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
               </div>
@@ -743,27 +1029,91 @@ export default function HomePage() {
     );
   }
 
-  // ── BROWSE (unchanged light theme) ──
+  // ── BROWSE (Home Page with Filtering and Pagination) ──
+  const filteredExams = allExams.filter(ex => {
+    if (searchQuery && !ex.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (selYear && String(ex.year) !== String(selYear)) return false;
+    if (selType && ex.examType !== selType) return false;
+    if (selSubject && ex.subject !== selSubject) return false;
+    return true;
+  }).sort((a, b) => {
+    if (sortOrder === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    if (sortOrder === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+    if (sortOrder === 'az') return a.title.localeCompare(b.title);
+    return 0;
+  });
+
+  const browseTotalPages = Math.ceil(filteredExams.length / ITEMS_PER_PAGE);
+  const visibleExams = filteredExams.slice((browsePage - 1) * ITEMS_PER_PAGE, browsePage * ITEMS_PER_PAGE);
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelYear(null);
+    setSelType(null);
+    setSelSubject(null);
+  };
+
   return (
-    <main className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+    <main className="min-h-screen bg-gray-50" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-6 py-8 pb-20 flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 mb-1">Kho đề thi luyện tập 📚</h1>
-          <p className="text-sm text-gray-500">{allExams.length} đề — THPT Quốc gia · HSA · TSA</p>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 flex flex-col gap-6">
+        {/* Banner Section */}
+        <div className="relative bg-gradient-to-r from-indigo-50 to-white border border-indigo-100 rounded-3xl p-6 sm:p-8 overflow-hidden shadow-sm">
+          <div className="relative z-10 max-w-xl">
+            <h1 className="text-2xl sm:text-3xl font-black text-indigo-950 mb-2 flex items-center gap-2">
+              Kho đề thi luyện tập <span className="text-2xl">📚</span>
+            </h1>
+            <p className="text-sm sm:text-base text-indigo-800/80 mb-3 font-medium">
+              {allExams.length} đề — THPT Quốc gia · HSA · TSA
+            </p>
+            <p className="text-sm text-indigo-900/60 leading-relaxed max-w-md">
+              Luyện tập với kho đề đa dạng, bám sát cấu trúc đề thi thật, giúp bạn nâng cao kỹ năng và tự tin chinh phục kỳ thi.
+            </p>
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-indigo-50/50 to-transparent z-0 pointer-events-none" />
         </div>
 
-        {allExams.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allExams.map(exam => (
-              <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
-            ))}
-          </div>
+        {/* Filter Bar */}
+        <FilterBar
+          search={searchQuery} onSearch={setSearchQuery}
+          selYear={selYear} onYear={setSelYear}
+          selType={selType} onType={setSelType}
+          selSubject={selSubject} onSubject={setSelSubject}
+          resultCount={filteredExams.length}
+          totalCount={allExams.length}
+          onClear={handleClearFilters}
+          sortOrder={sortOrder} onSortOrder={setSortOrder}
+        />
+
+        {/* Exam Grid */}
+        {visibleExams.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {visibleExams.map(exam => (
+                <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="mt-6">
+              <Pagination
+                currentPage={browsePage}
+                totalPages={browseTotalPages}
+                onPageChange={setBrowsePage}
+                variant="light"
+              />
+            </div>
+          </>
         ) : (
-          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-            <div className="text-4xl mb-3">🔍</div>
-            <p className="text-sm text-gray-500 mb-4">Chưa có đề thi nào được đăng tải.</p>
+          <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+            <div className="text-5xl mb-4">🔍</div>
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Không tìm thấy đề thi</h3>
+            <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem các đề thi khác.</p>
+            <button onClick={handleClearFilters} className="px-5 py-2.5 rounded-xl bg-indigo-50 text-indigo-600 font-semibold text-sm hover:bg-indigo-100 transition-colors">
+              Xóa bộ lọc
+            </button>
           </div>
         )}
       </div>

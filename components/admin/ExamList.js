@@ -5,6 +5,7 @@ import {
   Plus, Search, MoreVertical, Eye, EyeOff, Pencil, Trash2,
   FileText, Clock, Calendar, GraduationCap, Filter, GripVertical, Save, X
 } from 'lucide-react';
+import Pagination from '@/components/Pagination';
 
 const SUBJECT_COLORS = {
   'Toán': 'from-indigo-500/20 to-indigo-600/20 text-indigo-400 border-indigo-500/30',
@@ -18,6 +19,8 @@ const SUBJECT_COLORS = {
 export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onCreateNew, onUpdateOrder }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | published | draft
+  const [filterSubject, setFilterSubject] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [openMenu, setOpenMenu] = useState(null);
 
   // Ordering states
@@ -31,13 +34,26 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
     }
   }, [exams, isEditingOrder]);
 
+  // Pagination
+  const itemsPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
   const filtered = localExams.filter(e => {
-    if (isEditingOrder) return true; // Show all when editing order
+    if (isEditingOrder) return true;
     if (filterStatus === 'published' && !e.published) return false;
     if (filterStatus === 'draft' && e.published) return false;
+    if (filterSubject !== 'all' && e.subject !== filterSubject) return false;
+    if (filterType !== 'all' && e.examType !== filterType) return false;
     if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const visibleExams = isEditingOrder ? filtered : filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus, filterSubject, filterType, localExams]);
 
   const handleDragStart = (e, index) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -101,10 +117,10 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1 w-full sm:w-auto opacity-100 transition-opacity" style={{ opacity: isEditingOrder ? 0.5 : 1, pointerEvents: isEditingOrder ? 'none' : 'auto' }}>
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 flex-wrap flex-1 w-full xl:w-auto opacity-100 transition-opacity" style={{ opacity: isEditingOrder ? 0.5 : 1, pointerEvents: isEditingOrder ? 'none' : 'auto' }}>
           {/* Search */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -112,6 +128,33 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
               className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all"
             />
           </div>
+          
+          {/* Subject filter */}
+          <select 
+            value={filterSubject} onChange={e => setFilterSubject(e.target.value)}
+            className="px-3 py-2.5 rounded-xl text-sm bg-white/5 border border-white/10 text-white/70 focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer appearance-none min-w-[120px]"
+          >
+            <option value="all" className="bg-[#14142a]">Mọi môn</option>
+            <option value="Toán" className="bg-[#14142a]">Toán</option>
+            <option value="Vật Lý" className="bg-[#14142a]">Vật Lý</option>
+            <option value="Hoá Học" className="bg-[#14142a]">Hoá Học</option>
+            <option value="Tiếng Anh" className="bg-[#14142a]">Tiếng Anh</option>
+            <option value="Tư duy định lượng" className="bg-[#14142a]">Tư duy định lượng</option>
+            <option value="Tư duy định tính" className="bg-[#14142a]">Tư duy định tính</option>
+          </select>
+
+          {/* Exam Type filter */}
+          <select 
+            value={filterType} onChange={e => setFilterType(e.target.value)}
+            className="px-3 py-2.5 rounded-xl text-sm bg-white/5 border border-white/10 text-white/70 focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer appearance-none min-w-[120px]"
+          >
+            <option value="all" className="bg-[#14142a]">Mọi kì thi</option>
+            <option value="THPT" className="bg-[#14142a]">THPT QG</option>
+            <option value="HSA" className="bg-[#14142a]">HSA</option>
+            <option value="TSA" className="bg-[#14142a]">TSA</option>
+            <option value="Other" className="bg-[#14142a]">Khác</option>
+          </select>
+
           {/* Filter pills */}
           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
             {[
@@ -168,7 +211,7 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
         </div>
 
         {/* Rows */}
-        {filtered.length > 0 ? filtered.map((exam, index) => {
+        {visibleExams.length > 0 ? visibleExams.map((exam, index) => {
           const sc = SUBJECT_COLORS[exam.subject] || 'from-gray-500/20 to-gray-600/20 text-gray-400 border-gray-500/30';
           const isDragged = draggedIndex === index;
           return (
@@ -257,6 +300,18 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {!isEditingOrder && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            variant="dark"
+          />
+        </div>
+      )}
     </div>
   );
 }
