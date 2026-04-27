@@ -18,7 +18,7 @@ const Topbar = ({ activeExam, handleReset, children }) => (
   <div className="et-topbar">
     <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleReset}>
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--et-blue)" strokeWidth="2.2" strokeLinecap="round" style={{ width: 22, height: 22 }}>
-        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+        <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
       </svg>
       <span className="hidden sm:inline font-bold text-[17px] text-[var(--et-blue)]">YeuHoc</span>
     </div>
@@ -85,7 +85,7 @@ export default function HomePage() {
   const [user, setUser] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [startTime, setStartTime] = useState(null);
-  
+
   // Pause & Resume states
   const [isPaused, setIsPaused] = useState(false);
   const [savedSecondsLeft, setSavedSecondsLeft] = useState(null);
@@ -128,18 +128,18 @@ export default function HomePage() {
         const urlParams = new URLSearchParams(window.location.search);
         const pid = urlParams.get('preview_exam_id');
         if (pid) {
-           let ex = exams.find(e => e.id.toString() === pid);
-           if (!ex) {
-             ex = await getExamById(pid); // Fetch directly in case it's a draft
-           }
-           if (ex) {
-             setActiveExam(ex); 
-             setAnswers({}); 
-             setCurrentQ(0); 
-             setBookmarks(new Set());
-             setQuizPhase('preview');
-             window.history.replaceState({}, '', window.location.pathname);
-           }
+          let ex = exams.find(e => e.id.toString() === pid);
+          if (!ex) {
+            ex = await getExamById(pid); // Fetch directly in case it's a draft
+          }
+          if (ex) {
+            setActiveExam(ex);
+            setAnswers({});
+            setCurrentQ(0);
+            setBookmarks(new Set());
+            setQuizPhase('preview');
+            window.history.replaceState({}, '', window.location.pathname);
+          }
         }
       }
     }
@@ -175,9 +175,9 @@ export default function HomePage() {
 
   const handleStartExam = (exam) => {
     if (!exam.questions || exam.questions.length === 0) { showAlert('Thông báo', 'Đề thi này chưa có câu hỏi.'); return; }
-    setActiveExam(exam); 
-    setAnswers({}); 
-    setCurrentQ(0); 
+    setActiveExam(exam);
+    setAnswers({});
+    setCurrentQ(0);
     setBookmarks(new Set());
     setSavedSecondsLeft(null);
     setIsPaused(false);
@@ -202,7 +202,7 @@ export default function HomePage() {
     if (saved && user) {
       showConfirm(
         'Tiếp tục làm bài',
-        'Bạn đang có một phiên làm bài dở dang chưa nộp. Bạn có muốn tiếp tục phiên làm bài đó không?',
+        'Bạn đang có một phiên làm bài chưa nộp. Bạn có muốn tiếp tục phiên làm bài đó không?',
         () => {
           // Resume
           try {
@@ -215,7 +215,7 @@ export default function HomePage() {
             setQuizPhase('quiz');
             setTimerRunning(true);
             setStartTime(Date.now());
-          } catch(e) {
+          } catch (e) {
             startFreshQuiz();
           }
         },
@@ -264,9 +264,9 @@ export default function HomePage() {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
-  const handleSubmit = async () => { 
-    setTimerRunning(false); 
-    setQuizPhase('results'); 
+  const handleSubmit = async () => {
+    setTimerRunning(false);
+    setQuizPhase('results');
 
     if (user && activeExam) {
       // Clear auto-saved progress
@@ -274,7 +274,7 @@ export default function HomePage() {
 
       const timeSpentSecs = savedSecondsLeft !== null ? (activeExam.duration * 60 - savedSecondsLeft) : (startTime ? Math.floor((Date.now() - startTime) / 1000) : 0);
       let correctCount = 0;
-      
+
       activeExam.questions.forEach(q => {
         const ua = answers[q.id] || '';
         if (q.type === 'MCQ') {
@@ -305,10 +305,10 @@ export default function HomePage() {
       }
     }
   };
-  
+
   const handleTimeUp = () => { handleSubmit(); };
   const handleReset = () => { setActiveExam(null); setQuizPhase('browse'); setAnswers({}); setTimerRunning(false); setCurrentQ(0); setStartTime(null); setIsPaused(false); };
-  const handleRetry = () => { 
+  const handleRetry = () => {
     if (activeExam && user) localStorage.removeItem(getProgressKey(activeExam.id));
     startFreshQuiz();
   };
@@ -399,37 +399,37 @@ export default function HomePage() {
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset}>
-           <div className="mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
-             <Clock className="w-4 h-4 text-indigo-600" />
-             <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
-           </div>
-           <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause} title="Tạm dừng">
-             <PauseIcon /> <span className="hidden sm:inline">Tạm dừng</span>
-           </button>
+          <div className="mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
+            <Clock className="w-4 h-4 text-indigo-600" />
+            <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+          </div>
+          <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause} title="Tạm dừng">
+            <PauseIcon /> <span className="hidden sm:inline">Tạm dừng</span>
+          </button>
         </Topbar>
         <div className="et-screen" style={{ position: 'relative' }}>
-          
+
           <button className="et-fab mobile-only" onClick={() => setIsDrawerOpen(true)}>
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
           </button>
-          
+
           {isPaused && (
             <div style={{
-               position: 'absolute', inset: 0, zIndex: 100,
-               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-               background: 'rgba(255,255,255,0.6)',
-               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-               borderRadius: 16
+              position: 'absolute', inset: 0, zIndex: 100,
+              backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+              background: 'rgba(255,255,255,0.6)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 16
             }}>
-               <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16, color: 'var(--et-blue)' }}>Đã tạm dừng</h2>
-               <p style={{ color: 'var(--et-gray-600)', marginBottom: 32, fontSize: 15 }}>Tiến độ làm bài và thời gian của bạn đã được lưu lại.</p>
-               <button onClick={handleResume} style={{
-                  padding: '12px 32px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: 'var(--et-blue)', color: '#fff', fontSize: 15, fontWeight: 600,
-                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)', display: 'flex', alignItems: 'center', gap: 8
-               }}>
-                  <PlayIcon /> Tiếp tục làm bài
-               </button>
+              <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16, color: 'var(--et-blue)' }}>Đã tạm dừng</h2>
+              <p style={{ color: 'var(--et-gray-600)', marginBottom: 32, fontSize: 15 }}>Tiến độ làm bài và thời gian của bạn đã được lưu lại.</p>
+              <button onClick={handleResume} style={{
+                padding: '12px 32px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: 'var(--et-blue)', color: '#fff', fontSize: 15, fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)', display: 'flex', alignItems: 'center', gap: 8
+              }}>
+                <PlayIcon /> Tiếp tục làm bài
+              </button>
             </div>
           )}
 
@@ -456,10 +456,10 @@ export default function HomePage() {
                   onAnswerChange={(val) => handleAnswerChange(q.id, val)}
                   isBookmarked={bookmarks.has(q.id)}
                   onToggleBookmark={() => {
-                      const next = new Set(bookmarks);
-                      if (next.has(q.id)) next.delete(q.id);
-                      else next.add(q.id);
-                      setBookmarks(next);
+                    const next = new Set(bookmarks);
+                    if (next.has(q.id)) next.delete(q.id);
+                    else next.add(q.id);
+                    setBookmarks(next);
                   }}
                 />
               </div>
@@ -467,17 +467,17 @@ export default function HomePage() {
 
             {/* Bottom Submit Button */}
             <div className="mt-8 mb-24 flex justify-center">
-              <button 
+              <button
                 onClick={() => {
                   const unanswered = questions.length - answeredCount;
-                  const msg = unanswered > 0 
+                  const msg = unanswered > 0
                     ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
                     : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
-                  showConfirm('Xác nhận nộp bài', msg, () => handleSubmit()); 
+                  showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
                 }}
                 className="px-8 py-3.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-md flex items-center gap-2"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 18, height: 18 }}><polyline points="20 6 9 17 4 12"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 18, height: 18 }}><polyline points="20 6 9 17 4 12" /></svg>
                 Hoàn thành & Nộp bài
               </button>
             </div>
@@ -485,66 +485,66 @@ export default function HomePage() {
 
           {/* Drawer Overlay for Mobile */}
           <div className={`et-drawer-overlay mobile-only ${isDrawerOpen ? 'open' : ''}`} onClick={() => setIsDrawerOpen(false)} />
-          
+
           {/* Mobile Drawer */}
           <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`}>
-             <div className="flex justify-between items-center mb-2">
-                <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Danh sách câu hỏi</div>
-                <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
-                  <X className="w-4 h-4" />
-                </button>
-             </div>
-             
-             <div className="et-prog-row mt-2"><span>Đã làm</span><span>{answeredCount} / {questions.length}</span></div>
-             <div className="et-prog-bg mb-4"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
-             
-             <div className="et-nav-grid mb-4">
-                {questions.map((q, i) => {
-                  const a = answers[q.id];
-                  const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
-                  const isBookmarked = bookmarks.has(q.id);
-                  let cls = '';
-                  if (i === currentQ) cls = 'current';
-                  else if (isBookmarked) cls = 'bookmarked';
-                  else if (isAnswered) cls = 'answered';
-                  return (
-                    <button key={i} className={`et-nav-btn ${cls}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
-                      {i + 1}
-                    </button>
-                  );
-                })}
-             </div>
+            <div className="flex justify-between items-center mb-2">
+              <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Danh sách câu hỏi</div>
+              <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-             <div className="flex items-center gap-2 mb-4">
-                <button className="flex-1 py-3 bg-red-50 text-red-600 font-bold rounded-xl" onClick={() => { setIsDrawerOpen(false); handlePause(); }}>
-                  Tạm dừng
-                </button>
-                <button className="flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2" onClick={() => { 
-                  setIsDrawerOpen(false);
-                  const unanswered = questions.length - answeredCount;
-                  const msg = unanswered > 0 
-                    ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
-                    : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
-                  showConfirm('Xác nhận nộp bài', msg, () => handleSubmit()); 
-                }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 16, height: 16 }}><polyline points="20 6 9 17 4 12"/></svg>
-                  Nộp bài
-                </button>
-             </div>
+            <div className="et-prog-row mt-2"><span>Đã làm</span><span>{answeredCount} / {questions.length}</span></div>
+            <div className="et-prog-bg mb-4"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
+
+            <div className="et-nav-grid mb-4">
+              {questions.map((q, i) => {
+                const a = answers[q.id];
+                const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
+                const isBookmarked = bookmarks.has(q.id);
+                let cls = '';
+                if (i === currentQ) cls = 'current';
+                else if (isBookmarked) cls = 'bookmarked';
+                else if (isAnswered) cls = 'answered';
+                return (
+                  <button key={i} className={`et-nav-btn ${cls}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
+                    {i + 1}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-2 mb-4">
+              <button className="flex-1 py-3 bg-red-50 text-red-600 font-bold rounded-xl" onClick={() => { setIsDrawerOpen(false); handlePause(); }}>
+                Tạm dừng
+              </button>
+              <button className="flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2" onClick={() => {
+                setIsDrawerOpen(false);
+                const unanswered = questions.length - answeredCount;
+                const msg = unanswered > 0
+                  ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+                  : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+                showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
+              }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 16, height: 16 }}><polyline points="20 6 9 17 4 12" /></svg>
+                Nộp bài
+              </button>
+            </div>
           </div>
 
           {/* Sidebar */}
           <div className="et-sidebar desktop-only">
             <Timer initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
 
-            <button className="et-btn-submit" onClick={() => { 
+            <button className="et-btn-submit" onClick={() => {
               const unanswered = questions.length - answeredCount;
-              const msg = unanswered > 0 
+              const msg = unanswered > 0
                 ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
                 : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
-              showConfirm('Xác nhận nộp bài', msg, () => handleSubmit()); 
+              showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
             }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><polyline points="20 6 9 17 4 12"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><polyline points="20 6 9 17 4 12" /></svg>
               Nộp bài
             </button>
 
@@ -593,8 +593,8 @@ export default function HomePage() {
           <div className="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-sm text-center animate-fadeIn">
             <ResultsView questions={questions} answers={answers} onReset={handleRetry} />
             <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
-              <button 
-                onClick={() => setQuizPhase('results-detail')} 
+              <button
+                onClick={() => setQuizPhase('results-detail')}
                 className="px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md flex items-center gap-2"
               >
                 Xem chi tiết bài thi <ChevronRight className="w-4 h-4" />
@@ -614,14 +614,14 @@ export default function HomePage() {
   if (quizPhase === 'results-detail' && activeExam) {
     let correctCount = 0;
     questions.forEach(q => {
-        const ua = answers[q.id] || '';
-        let ok = false;
-        if (q.type === 'MCQ') ok = ua === q.answer;
-        else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-            const s = typeof ua === 'object' ? ua : {};
-            ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-        } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
-        if (ok) correctCount++;
+      const ua = answers[q.id] || '';
+      let ok = false;
+      if (q.type === 'MCQ') ok = ua === q.answer;
+      else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
+        const s = typeof ua === 'object' ? ua : {};
+        ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
+      } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+      if (ok) correctCount++;
     });
     const pct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
 
@@ -644,7 +644,7 @@ export default function HomePage() {
                   question={q}
                   index={i}
                   selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
-                  onAnswerChange={() => {}}
+                  onAnswerChange={() => { }}
                   showResult
                   disabled
                 />
@@ -658,53 +658,53 @@ export default function HomePage() {
           </div>
 
           <button className="et-fab mobile-only" onClick={() => setIsDrawerOpen(true)}>
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
           </button>
 
           {/* Drawer Overlay for Mobile */}
           <div className={`et-drawer-overlay mobile-only ${isDrawerOpen ? 'open' : ''}`} onClick={() => setIsDrawerOpen(false)} />
-          
+
           {/* Mobile Drawer */}
           <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`}>
-             <div className="flex justify-between items-center mb-4">
-                <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Chi tiết bài làm</div>
-                <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
-                  <X className="w-4 h-4" />
-                </button>
-             </div>
-             
-             {/* Score Summary */}
-             <div className="flex items-center justify-between bg-indigo-50 rounded-xl p-4 mb-5">
-               <div>
-                 <div className="text-2xl font-black text-indigo-600">{correctCount}/{questions.length}</div>
-                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
-               </div>
-               <div className="text-right">
-                 <div className="text-2xl font-black text-indigo-600">{pct}%</div>
-                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
-               </div>
-             </div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Chi tiết bài làm</div>
+              <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-             <div className="et-nav-grid mb-5">
-                {questions.map((q, i) => {
-                  const ua = answers[q.id] || '';
-                  let ok = false;
-                  if (q.type === 'MCQ') ok = ua === q.answer;
-                  else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-                    const s = typeof ua === 'object' ? ua : {};
-                    ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-                  } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
-                  return (
-                    <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
-                      {i + 1}
-                    </button>
-                  );
-                })}
-             </div>
-             <div className="et-nav-legend flex-row justify-center gap-6 mt-0">
-                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
-                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
-             </div>
+            {/* Score Summary */}
+            <div className="flex items-center justify-between bg-indigo-50 rounded-xl p-4 mb-5">
+              <div>
+                <div className="text-2xl font-black text-indigo-600">{correctCount}/{questions.length}</div>
+                <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-black text-indigo-600">{pct}%</div>
+                <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
+              </div>
+            </div>
+
+            <div className="et-nav-grid mb-5">
+              {questions.map((q, i) => {
+                const ua = answers[q.id] || '';
+                let ok = false;
+                if (q.type === 'MCQ') ok = ua === q.answer;
+                else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
+                  const s = typeof ua === 'object' ? ua : {};
+                  ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
+                } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+                return (
+                  <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
+                    {i + 1}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="et-nav-legend flex-row justify-center gap-6 mt-0">
+              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
+              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
+            </div>
           </div>
 
           {/* Results sidebar with nav */}
