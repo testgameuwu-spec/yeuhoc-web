@@ -51,11 +51,9 @@ function renderMathInText(text) {
     });
 
     // 4. Handle inline math $...$
-    // Matches $...$ where content is non-empty and not just digits (to avoid $100 style)
+    // Matches $...$ where content is non-empty
     // Uses negative lookahead to skip $$
     result = result.replace(/(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g, (match, latex) => {
-        // Skip if the content looks like a plain number (currency): $100, $5.99
-        if (/^\d[\d,.]*$/.test(latex.trim())) return match;
         const id = `__MATH_INLINE_${placeholders.length}__`;
         placeholders.push({ id, html: renderKatex(latex.trim(), false) });
         return id;
