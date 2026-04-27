@@ -403,8 +403,8 @@ export default function HomePage() {
              <Clock className="w-4 h-4 text-indigo-600" />
              <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
            </div>
-           <button className="et-btn-outline desktop-only" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause}>
-             <PauseIcon /> Tạm dừng
+           <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause} title="Tạm dừng">
+             <PauseIcon /> <span className="hidden sm:inline">Tạm dừng</span>
            </button>
         </Topbar>
         <div className="et-screen" style={{ position: 'relative' }}>
