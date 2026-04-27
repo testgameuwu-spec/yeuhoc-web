@@ -286,13 +286,13 @@ body {
 }
 
 /* Responsive: collapse sidebar on small screens */
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-width: 950px) and (orientation: landscape) {
   .et-screen { grid-template-columns: 1fr; }
   .et-sidebar { display: none; }
   .desktop-only { display: none !important; }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 769px) and (orientation: portrait), (min-width: 951px) and (orientation: landscape) {
   .mobile-only { display: none !important; }
 }
 
@@ -556,7 +556,7 @@ body {
 }
 
 /* ─── Landscape Mobile (phone rotated) ─── */
-@media (max-width: 900px) and (orientation: landscape) {
+@media (max-width: 950px) and (orientation: landscape) {
   .et-topbar {
     height: 44px;
     padding: 0 14px;
