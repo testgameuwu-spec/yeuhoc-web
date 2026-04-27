@@ -10,7 +10,7 @@ import {
 
 const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
 const EXAM_TYPES = ['THPT', 'HSA', 'TSA', 'Other'];
-const YEARS = [2025, 2024, 2023, 2022, 2021, 2020];
+const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
 const SCORING_PRESETS = {
   'THPT Toán': { mcq: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] },
@@ -98,7 +98,7 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
   const handleDrop = (e, index) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
-    
+
     setQuestions(prev => {
       const newQuestions = [...prev];
       const draggedItem = newQuestions[draggedIndex];
@@ -131,11 +131,10 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
           { key: 'questions', label: `Câu hỏi (${questions.length})`, icon: FileText },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveSection(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeSection === tab.key
-                ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border border-indigo-500/30'
-                : 'text-white/40 hover:text-white/60 border border-transparent'
-            }`}>
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeSection === tab.key
+              ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border border-indigo-500/30'
+              : 'text-white/40 hover:text-white/60 border border-transparent'
+              }`}>
             <tab.icon className="w-4 h-4" />
             {tab.label}
           </button>
@@ -245,11 +244,10 @@ D. Đáp án D
             <div className="flex flex-wrap gap-2">
               {Object.keys(SCORING_PRESETS).map(p => (
                 <button key={p} onClick={() => handlePresetChange(p)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
-                    scoringPreset === p
-                      ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                      : 'bg-white/5 text-white/40 border-white/10 hover:text-white/60'
-                  }`}>
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${scoringPreset === p
+                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                    : 'bg-white/5 text-white/40 border-white/10 hover:text-white/60'
+                    }`}>
                   {p}
                 </button>
               ))}
@@ -346,11 +344,10 @@ D. Đáp án D
         <div className="glass rounded-2xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => setPublished(!published)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
-                published
-                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                  : 'bg-white/5 text-white/40 border-white/10'
-              }`}>
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${published
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                : 'bg-white/5 text-white/40 border-white/10'
+                }`}>
               {published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               {published ? 'Published' : 'Draft'}
             </button>

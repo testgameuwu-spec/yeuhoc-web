@@ -2,12 +2,12 @@
 
 import { Search, X } from 'lucide-react';
 
-const YEARS = [2025, 2024, 2023, 2022, 2021, 2020];
+const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
 const EXAM_TYPES = [
-  { key: 'THPT',  label: 'THPT QG' },
-  { key: 'HSA',   label: 'HSA' },
-  { key: 'TSA',   label: 'TSA' },
+  { key: 'THPT', label: 'THPT QG' },
+  { key: 'HSA', label: 'HSA' },
+  { key: 'TSA', label: 'TSA' },
   { key: 'Other', label: 'Khác' },
 ];
 
