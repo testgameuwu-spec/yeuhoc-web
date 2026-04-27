@@ -39,21 +39,26 @@ const Topbar = ({ activeExam, handleReset, children }) => (
 
 
 // ── Custom UI Modal ──
-const CustomModal = ({ isOpen, type, title, message, onConfirm, onClose }) => {
+const CustomModal = ({ isOpen, type, title, message, onConfirm, onCancel, confirmText = 'Xác nhận', cancelText = 'Hủy', extraBtn = null, onClose }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white rounded-2xl w-[90%] max-w-sm p-6 shadow-xl transform transition-all scale-100">
         <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
         <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 flex-wrap">
+          {extraBtn && (
+            <button onClick={() => { extraBtn.onClick(); onClose(); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+              {extraBtn.text}
+            </button>
+          )}
           {type === 'confirm' && (
-            <button onClick={() => { if (onCancel) onCancel(); onClose(); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
-              Hủy
+            <button onClick={() => { if (onCancel) onCancel(); onClose(); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+              {cancelText}
             </button>
           )}
           <button onClick={() => { if (onConfirm) onConfirm(); onClose(); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md">
-            {type === 'confirm' ? 'Xác nhận' : 'Đóng'}
+            {type === 'confirm' ? confirmText : 'Đóng'}
           </button>
         </div>
       </div>
@@ -84,16 +89,32 @@ export default function HomePage() {
   // Pause & Resume states
   const [isPaused, setIsPaused] = useState(false);
   const [savedSecondsLeft, setSavedSecondsLeft] = useState(null);
+  const [savedExams, setSavedExams] = useState(new Set());
 
-  const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null });
+  const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
-  const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null, onCancel: null });
-  const showConfirm = (title, message, onConfirm, onCancel = null) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm, onCancel });
+  const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null, onCancel: null, extraBtn: null });
+  const showConfirm = (title, message, onConfirm, onCancel = null, confirmText = 'Xác nhận', cancelText = 'Hủy', extraBtn = null) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm, onCancel, confirmText, cancelText, extraBtn });
   const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
 
   const mainRef = useRef(null);
 
   const getProgressKey = (examId) => `yeuhoc_progress_${user?.id}_${examId}`;
+
+  // Read saved exams
+  useEffect(() => {
+    if (user && quizPhase === 'browse') {
+      const keys = Object.keys(localStorage);
+      const saved = new Set();
+      keys.forEach(k => {
+        if (k.startsWith(`yeuhoc_progress_${user.id}_`)) {
+          const examId = k.split('_').pop();
+          saved.add(examId);
+        }
+      });
+      setSavedExams(saved);
+    }
+  }, [user, quizPhase]);
 
   // Load published exams from store
   useEffect(() => {
@@ -180,7 +201,7 @@ export default function HomePage() {
     if (saved && user) {
       showConfirm(
         'Tiếp tục làm bài',
-        'Bạn đang có một phiên làm bài dở dang chưa nộp. Bạn có muốn tiếp tục phiên làm bài đó không?\n\nChọn "Xác nhận" để làm tiếp.\nChọn "Hủy" để làm lại từ đầu.',
+        'Bạn đang có một phiên làm bài dở dang chưa nộp. Bạn có muốn tiếp tục phiên làm bài đó không?',
         () => {
           // Resume
           try {
@@ -201,7 +222,10 @@ export default function HomePage() {
           // Cancel / Fresh start
           localStorage.removeItem(key);
           startFreshQuiz();
-        }
+        },
+        'Làm tiếp',
+        'Làm lại từ đầu',
+        { text: 'Quay lại trang chủ', onClick: () => handleReset() }
       );
     } else {
       startFreshQuiz();
@@ -373,7 +397,11 @@ export default function HomePage() {
     const pct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
-        <Topbar activeExam={activeExam} handleReset={handleReset} />
+        <Topbar activeExam={activeExam} handleReset={handleReset}>
+           <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause}>
+             <PauseIcon /> Tạm dừng
+           </button>
+        </Topbar>
         <div className="et-screen" style={{ position: 'relative' }}>
           
           {isPaused && (
@@ -404,9 +432,6 @@ export default function HomePage() {
                 <div className="et-exam-sub">{activeExam.subject} · {questions.length} câu</div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause}>
-                  <PauseIcon /> Tạm dừng
-                </button>
                 <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={() => { showConfirm('Làm lại từ đầu', 'Toàn bộ câu trả lời hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => handleRetry()); }}>
                   <RotateCcw style={{ width: 13, height: 13 }} /> Làm lại
                 </button>
@@ -593,7 +618,7 @@ export default function HomePage() {
         {allExams.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {allExams.map(exam => (
-              <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} />
+              <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
             ))}
           </div>
         ) : (

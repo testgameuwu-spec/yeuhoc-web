@@ -28,7 +28,7 @@ function QBadge({ label, className }) {
   );
 }
 
-export default function ExamCard({ exam, onStart }) {
+export default function ExamCard({ exam, onStart, isSaved }) {
   const [hov, setHov] = useState(false);
   const sm = SUBJECT_META[exam.subject] || SUBJECT_META['Khác'];
   const tm = TYPE_META[exam.examType]   || TYPE_META['Other'];
@@ -89,14 +89,16 @@ export default function ExamCard({ exam, onStart }) {
         className={`
           flex items-center justify-center gap-2 py-2.5 rounded-xl
           text-sm font-semibold transition-all duration-200 cursor-pointer border-0
-          ${hov
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-            : 'bg-indigo-50 text-indigo-600'
+          ${isSaved 
+            ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            : hov
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+              : 'bg-indigo-50 text-indigo-600'
           }
         `}
       >
-        <Play className="w-3.5 h-3.5 fill-current" />
-        Làm bài ngay
+        {isSaved ? <Clock className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+        {isSaved ? 'Tiếp tục làm bài' : 'Làm bài ngay'}
       </button>
     </div>
   );
