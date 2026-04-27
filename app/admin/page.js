@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { parseQuizText } from '@/lib/parser';
-import { getAllExams, saveExam, deleteExam, togglePublish, seedIfEmpty } from '@/lib/examStore';
+import { getAllExams, saveExam, deleteExam, togglePublish, seedIfEmpty, updateExamsOrder } from '@/lib/examStore';
 import FileUpload from '@/components/FileUpload';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import ExamList from '@/components/admin/ExamList';
@@ -177,6 +177,19 @@ export default function AdminDashboard() {
     await refreshExams();
   };
 
+  const handleUpdateOrder = async (orderedExams) => {
+    try {
+      // Create updates payload: [{id, order_index}]
+      const updates = orderedExams.map((exam, idx) => ({ id: exam.id, order_index: idx }));
+      await updateExamsOrder(updates);
+      await refreshExams();
+      showAlert('Thành công', 'Lưu thứ tự đề thi thành công!');
+    } catch (error) {
+      console.error('Update order error:', error);
+      showAlert('Lỗi', 'Không thể lưu thứ tự: ' + (error.message || JSON.stringify(error)));
+    }
+  };
+
   // Determine what to render in main content
   const renderContent = () => {
     if (activeTab === 'exams') {
@@ -199,6 +212,7 @@ export default function AdminDashboard() {
           onDelete={handleDeleteExam}
           onTogglePublish={handleTogglePublish}
           onCreateNew={handleCreateNew}
+          onUpdateOrder={handleUpdateOrder}
         />
       );
     }
