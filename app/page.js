@@ -145,35 +145,36 @@ export default function HomePage() {
         setLoadingPreviewStats(true);
         const { data, error } = await supabase
           .from('exam_attempts')
-          .select('*, profiles(name, avatar_url)')
+          .select('*, profiles(full_name, avatar_url)')
           .eq('exam_id', activeExam.id)
           .order('score', { ascending: false })
           .order('time_spent', { ascending: true });
         
         if (data) {
-          const totalParticipants = data.length;
-          const totalScore = data.reduce((acc, curr) => acc + curr.score, 0);
+          const highestAttemptsMap = new Map();
+          data.forEach(attempt => {
+            if (!highestAttemptsMap.has(attempt.user_id)) {
+              highestAttemptsMap.set(attempt.user_id, attempt);
+            }
+          });
+          const highestAttempts = Array.from(highestAttemptsMap.values());
+
+          const totalParticipants = highestAttempts.length;
+          const totalScore = highestAttempts.reduce((acc, curr) => acc + curr.score, 0);
           const avgScore = totalParticipants ? (totalScore / totalParticipants).toFixed(2) : 0;
           
-          const sortedScores = [...data].map(d => d.score).sort((a,b) => a - b);
+          const sortedScores = [...highestAttempts].map(d => d.score).sort((a,b) => a - b);
           let medianScore = 0;
           if (totalParticipants > 0) {
             const mid = Math.floor(totalParticipants / 2);
             medianScore = totalParticipants % 2 !== 0 ? sortedScores[mid] : ((sortedScores[mid - 1] + sortedScores[mid]) / 2).toFixed(2);
           }
 
-          const totalTime = data.reduce((acc, curr) => acc + curr.time_spent, 0);
+          const totalTime = highestAttempts.reduce((acc, curr) => acc + curr.time_spent, 0);
           const avgTime = totalParticipants ? Math.floor(totalTime / totalParticipants) : 0;
 
-          const ranges = {
-            '9-10': data.filter(d => d.score > 9 && d.score <= 10).length,
-            '8-9': data.filter(d => d.score > 8 && d.score <= 9).length,
-            '7-8': data.filter(d => d.score > 7 && d.score <= 8).length,
-            '6-7': data.filter(d => d.score >= 6 && d.score <= 7).length,
-          };
-
-          setExamStats({ totalParticipants, avgScore, medianScore, avgTime, ranges });
-          setExamLeaderboard(data.slice(0, 10)); // top 10
+          setExamStats({ totalParticipants, avgScore, medianScore, avgTime });
+          setExamLeaderboard(highestAttempts.slice(0, 10)); // top 10
         }
         setLoadingPreviewStats(false);
       }
@@ -503,23 +504,6 @@ export default function HomePage() {
                             {Math.floor(examStats.avgTime / 60)} <span className="text-sm font-medium text-gray-500">Phút</span> {examStats.avgTime % 60} <span className="text-sm font-medium text-gray-500">Giây</span>
                           </div>
                         </div>
-                        {/* Hàng 2 */}
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">9</span> đến <span className="text-indigo-600 font-bold">10</span></div>
-                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['9-10']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['9-10']/examStats.totalParticipants*100) : 0}%)</span></div>
-                        </div>
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">8</span> đến <span className="text-indigo-600 font-bold">9</span></div>
-                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['8-9']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['8-9']/examStats.totalParticipants*100) : 0}%)</span></div>
-                        </div>
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">7</span> đến <span className="text-indigo-600 font-bold">8</span></div>
-                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['7-8']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['7-8']/examStats.totalParticipants*100) : 0}%)</span></div>
-                        </div>
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Thí sinh đạt điểm trên <span className="text-indigo-600 font-bold">6</span> đến <span className="text-indigo-600 font-bold">7</span></div>
-                          <div className="text-xl font-black text-indigo-900">{examStats.ranges['6-7']} thí sinh <span className="text-xs font-normal text-gray-400">({examStats.totalParticipants ? Math.round(examStats.ranges['6-7']/examStats.totalParticipants*100) : 0}%)</span></div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -558,15 +542,15 @@ export default function HomePage() {
                                   </td>
                                   <td className="px-4 py-3">
                                     {attempt.profiles?.avatar_url ? (
-                                      <img src={`${supabase.storage.from('avatars').getPublicUrl(attempt.profiles.avatar_url).data.publicUrl}`} alt="Avatar" className="w-8 h-8 rounded-full mx-auto object-cover ring-2 ring-gray-100" />
+                                      <img src={attempt.profiles.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full mx-auto object-cover ring-2 ring-gray-100" />
                                     ) : (
                                       <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xs">
-                                        {(attempt.profiles?.name || 'U').charAt(0).toUpperCase()}
+                                        {(attempt.profiles?.full_name || 'U').charAt(0).toUpperCase()}
                                       </div>
                                     )}
                                   </td>
                                   <td className={`px-4 py-3 font-semibold ${index < 3 ? 'text-indigo-600' : 'text-gray-700'}`}>
-                                    {attempt.profiles?.name || 'Học sinh ẩn danh'}
+                                    {attempt.profiles?.full_name || 'Học sinh ẩn danh'}
                                   </td>
                                   <td className={`px-4 py-3 text-center font-bold ${index < 3 ? 'text-red-500' : 'text-gray-900'}`}>
                                     {attempt.score.toFixed(2)}

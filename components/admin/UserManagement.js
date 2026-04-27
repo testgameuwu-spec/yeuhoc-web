@@ -127,7 +127,7 @@ export default function UserManagement() {
           role: u.role,
           createdAt: new Date(u.created_at).toLocaleDateString('vi-VN'),
           attempts: attemptCounts[u.id] || 0,
-          avatar: null,
+          avatar: u.avatar_url,
           is_banned: u.is_banned || false
         })));
       }

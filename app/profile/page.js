@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activeTab, setActiveTab] = useState('info'); // info | history
 
 
@@ -168,6 +169,50 @@ export default function ProfilePage() {
       alert("Lỗi khi tải chi tiết đề thi.");
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        setMessage({ type: 'error', text: 'Vui lòng chọn file hình ảnh hợp lệ.' });
+        return;
+      }
+
+      if (file.size > 2 * 1024 * 1024) {
+        setMessage({ type: 'error', text: 'Kích thước ảnh tối đa là 2MB.' });
+        return;
+      }
+
+      setUploadingAvatar(true);
+      setMessage({ type: '', text: '' });
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setAvatarUrl(publicUrl);
+      setMessage({ type: 'success', text: 'Đã tải ảnh lên! Hãy nhấn Cập nhật để lưu lại.' });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      setMessage({ type: 'error', text: 'Lỗi tải ảnh lên: ' + error.message });
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -416,30 +461,44 @@ export default function ProfilePage() {
                   <p className="text-[11px] text-gray-400 mt-1 text-right">{bio.length}/200</p>
                 </div>
 
-                {/* Avatar URL */}
+                {/* Avatar Upload */}
                 <div>
-                  <label className="auth-label">URL ảnh đại diện</label>
-                  <div className="auth-input-wrap">
-                    <Camera className="w-4 h-4 text-gray-400" />
-                    <input
-                      type="url"
-                      value={avatarUrl}
-                      onChange={(e) => setAvatarUrl(e.target.value)}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="auth-input"
-                    />
-                  </div>
-                  {avatarUrl && (
-                    <div className="mt-2 flex items-center gap-3">
-                      <img
-                        src={avatarUrl}
-                        alt="Preview"
-                        className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                      <span className="text-xs text-gray-400">Xem trước avatar</span>
+                  <label className="auth-label">Ảnh đại diện</label>
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="relative flex-shrink-0">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt="Preview"
+                          className="w-16 h-16 rounded-full object-cover border border-gray-200 shadow-sm"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xl font-bold border border-gray-200 shadow-sm">
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {uploadingAvatar && (
+                        <div className="absolute inset-0 bg-white/60 rounded-full flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <div className="flex-1">
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2">
+                        <Camera className="w-4 h-4 text-gray-500" />
+                        <span>Tải ảnh mới lên</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={handleAvatarUpload}
+                          disabled={uploadingAvatar}
+                        />
+                      </label>
+                      <p className="text-[11px] text-gray-400 mt-1.5">PNG, JPG tối đa 2MB. Tỉ lệ 1:1.</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Save Button */}
