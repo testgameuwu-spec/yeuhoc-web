@@ -2,13 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-export default function Timer({ initialMinutes = 30, onTimeUp, isRunning = true }) {
-    const [secondsLeft, setSecondsLeft] = useState(initialMinutes * 60);
+export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true }) {
+    const [secondsLeft, setSecondsLeft] = useState(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
     const intervalRef = useRef(null);
 
     useEffect(() => {
-        setSecondsLeft(initialMinutes * 60);
-    }, [initialMinutes]);
+        setSecondsLeft(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
+    }, [initialMinutes, initialSeconds]);
+
+    useEffect(() => {
+        if (onTick) onTick(secondsLeft);
+    }, [secondsLeft]);
 
     useEffect(() => {
         if (!isRunning) { clearInterval(intervalRef.current); return; }

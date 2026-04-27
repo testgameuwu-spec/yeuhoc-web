@@ -48,7 +48,7 @@ const CustomModal = ({ isOpen, type, title, message, onConfirm, onClose }) => {
         <p className="text-sm text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
         <div className="flex justify-end gap-3">
           {type === 'confirm' && (
-            <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+            <button onClick={() => { if (onCancel) onCancel(); onClose(); }} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
               Hủy
             </button>
           )}
@@ -60,6 +60,10 @@ const CustomModal = ({ isOpen, type, title, message, onConfirm, onClose }) => {
     </div>
   );
 };
+
+// SVG Icons for Pause and Play
+const PauseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
+const PlayIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
 
 export default function HomePage() {
 
@@ -76,13 +80,20 @@ export default function HomePage() {
   const [user, setUser] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [startTime, setStartTime] = useState(null);
-  const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
+  
+  // Pause & Resume states
+  const [isPaused, setIsPaused] = useState(false);
+  const [savedSecondsLeft, setSavedSecondsLeft] = useState(null);
 
-  const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null });
-  const showConfirm = (title, message, onConfirm) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm });
+  const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null });
+
+  const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null, onCancel: null });
+  const showConfirm = (title, message, onConfirm, onCancel = null) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm, onCancel });
   const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
 
   const mainRef = useRef(null);
+
+  const getProgressKey = (examId) => `yeuhoc_progress_${user?.id}_${examId}`;
 
   // Load published exams from store
   useEffect(() => {
@@ -142,11 +153,87 @@ export default function HomePage() {
 
   const handleStartExam = (exam) => {
     if (!exam.questions || exam.questions.length === 0) { showAlert('Thông báo', 'Đề thi này chưa có câu hỏi.'); return; }
-    setActiveExam(exam); setAnswers({}); setCurrentQ(0); setBookmarks(new Set());
+    setActiveExam(exam); 
+    setAnswers({}); 
+    setCurrentQ(0); 
+    setBookmarks(new Set());
+    setSavedSecondsLeft(null);
+    setIsPaused(false);
     setQuizPhase('preview');
   };
 
-  const handleBeginQuiz = () => { setQuizPhase('quiz'); setTimerRunning(true); setStartTime(Date.now()); };
+  const startFreshQuiz = () => {
+    setAnswers({});
+    setBookmarks(new Set());
+    setCurrentQ(0);
+    setSavedSecondsLeft(null);
+    setIsPaused(false);
+    setQuizPhase('quiz');
+    setTimerRunning(true);
+    setStartTime(Date.now());
+  };
+
+  const handleBeginQuiz = () => {
+    const key = getProgressKey(activeExam.id);
+    const saved = localStorage.getItem(key);
+
+    if (saved && user) {
+      showConfirm(
+        'Tiếp tục làm bài',
+        'Bạn đang có một phiên làm bài dở dang chưa nộp. Bạn có muốn tiếp tục phiên làm bài đó không?\n\nChọn "Xác nhận" để làm tiếp.\nChọn "Hủy" để làm lại từ đầu.',
+        () => {
+          // Resume
+          try {
+            const data = JSON.parse(saved);
+            setAnswers(data.answers || {});
+            setBookmarks(new Set(data.bookmarks || []));
+            setCurrentQ(data.currentQ || 0);
+            setSavedSecondsLeft(data.secondsLeft);
+            setIsPaused(false);
+            setQuizPhase('quiz');
+            setTimerRunning(true);
+            setStartTime(Date.now());
+          } catch(e) {
+            startFreshQuiz();
+          }
+        },
+        () => {
+          // Cancel / Fresh start
+          localStorage.removeItem(key);
+          startFreshQuiz();
+        }
+      );
+    } else {
+      startFreshQuiz();
+    }
+  };
+
+  const handleTick = (sec) => {
+    setSavedSecondsLeft(sec);
+  };
+
+  const handlePause = () => {
+    setIsPaused(true);
+    setTimerRunning(false);
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    setTimerRunning(true);
+  };
+
+  // Auto-save progress
+  useEffect(() => {
+    if (quizPhase === 'quiz' && activeExam && user && !isPaused && savedSecondsLeft !== null) {
+      const data = {
+        answers,
+        bookmarks: Array.from(bookmarks),
+        secondsLeft: savedSecondsLeft,
+        currentQ,
+      };
+      localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(data));
+    }
+  }, [answers, bookmarks, savedSecondsLeft, currentQ, quizPhase, activeExam, user, isPaused]);
 
   const handleAnswerChange = (questionId, answer) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
@@ -157,7 +244,10 @@ export default function HomePage() {
     setQuizPhase('results'); 
 
     if (user && activeExam) {
-      const timeSpentSecs = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+      // Clear auto-saved progress
+      localStorage.removeItem(getProgressKey(activeExam.id));
+
+      const timeSpentSecs = savedSecondsLeft !== null ? (activeExam.duration * 60 - savedSecondsLeft) : (startTime ? Math.floor((Date.now() - startTime) / 1000) : 0);
       let correctCount = 0;
       
       activeExam.questions.forEach(q => {
@@ -192,8 +282,11 @@ export default function HomePage() {
   };
   
   const handleTimeUp = () => { handleSubmit(); };
-  const handleReset = () => { setActiveExam(null); setQuizPhase('browse'); setAnswers({}); setTimerRunning(false); setCurrentQ(0); setStartTime(null); };
-  const handleRetry = () => { setAnswers({}); setCurrentQ(0); setQuizPhase('quiz'); setTimerRunning(true); setStartTime(Date.now()); };
+  const handleReset = () => { setActiveExam(null); setQuizPhase('browse'); setAnswers({}); setTimerRunning(false); setCurrentQ(0); setStartTime(null); setIsPaused(false); };
+  const handleRetry = () => { 
+    if (activeExam && user) localStorage.removeItem(getProgressKey(activeExam.id));
+    startFreshQuiz();
+  };
 
   const scrollToQ = (i) => {
     setCurrentQ(i);
@@ -281,7 +374,28 @@ export default function HomePage() {
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
-        <div className="et-screen">
+        <div className="et-screen" style={{ position: 'relative' }}>
+          
+          {isPaused && (
+            <div style={{
+               position: 'absolute', inset: 0, zIndex: 100,
+               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+               background: 'rgba(255,255,255,0.6)',
+               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+               borderRadius: 16
+            }}>
+               <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16, color: 'var(--et-blue)' }}>Đã tạm dừng</h2>
+               <p style={{ color: 'var(--et-gray-600)', marginBottom: 32, fontSize: 15 }}>Tiến độ làm bài và thời gian của bạn đã được lưu lại.</p>
+               <button onClick={handleResume} style={{
+                  padding: '12px 32px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: 'var(--et-blue)', color: '#fff', fontSize: 15, fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)', display: 'flex', alignItems: 'center', gap: 8
+               }}>
+                  <PlayIcon /> Tiếp tục làm bài
+               </button>
+            </div>
+          )}
+
           {/* Main area */}
           <div className="et-main" ref={mainRef}>
             <div className="et-exam-hd">
@@ -289,9 +403,14 @@ export default function HomePage() {
                 <div className="et-exam-title">{activeExam.title}</div>
                 <div className="et-exam-sub">{activeExam.subject} · {questions.length} câu</div>
               </div>
-              <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={() => { showConfirm('Làm lại từ đầu', 'Toàn bộ câu trả lời hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => handleRetry()); }}>
-                <RotateCcw style={{ width: 13, height: 13 }} /> Làm lại
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause}>
+                  <PauseIcon /> Tạm dừng
+                </button>
+                <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={() => { showConfirm('Làm lại từ đầu', 'Toàn bộ câu trả lời hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => handleRetry()); }}>
+                  <RotateCcw style={{ width: 13, height: 13 }} /> Làm lại
+                </button>
+              </div>
             </div>
 
             {questions.map((q, i) => (
@@ -315,7 +434,7 @@ export default function HomePage() {
 
           {/* Sidebar */}
           <div className="et-sidebar">
-            <Timer initialMinutes={activeExam.duration || 90} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+            <Timer initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
 
             <button className="et-btn-submit" onClick={() => { 
               const unanswered = questions.length - answeredCount;
