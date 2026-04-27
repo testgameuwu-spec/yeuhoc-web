@@ -134,6 +134,22 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
     }
   };
 
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          updateMultiple({ imageFile: file, image: URL.createObjectURL(file) });
+          break;
+        }
+      }
+    }
+  };
+
   return (
     <div 
       className={`rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden transition-all hover:border-white/15 ${isDragged ? 'opacity-50 scale-[0.98] shadow-lg shadow-indigo-500/20 z-10 relative' : ''}`}
@@ -152,6 +168,7 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
         setDraggable(false);
         if (onDragEnd) onDragEnd(e);
       }}
+      onPaste={handlePaste}
     >
       {/* ── Header ── */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/8 cursor-pointer select-none"
