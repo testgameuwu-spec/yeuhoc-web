@@ -579,7 +579,7 @@ export default function HomePage() {
                 showConfirm(
                   '🔒 Chấp nhận chế độ toàn màn hình',
                   'Bài thi sẽ chạy ở chế độ toàn màn hình.\n\n⚠️ Bạn KHÔNG được chuyển tab hoặc thoát fullscreen.\nSau 5 lần vi phạm, hệ thống sẽ TỰ ĐỘNG NỘP BÀI.\n\nBạn có đồng ý và sẵn sàng bắt đầu?',
-                  () => handleBeginQuiz(),
+                  () => setTimeout(() => handleBeginQuiz(), 50),
                   null,
                   'Đồng ý & Bắt đầu',
                   'Chưa sẵn sàng'
