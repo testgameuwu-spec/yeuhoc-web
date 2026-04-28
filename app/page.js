@@ -462,7 +462,22 @@ export default function HomePage() {
   };
 
   const handleTimeUp = () => { handleSubmit(); };
-  const handleReset = () => { exitFullscreen(); setActiveExam(null); setQuizPhase('browse'); setAnswers({}); setTimerRunning(false); setCurrentQ(0); setStartTime(null); setIsPaused(false); setViolationCount(0); setShowViolationWarning(false); isSubmittingRef.current = false; };
+  const handleReset = () => {
+    // Suppress anti-cheat listener before exiting fullscreen
+    isSubmittingRef.current = true;
+    exitFullscreen();
+    setActiveExam(null);
+    setQuizPhase('browse');
+    setAnswers({});
+    setTimerRunning(false);
+    setCurrentQ(0);
+    setStartTime(null);
+    setIsPaused(false);
+    setViolationCount(0);
+    setShowViolationWarning(false);
+    // Reset ref after fullscreenchange event has fired
+    setTimeout(() => { isSubmittingRef.current = false; }, 300);
+  };
   const handleRetry = () => {
     if (activeExam && user) localStorage.removeItem(getProgressKey(activeExam.id));
     startFreshQuiz();
