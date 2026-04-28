@@ -257,20 +257,23 @@ export default function HomePage() {
   };
 
   // ── Fullscreen helpers ──
+  const canFullscreen = typeof document !== 'undefined' && !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+
   const requestFullscreen = useCallback(() => {
+    if (!canFullscreen) return;
     const el = document.documentElement;
     if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    else if (el.msRequestFullscreen) el.msRequestFullscreen();
-  }, []);
+  }, [canFullscreen]);
 
   const exitFullscreen = useCallback(() => {
+    if (!canFullscreen) return;
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     } else if (document.webkitFullscreenElement) {
       document.webkitExitFullscreen?.();
     }
-  }, []);
+  }, [canFullscreen]);
 
   const startFreshQuiz = () => {
     setAnswers({});
@@ -329,56 +332,52 @@ export default function HomePage() {
     }
   };
 
-  // ── Fullscreen anti-cheat: detect exit & tab switch ──
+  // ── Anti-cheat: detect fullscreen exit (desktop) & tab switch (all devices) ──
   useEffect(() => {
     if (quizPhase !== 'quiz') return;
 
+    const addViolation = () => {
+      setViolationCount(prev => {
+        const next = prev + 1;
+        if (next >= MAX_VIOLATIONS) {
+          showAlert('⛔ Tự động nộp bài', `Bạn đã vi phạm ${MAX_VIOLATIONS} lần. Hệ thống tự động nộp bài của bạn.`);
+          setTimeout(() => handleSubmit(), 100);
+          return next;
+        }
+        setShowViolationWarning(true);
+        return next;
+      });
+    };
+
     const handleFullscreenChange = () => {
       const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      if (!isFS && quizPhase === 'quiz' && !isSubmittingRef.current) {
-        setViolationCount(prev => {
-          const next = prev + 1;
-          if (next >= MAX_VIOLATIONS) {
-            // Auto-submit after max violations
-            showAlert('⛔ Tự động nộp bài', `Bạn đã vi phạm ${MAX_VIOLATIONS} lần. Hệ thống tự động nộp bài của bạn.`);
-            setTimeout(() => handleSubmit(), 100);
-            return next;
-          }
-          setShowViolationWarning(true);
-          return next;
-        });
-      }
+      if (!isFS && !isSubmittingRef.current) addViolation();
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden && quizPhase === 'quiz' && !isSubmittingRef.current) {
-        setViolationCount(prev => {
-          const next = prev + 1;
-          if (next >= MAX_VIOLATIONS) {
-            showAlert('⛔ Tự động nộp bài', `Bạn đã vi phạm ${MAX_VIOLATIONS} lần. Hệ thống tự động nộp bài của bạn.`);
-            setTimeout(() => handleSubmit(), 100);
-            return next;
-          }
-          setShowViolationWarning(true);
-          return next;
-        });
-      }
+      if (document.hidden && !isSubmittingRef.current) addViolation();
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    // Fullscreen change only on desktop (where API is supported)
+    if (canFullscreen) {
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    }
+    // Visibility change works on ALL devices (mobile + desktop)
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      if (canFullscreen) {
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [quizPhase]);
+  }, [quizPhase, canFullscreen]);
 
   const handleDismissViolationWarning = () => {
     setShowViolationWarning(false);
-    requestFullscreen();
+    if (canFullscreen) requestFullscreen();
   };
 
   const handleTick = (sec) => {
@@ -567,8 +566,8 @@ export default function HomePage() {
                 <span style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>Quy định phòng thi</span>
               </div>
               <ul style={{ fontSize: 12, color: '#78350f', lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
-                <li>Bài thi sẽ chạy ở chế độ <b>toàn màn hình (fullscreen)</b></li>
-                <li>Không được chuyển tab hoặc thoát fullscreen trong lúc thi</li>
+                {canFullscreen && <li>Bài thi sẽ chạy ở chế độ <b>toàn màn hình (fullscreen)</b></li>}
+                <li>Không được <b>chuyển tab</b> hoặc rời khỏi trang thi trong lúc thi</li>
                 <li>Mỗi lần vi phạm sẽ bị <b>cảnh cáo và ghi nhận</b></li>
                 <li>Sau <b>5 lần vi phạm</b>, hệ thống sẽ <b>tự động nộp bài</b></li>
               </ul>
@@ -793,7 +792,7 @@ export default function HomePage() {
               onMouseOver={e => e.target.style.background = '#b91c1c'}
               onMouseOut={e => e.target.style.background = '#dc2626'}
               >
-                🔒 Quay lại làm bài (Toàn màn hình)
+                🔒 {canFullscreen ? 'Quay lại làm bài (Toàn màn hình)' : 'Quay lại làm bài'}
               </button>
             </div>
           )}
