@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, User, ArrowLeft, ChevronRight, RotateCcw, Clock, X, BarChart2, Award, Calendar } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -108,6 +108,12 @@ export default function HomePage() {
   const [examLeaderboard, setExamLeaderboard] = useState([]);
   const [loadingPreviewStats, setLoadingPreviewStats] = useState(false);
 
+  // Anti-cheat fullscreen states
+  const [violationCount, setViolationCount] = useState(0);
+  const [showViolationWarning, setShowViolationWarning] = useState(false);
+  const MAX_VIOLATIONS = 5;
+  const isSubmittingRef = useRef(false);
+
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
   const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null, onCancel: null, extraBtn: null });
@@ -118,14 +124,15 @@ export default function HomePage() {
 
   const getProgressKey = (examId) => `yeuhoc_progress_${user?.id}_${examId}`;
 
-  // Read saved exams
+  // Read saved exams (fixed: extract examId properly for UUIDs)
   useEffect(() => {
     if (user && quizPhase === 'browse') {
       const keys = Object.keys(localStorage);
       const saved = new Set();
+      const prefix = `yeuhoc_progress_${user.id}_`;
       keys.forEach(k => {
-        if (k.startsWith(`yeuhoc_progress_${user.id}_`)) {
-          const examId = k.split('_').pop();
+        if (k.startsWith(prefix)) {
+          const examId = k.substring(prefix.length);
           saved.add(examId);
         }
       });
@@ -249,15 +256,35 @@ export default function HomePage() {
     setQuizPhase('preview');
   };
 
+  // ── Fullscreen helpers ──
+  const requestFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.msRequestFullscreen) el.msRequestFullscreen();
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.webkitFullscreenElement) {
+      document.webkitExitFullscreen?.();
+    }
+  }, []);
+
   const startFreshQuiz = () => {
     setAnswers({});
     setBookmarks(new Set());
     setCurrentQ(0);
     setSavedSecondsLeft(null);
     setIsPaused(false);
+    setViolationCount(0);
+    setShowViolationWarning(false);
+    isSubmittingRef.current = false;
     setQuizPhase('quiz');
     setTimerRunning(true);
     setStartTime(Date.now());
+    requestFullscreen();
   };
 
   const handleBeginQuiz = () => {
@@ -277,9 +304,13 @@ export default function HomePage() {
             setCurrentQ(data.currentQ || 0);
             setSavedSecondsLeft(data.secondsLeft);
             setIsPaused(false);
+            setViolationCount(0);
+            setShowViolationWarning(false);
+            isSubmittingRef.current = false;
             setQuizPhase('quiz');
             setTimerRunning(true);
             setStartTime(Date.now());
+            requestFullscreen();
           } catch (e) {
             startFreshQuiz();
           }
@@ -296,6 +327,58 @@ export default function HomePage() {
     } else {
       startFreshQuiz();
     }
+  };
+
+  // ── Fullscreen anti-cheat: detect exit & tab switch ──
+  useEffect(() => {
+    if (quizPhase !== 'quiz') return;
+
+    const handleFullscreenChange = () => {
+      const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (!isFS && quizPhase === 'quiz' && !isSubmittingRef.current) {
+        setViolationCount(prev => {
+          const next = prev + 1;
+          if (next >= MAX_VIOLATIONS) {
+            // Auto-submit after max violations
+            showAlert('⛔ Tự động nộp bài', `Bạn đã vi phạm ${MAX_VIOLATIONS} lần. Hệ thống tự động nộp bài của bạn.`);
+            setTimeout(() => handleSubmit(), 100);
+            return next;
+          }
+          setShowViolationWarning(true);
+          return next;
+        });
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && quizPhase === 'quiz' && !isSubmittingRef.current) {
+        setViolationCount(prev => {
+          const next = prev + 1;
+          if (next >= MAX_VIOLATIONS) {
+            showAlert('⛔ Tự động nộp bài', `Bạn đã vi phạm ${MAX_VIOLATIONS} lần. Hệ thống tự động nộp bài của bạn.`);
+            setTimeout(() => handleSubmit(), 100);
+            return next;
+          }
+          setShowViolationWarning(true);
+          return next;
+        });
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [quizPhase]);
+
+  const handleDismissViolationWarning = () => {
+    setShowViolationWarning(false);
+    requestFullscreen();
   };
 
   const handleTick = (sec) => {
@@ -330,8 +413,14 @@ export default function HomePage() {
   };
 
   const handleSubmit = async () => {
+    // Guard against double-submit
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     setTimerRunning(false);
+    setShowViolationWarning(false);
     setQuizPhase('results');
+    exitFullscreen();
 
     if (user && activeExam) {
       // Clear auto-saved progress
@@ -362,6 +451,7 @@ export default function HomePage() {
         total_questions: activeExam.questions.length,
         time_spent: timeSpentSecs,
         user_answers: answers,
+        violation_count: violationCount,
       });
 
       if (error) {
@@ -372,7 +462,7 @@ export default function HomePage() {
   };
 
   const handleTimeUp = () => { handleSubmit(); };
-  const handleReset = () => { setActiveExam(null); setQuizPhase('browse'); setAnswers({}); setTimerRunning(false); setCurrentQ(0); setStartTime(null); setIsPaused(false); };
+  const handleReset = () => { exitFullscreen(); setActiveExam(null); setQuizPhase('browse'); setAnswers({}); setTimerRunning(false); setCurrentQ(0); setStartTime(null); setIsPaused(false); setViolationCount(0); setShowViolationWarning(false); isSubmittingRef.current = false; };
   const handleRetry = () => {
     if (activeExam && user) localStorage.removeItem(getProgressKey(activeExam.id));
     startFreshQuiz();
@@ -447,11 +537,39 @@ export default function HomePage() {
               {activeExam.examType && <span className="et-tag">{activeExam.examType} · {activeExam.year}</span>}
             </div>
             <h1 className="text-xl sm:text-2xl font-bold mb-2 text-gray-800">{activeExam.title}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mb-6">
+            <p className="text-xs sm:text-sm text-gray-500 mb-4">
               Nhấn "Bắt đầu" để vào làm bài. Thời gian sẽ được tính ngay khi bắt đầu.
             </p>
+
+            {/* Fullscreen rules notice */}
+            <div style={{
+              background: '#fefce8', border: '1px solid #fef08a',
+              borderRadius: 12, padding: '14px 20px', marginBottom: 20,
+              textAlign: 'left', maxWidth: 480, margin: '0 auto 20px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 18 }}>🔒</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>Quy định phòng thi</span>
+              </div>
+              <ul style={{ fontSize: 12, color: '#78350f', lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
+                <li>Bài thi sẽ chạy ở chế độ <b>toàn màn hình (fullscreen)</b></li>
+                <li>Không được chuyển tab hoặc thoát fullscreen trong lúc thi</li>
+                <li>Mỗi lần vi phạm sẽ bị <b>cảnh cáo và ghi nhận</b></li>
+                <li>Sau <b>5 lần vi phạm</b>, hệ thống sẽ <b>tự động nộp bài</b></li>
+              </ul>
+            </div>
+
             <button
-              onClick={handleBeginQuiz}
+              onClick={() => {
+                showConfirm(
+                  '🔒 Chấp nhận chế độ toàn màn hình',
+                  'Bài thi sẽ chạy ở chế độ toàn màn hình.\n\n⚠️ Bạn KHÔNG được chuyển tab hoặc thoát fullscreen.\nSau 5 lần vi phạm, hệ thống sẽ TỰ ĐỘNG NỘP BÀI.\n\nBạn có đồng ý và sẵn sàng bắt đầu?',
+                  () => handleBeginQuiz(),
+                  null,
+                  'Đồng ý & Bắt đầu',
+                  'Chưa sẵn sàng'
+                );
+              }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '12px 32px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -595,6 +713,16 @@ export default function HomePage() {
           <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause} title="Tạm dừng">
             <PauseIcon /> <span className="hidden sm:inline">Tạm dừng</span>
           </button>
+          {violationCount > 0 && (
+            <div title={`Vi phạm: ${violationCount}/${MAX_VIOLATIONS}`} style={{
+              background: violationCount >= 3 ? '#ef4444' : '#f59e0b',
+              color: '#fff', fontSize: 10, fontWeight: 800,
+              padding: '3px 8px', borderRadius: 20,
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              ⚠ {violationCount}/{MAX_VIOLATIONS}
+            </div>
+          )}
         </Topbar>
         <div className={`et-screen ${isSidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ position: 'relative' }}>
 
@@ -618,6 +746,48 @@ export default function HomePage() {
                 boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)', display: 'flex', alignItems: 'center', gap: 8
               }}>
                 <PlayIcon /> Tiếp tục làm bài
+              </button>
+            </div>
+          )}
+
+          {/* Violation Warning Overlay */}
+          {showViolationWarning && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 200,
+              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+              background: 'rgba(220, 38, 38, 0.08)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 16, padding: 24,
+            }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+              <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: '#dc2626', textAlign: 'center' }}>
+                Cảnh báo vi phạm!
+              </h2>
+              <p style={{ color: '#991b1b', marginBottom: 8, fontSize: 15, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
+                Bạn đã thoát khỏi chế độ toàn màn hình hoặc chuyển tab.
+                Đây là hành vi không được phép trong khi thi.
+              </p>
+              <div style={{
+                background: violationCount >= 4 ? '#fef2f2' : '#fefce8',
+                border: `1px solid ${violationCount >= 4 ? '#fecaca' : '#fef08a'}`,
+                borderRadius: 12, padding: '12px 20px', marginBottom: 24,
+                fontSize: 14, fontWeight: 700, textAlign: 'center',
+                color: violationCount >= 4 ? '#dc2626' : '#92400e',
+              }}>
+                Lần vi phạm: <span style={{ fontSize: 20 }}>{violationCount}</span> / {MAX_VIOLATIONS}
+                {violationCount >= 4 && <div style={{ fontSize: 12, fontWeight: 500, marginTop: 4 }}>⚠ Lần vi phạm tiếp theo sẽ tự động nộp bài!</div>}
+              </div>
+              <button onClick={handleDismissViolationWarning} style={{
+                padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: '#dc2626', color: '#fff', fontSize: 15, fontWeight: 700,
+                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)',
+                display: 'flex', alignItems: 'center', gap: 8,
+                transition: 'background 0.2s',
+              }}
+              onMouseOver={e => e.target.style.background = '#b91c1c'}
+              onMouseOut={e => e.target.style.background = '#dc2626'}
+              >
+                🔒 Quay lại làm bài (Toàn màn hình)
               </button>
             </div>
           )}

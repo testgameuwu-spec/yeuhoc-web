@@ -236,6 +236,32 @@ export default function UserManagement() {
     setLoadingDetails(false);
   };
 
+  const handleDeleteAttempt = (attemptId) => {
+    showConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa lượt thi này? Thao tác không thể hoàn tác!', async () => {
+      const { error } = await supabase.from('exam_attempts').delete().eq('id', attemptId);
+      if (error) {
+        showAlert('Lỗi', 'Không thể xóa: ' + error.message + '\n\n(Kiểm tra RLS Policy: Admin cần quyền DELETE trên bảng exam_attempts)');
+      } else {
+        setUserAttempts(prev => prev.filter(a => a.id !== attemptId));
+        fetchUsers(false); // Cập nhật lại số lượt thi trên danh sách user
+        showAlert('Thành công', 'Đã xóa lượt thi thành công!');
+      }
+    });
+  };
+
+  const handleDeleteAllAttempts = (userId) => {
+    showConfirm('Xóa toàn bộ lịch sử', `Bạn có chắc chắn muốn xóa TẤT CẢ ${userAttempts.length} lượt thi của học sinh này?\n\nThao tác này không thể hoàn tác!`, async () => {
+      const { error } = await supabase.from('exam_attempts').delete().eq('user_id', userId);
+      if (error) {
+        showAlert('Lỗi', 'Không thể xóa: ' + error.message + '\n\n(Kiểm tra RLS Policy: Admin cần quyền DELETE trên bảng exam_attempts)');
+      } else {
+        setUserAttempts([]);
+        fetchUsers(false); // Cập nhật lại số lượt thi trên danh sách user
+        showAlert('Thành công', 'Đã xóa toàn bộ lịch sử làm bài!');
+      }
+    });
+  };
+
   const enrichedUsers = users;
 
   const filtered = enrichedUsers
@@ -452,9 +478,19 @@ export default function UserManagement() {
                 <h3 className="text-lg font-bold text-white">Lịch sử làm bài</h3>
                 <p className="text-sm text-white/40">Học sinh: {historyUser.name} ({historyUser.email})</p>
               </div>
-              <button onClick={() => setHistoryUser(null)} className="p-2 rounded-xl hover:bg-white/10 text-white/40 hover:text-white transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {userAttempts.length > 0 && !selectedAttempt && (
+                  <button
+                    onClick={() => handleDeleteAllAttempts(historyUser.id)}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Xóa tất cả
+                  </button>
+                )}
+                <button onClick={() => setHistoryUser(null)} className="p-2 rounded-xl hover:bg-white/10 text-white/40 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-6">
@@ -472,10 +508,15 @@ export default function UserManagement() {
                     <div className="space-y-6">
                       <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-6">
                         <h4 className="font-bold text-white mb-2">{attemptDetails.exam.title}</h4>
-                        <div className="flex items-center gap-4 text-sm text-white/60">
+                        <div className="flex items-center gap-4 text-sm text-white/60 flex-wrap">
                           <span>Điểm: <span className="font-bold text-emerald-400">{selectedAttempt.score?.toFixed(1)}</span></span>
                           <span>Đúng: <span className="font-bold text-white/90">{selectedAttempt.correct_answers}/{selectedAttempt.total_questions}</span></span>
                           <span>Thời gian: {Math.floor(selectedAttempt.time_spent / 60)}p {selectedAttempt.time_spent % 60}s</span>
+                          {(selectedAttempt.violation_count > 0) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                              ⚠ Vi phạm: {selectedAttempt.violation_count}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {attemptDetails.exam.questions.map((q, i) => (
@@ -527,11 +568,29 @@ export default function UserManagement() {
                           <p className="text-xs text-white/30 mb-0.5">Thời gian</p>
                           <p className="font-bold text-white/90">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</p>
                         </div>
+                        {(attempt.violation_count > 0) && (
+                          <>
+                            <div className="w-px h-8 bg-white/10"></div>
+                            <div className="text-center" title={`${attempt.violation_count} lần vi phạm (thoát fullscreen/chuyển tab)`}>
+                              <p className="text-xs text-white/30 mb-0.5">Vi phạm</p>
+                              <p className={`font-bold ${attempt.violation_count >= 5 ? 'text-red-400' : attempt.violation_count >= 3 ? 'text-amber-400' : 'text-yellow-400'}`}>
+                                ⚠ {attempt.violation_count}
+                              </p>
+                            </div>
+                          </>
+                        )}
                         <button
                           onClick={() => handleViewAttemptDetails(attempt)}
                           className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors flex items-center gap-1"
                         >
                           Chi tiết <ChevronRight className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAttempt(attempt.id)}
+                          title="Xóa lượt thi này"
+                          className="ml-1 p-1.5 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
