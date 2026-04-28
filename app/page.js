@@ -575,16 +575,7 @@ export default function HomePage() {
             </div>
 
             <button
-              onClick={() => {
-                showConfirm(
-                  '🔒 Chấp nhận chế độ toàn màn hình',
-                  'Bài thi sẽ chạy ở chế độ toàn màn hình.\n\n⚠️ Bạn KHÔNG được chuyển tab hoặc thoát fullscreen.\nSau 5 lần vi phạm, hệ thống sẽ TỰ ĐỘNG NỘP BÀI.\n\nBạn có đồng ý và sẵn sàng bắt đầu?',
-                  () => setTimeout(() => handleBeginQuiz(), 50),
-                  null,
-                  'Đồng ý & Bắt đầu',
-                  'Chưa sẵn sàng'
-                );
-              }}
+              onClick={handleBeginQuiz}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '12px 32px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -594,7 +585,7 @@ export default function HomePage() {
               onMouseOver={e => e.target.style.background = '#2f5cc0'}
               onMouseOut={e => e.target.style.background = 'var(--et-blue)'}
             >
-              Bắt đầu làm bài <ChevronRight style={{ width: 18, height: 18 }} />
+              🔒 Đồng ý & Bắt đầu làm bài <ChevronRight style={{ width: 18, height: 18 }} />
             </button>
 
             {/* Preview Statistics & Leaderboard */}
