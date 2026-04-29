@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import {
   Trash2, ChevronDown, ChevronUp, GripVertical, Plus, X,
   Image as ImageIcon, FileText, CheckCircle2, XCircle, Type,
-  ToggleLeft, Hash, AlertCircle
+  ToggleLeft, Hash, AlertCircle, BookOpen
 } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import MathRenderer from '@/components/MathRenderer';
@@ -182,7 +182,13 @@ export default function QuestionEditorCard({ question, index, allQuestions, onUp
         >
           <GripVertical className="w-4 h-4 text-white/15 flex-shrink-0" />
         </div>
-        <span className="text-sm font-black text-white/30 w-8">#{index + 1}</span>
+        {q.type === 'TEXT' ? (
+          <div className="w-8 flex justify-center items-center">
+            <BookOpen className="w-4 h-4 text-white/30" />
+          </div>
+        ) : (
+          <span className="text-sm font-black text-white/30 w-8">#{index + 1}</span>
+        )}
 
         {/* Type badge */}
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeStyle.color}`}>
@@ -387,26 +393,28 @@ export default function QuestionEditorCard({ question, index, allQuestions, onUp
           )}
 
           {/* ── Solution (collapsible) ── */}
-          <div>
-            <button onClick={() => setShowSolution(!showSolution)}
-              className="flex items-center gap-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors mb-1.5">
-              {showSolution ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              Lời giải {q.solution ? '✓' : ''}
-            </button>
-            {showSolution && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
-                <textarea value={q.solution || ''} onChange={e => update('solution', e.target.value)}
-                  onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                  placeholder="Nhập lời giải chi tiết (hỗ trợ LaTeX)..."
-                  rows={4}
-                  className="w-full min-h-[100px] px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm placeholder-white/15 focus:outline-none focus:border-indigo-500/50 transition-all resize-y" />
-                <div className="bg-white/5 rounded-xl border border-white/10 p-4 text-sm text-white/80 overflow-y-auto max-h-[300px]">
-                  <span className="text-[10px] font-semibold text-white/30 uppercase tracking-wider block mb-2">Xem trước Lời giải</span>
-                  <MathRenderer text={q.solution} />
+          {q.type !== 'TEXT' && (
+            <div>
+              <button onClick={() => setShowSolution(!showSolution)}
+                className="flex items-center gap-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider hover:text-white/50 transition-colors mb-1.5">
+                {showSolution ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                Lời giải {q.solution ? '✓' : ''}
+              </button>
+              {showSolution && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                  <textarea value={q.solution || ''} onChange={e => update('solution', e.target.value)}
+                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                    placeholder="Nhập lời giải chi tiết (hỗ trợ LaTeX)..."
+                    rows={4}
+                    className="w-full min-h-[100px] px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm placeholder-white/15 focus:outline-none focus:border-indigo-500/50 transition-all resize-y" />
+                  <div className="bg-white/5 rounded-xl border border-white/10 p-4 text-sm text-white/80 overflow-y-auto max-h-[300px]">
+                    <span className="text-[10px] font-semibold text-white/30 uppercase tracking-wider block mb-2">Xem trước Lời giải</span>
+                    <MathRenderer text={q.solution} />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* ── Image ── */}
           <div className="space-y-3">

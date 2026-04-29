@@ -1111,7 +1111,7 @@ export default function HomePage() {
   // ── RESULTS DETAIL (2-column layout) ──
   if (quizPhase === 'results-detail' && activeExam) {
     let correctCount = 0;
-    questions.forEach(q => {
+    realQuestions.forEach(q => {
       const ua = answers[q.id] || '';
       let ok = false;
       if (q.type === 'MCQ') ok = ua === q.answer;
@@ -1121,7 +1121,7 @@ export default function HomePage() {
       } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
       if (ok) correctCount++;
     });
-    const pct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+    const pct = realQuestions.length > 0 ? Math.round((correctCount / realQuestions.length) * 100) : 0;
 
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
@@ -1136,47 +1136,106 @@ export default function HomePage() {
                 Chi tiết từng câu
               </div>
             </div>
-            {questions.map((q, i) => {
-              // Section Logic (Phần 1, 2, 3) - Only for THPT
-              const isTHPT = activeExam?.examType === 'THPT';
-              const isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || questions[i-1].type !== 'MCQ');
-              const isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || questions[i-1].type !== 'TF');
-              const isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || questions[i-1].type !== 'SA');
+            {(() => {
+              let realQIndex = 0;
+              return groupedQuestions.map((group, gIdx) => {
+                const firstChild = group.children[0];
+                const isFirstMCQ = firstChild?._isFirstMCQ;
+                const isFirstTF = firstChild?._isFirstTF;
+                const isFirstSA = firstChild?._isFirstSA;
 
-              return (
-                <div key={q.id} id={`q-card-${i}`}>
-                  {isFirstMCQ && (
-                    <div className="et-section-hd">
-                      <div className="et-section-hd-line" />
-                      <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
-                      <div className="et-section-hd-line" />
+                const sectionHeader = (
+                  <>
+                    {isFirstMCQ && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstTF && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstSA && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                  </>
+                );
+
+                if (group.context) {
+                  return (
+                    <div key={`group-${gIdx}`}>
+                      {sectionHeader}
+                      <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
+                        <div className="mb-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <BookOpen className="w-4 h-4 text-indigo-500" />
+                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Dựa vào thông tin sau để trả lời các câu hỏi bên dưới:</p>
+                          </div>
+                          <div className="et-q-text text-gray-800 leading-relaxed text-[15px]">
+                            <MathRenderer text={group.context.content} />
+                          </div>
+                          {group.context.image && (
+                            <img src={group.context.image} alt="Context image" className="max-w-full rounded-xl border border-gray-200 mt-4 max-h-[300px] object-contain" />
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-col gap-5 pl-2 sm:pl-4 border-l-2 border-indigo-100">
+                          {group.children.map(childQ => {
+                            const currentI = realQIndex++;
+                            return (
+                              <div key={childQ.id} id={`q-card-${currentI}`}>
+                                <QuestionCard
+                                  question={childQ}
+                                  index={currentI}
+                                  selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
+                                  onAnswerChange={() => {}}
+                                  showResult
+                                  disabled
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  {isFirstTF && (
-                    <div className="et-section-hd">
-                      <div className="et-section-hd-line" />
-                      <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
-                      <div className="et-section-hd-line" />
+                  );
+                } else {
+                  // Single normal question
+                  if (!firstChild) return null;
+                  const currentI = realQIndex++;
+                  return (
+                    <div key={firstChild.id} id={`q-card-${currentI}`}>
+                      {sectionHeader}
+                      
+                      {firstChild.contextHint && (
+                        <div className="et-section-hint">
+                          <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>{firstChild.contextHint}</span>
+                        </div>
+                      )}
+
+                      <QuestionCard
+                        question={firstChild}
+                        index={currentI}
+                        selectedAnswer={answers[firstChild.id] || (firstChild.type === 'TF' ? {} : '')}
+                        onAnswerChange={() => {}}
+                        showResult
+                        disabled
+                      />
                     </div>
-                  )}
-                  {isFirstSA && (
-                    <div className="et-section-hd">
-                      <div className="et-section-hd-line" />
-                      <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
-                      <div className="et-section-hd-line" />
-                    </div>
-                  )}
-                  <QuestionCard
-                    question={q}
-                    index={i}
-                    selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
-                    onAnswerChange={() => { }}
-                    showResult
-                    disabled
-                  />
-                </div>
-              );
-            })}
+                  );
+                }
+              });
+            })()}
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, padding: '24px 0' }}>
               <button className="et-btn-outline" onClick={handleRetry}><RotateCcw style={{ width: 13, height: 13 }} /> Làm lại đề này</button>
@@ -1203,11 +1262,11 @@ export default function HomePage() {
             {/* Score Summary */}
             <div className="flex items-center justify-between bg-indigo-50 rounded-xl p-4 mb-5">
               <div>
-                <div className="text-2xl font-black text-indigo-600">{correctCount}/{questions.length}</div>
+                <div className="text-2xl font-black text-indigo-600">{correctCount}/{realQuestions.length}</div>
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-indigo-600">{(correctCount / questions.length * 10).toFixed(1)}</div>
+                <div className="text-2xl font-black text-indigo-600">{(realQuestions.length > 0 ? (correctCount / realQuestions.length * 10) : 0).toFixed(1)}</div>
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
               </div>
             </div>
