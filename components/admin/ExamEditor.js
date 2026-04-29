@@ -316,6 +316,7 @@ D. Đáp án D
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                   onDragEnd={handleDragEnd}
+                  allQuestions={questions}
                 />
               ))}
             </>

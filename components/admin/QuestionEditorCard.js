@@ -13,6 +13,7 @@ const TYPE_STYLES = {
   MCQ: { label: 'Trắc nghiệm', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', icon: CheckCircle2 },
   TF:  { label: 'Đúng / Sai',  color: 'bg-amber-500/15 text-amber-400 border-amber-500/30',   icon: ToggleLeft },
   SA:  { label: 'Tự luận ngắn', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', icon: Type },
+  TEXT: { label: 'Ngữ cảnh', color: 'bg-slate-500/15 text-slate-400 border-slate-500/30', icon: FileText },
 };
 
 const LEVELS = ['Dễ', 'Trung bình', 'Khó', 'VD', 'TH'];
@@ -27,7 +28,7 @@ const LEVEL_COLORS = {
 
 const OPTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-export default function QuestionEditorCard({ question, index, onUpdate, onDelete, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
+export default function QuestionEditorCard({ question, index, allQuestions, onUpdate, onDelete, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [expanded, setExpanded] = useState(true);
   const [showSolution, setShowSolution] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -214,11 +215,11 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
       {expanded && (
         <div className="p-5 space-y-5 animate-fadeIn">
           {/* Row 1: Type + Level */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Question Type */}
-            <div>
+            <div className="sm:col-span-2 lg:col-span-1">
               <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">Loại câu hỏi</label>
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                 {Object.entries(TYPE_STYLES).map(([key, style]) => {
                   const Icon = style.icon;
                   return (
@@ -249,6 +250,21 @@ export default function QuestionEditorCard({ question, index, onUpdate, onDelete
               <input type="text" value={q.id || ''} onChange={e => update('id', e.target.value)}
                 placeholder="VD: MATH_001"
                 className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs focus:outline-none focus:border-indigo-500/50 transition-all font-mono" />
+            </div>
+            {/* Linked To */}
+            <div>
+              <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">Nằm trong ngữ cảnh</label>
+              <select value={q.linkedTo || ''} onChange={e => update('linkedTo', e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
+                <option value="" className="bg-[#14142a]">Không liên kết (Câu hỏi độc lập)</option>
+                {(allQuestions || [])
+                  .filter(parent => parent.id !== q.id && parent.type === 'TEXT')
+                  .map(parent => (
+                    <option key={parent.id} value={parent.id} className="bg-[#14142a]">
+                      ID: {parent.id} — {(parent.content || '').slice(0, 30)}...
+                    </option>
+                  ))}
+              </select>
             </div>
           </div>
 

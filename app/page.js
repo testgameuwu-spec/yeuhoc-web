@@ -9,6 +9,7 @@ import { getPublishedExams, getExamById } from '@/lib/examStore';
 import FilterBar from '@/components/FilterBar';
 import ExamCard from '@/components/ExamCard';
 import QuestionCard from '@/components/QuestionCard';
+import MathRenderer from '@/components/MathRenderer';
 import Pagination from '@/components/Pagination';
 import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
@@ -238,7 +239,38 @@ export default function HomePage() {
 
   // ── Quiz flow ──
   const questions = activeExam?.questions || [];
-  const answeredCount = questions.filter(q => {
+  const realQuestions = questions.filter(q => q.type !== 'TEXT');
+
+  // Logic gộp nhóm (Grouping)
+  const groupedQuestions = [];
+  let currentGroup = null;
+
+  questions.forEach(q => {
+    if (q.type === 'TEXT') {
+      currentGroup = { context: q, children: [] };
+      groupedQuestions.push(currentGroup);
+    } else {
+      if (q.linkedTo && currentGroup && currentGroup.context.id === q.linkedTo) {
+        currentGroup.children.push(q);
+      } else {
+        const parentGroup = q.linkedTo ? groupedQuestions.find(g => g.context?.id === q.linkedTo) : null;
+        if (parentGroup) {
+          parentGroup.children.push(q);
+        } else {
+          groupedQuestions.push({ context: null, children: [q] });
+        }
+      }
+    }
+  });
+
+  const isTHPT = activeExam?.examType === 'THPT';
+  realQuestions.forEach((q, i) => {
+    q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i-1].type !== 'MCQ');
+    q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || realQuestions[i-1].type !== 'TF');
+    q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || realQuestions[i-1].type !== 'SA');
+  });
+
+  const answeredCount = realQuestions.filter(q => {
     const a = answers[q.id];
     if (!a) return false;
     if (typeof a === 'object') return Object.keys(a).length > 0;
@@ -428,7 +460,8 @@ export default function HomePage() {
       const timeSpentSecs = savedSecondsLeft !== null ? (activeExam.duration * 60 - savedSecondsLeft) : (startTime ? Math.floor((Date.now() - startTime) / 1000) : 0);
       let correctCount = 0;
 
-      activeExam.questions.forEach(q => {
+      const realQs = activeExam.questions.filter(q => q.type !== 'TEXT');
+      realQs.forEach(q => {
         const ua = answers[q.id] || '';
         if (q.type === 'MCQ') {
           if (ua === q.answer) correctCount++;
@@ -440,14 +473,14 @@ export default function HomePage() {
         }
       });
 
-      const score = activeExam.questions.length > 0 ? (correctCount / activeExam.questions.length) * 10 : 0;
+      const score = realQs.length > 0 ? (correctCount / realQs.length) * 10 : 0;
 
       const { error } = await supabase.from('exam_attempts').insert({
         user_id: user.id,
         exam_id: activeExam.id,
         score: score,
         correct_answers: correctCount,
-        total_questions: activeExam.questions.length,
+        total_questions: realQs.length,
         time_spent: timeSpentSecs,
         user_answers: answers,
         violation_count: violationCount,
@@ -493,13 +526,13 @@ export default function HomePage() {
     if (!isTHPT) {
       return (
         <div className="et-nav-grid">
-          {questions.map((q, i) => renderBtn(q, i))}
+          {realQuestions.map((q, i) => renderBtn(q, i))}
         </div>
       );
     }
 
     let p1 = [], p2 = [], p3 = [];
-    questions.forEach((q, i) => {
+    realQuestions.forEach((q, i) => {
       if (q.type === 'MCQ') p1.push({ q, i });
       else if (q.type === 'TF') p2.push({ q, i });
       else if (q.type === 'SA') p3.push({ q, i });
@@ -705,7 +738,7 @@ export default function HomePage() {
 
   // ── QUIZ (2-column layout) ──
   if (quizPhase === 'quiz' && activeExam) {
-    const pct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
+    const pct = realQuestions.length > 0 ? Math.round((answeredCount / realQuestions.length) * 100) : 0;
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={() => {
@@ -802,7 +835,7 @@ export default function HomePage() {
             <div className="et-exam-hd">
               <div>
                 <div className="et-exam-title">{activeExam.title}</div>
-                <div className="et-exam-sub">{activeExam.subject} · {questions.length} câu</div>
+                <div className="et-exam-sub">{activeExam.subject} · {realQuestions.length} câu</div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={() => { showConfirm('Làm lại từ đầu', 'Toàn bộ câu trả lời hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => handleRetry()); }}>
@@ -811,70 +844,125 @@ export default function HomePage() {
               </div>
             </div>
 
-            {questions.map((q, i) => {
-              // Section Logic (Phần 1, 2, 3) - Only for THPT
-              const isTHPT = activeExam?.examType === 'THPT';
-              const isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || questions[i-1].type !== 'MCQ');
-              const isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || questions[i-1].type !== 'TF');
-              const isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || questions[i-1].type !== 'SA');
+            {(() => {
+              let realQIndex = 0;
+              return groupedQuestions.map((group, gIdx) => {
+                const firstChild = group.children[0];
+                const isFirstMCQ = firstChild?._isFirstMCQ;
+                const isFirstTF = firstChild?._isFirstTF;
+                const isFirstSA = firstChild?._isFirstSA;
 
-              return (
-                <div key={q.id} id={`q-card-${i}`} onClick={() => setCurrentQ(i)}>
-                  {isFirstMCQ && (
-                    <div className="et-section-hd">
-                      <div className="et-section-hd-line" />
-                      <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
-                      <div className="et-section-hd-line" />
-                    </div>
-                  )}
-                  {isFirstTF && (
-                    <div className="et-section-hd">
-                      <div className="et-section-hd-line" />
-                      <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
-                      <div className="et-section-hd-line" />
-                    </div>
-                  )}
-                  {isFirstSA && (
-                    <div className="et-section-hd">
-                      <div className="et-section-hd-line" />
-                      <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
-                      <div className="et-section-hd-line" />
-                    </div>
-                  )}
-                  
-                  {/* Context hint logic (VD nhìn câu đề 16 để làm câu 17,18) */}
-                  {q.contextHint && (
-                    <div className="et-section-hint">
-                      <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{q.contextHint}</span>
-                    </div>
-                  )}
+                const sectionHeader = (
+                  <>
+                    {isFirstMCQ && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstTF && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstSA && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                  </>
+                );
 
-                  <QuestionCard
-                    question={q}
-                    index={i}
-                    selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
-                    onAnswerChange={(val) => handleAnswerChange(q.id, val)}
-                    isBookmarked={bookmarks.has(q.id)}
-                    onToggleBookmark={() => {
-                      const next = new Set(bookmarks);
-                      if (next.has(q.id)) next.delete(q.id);
-                      else next.add(q.id);
-                      setBookmarks(next);
-                    }}
-                  />
-                </div>
-              );
-            })}
+                if (group.context) {
+                  return (
+                    <div key={`group-${gIdx}`}>
+                      {sectionHeader}
+                      <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
+                        <div className="mb-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <BookOpen className="w-4 h-4 text-indigo-500" />
+                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Dựa vào thông tin sau để trả lời các câu hỏi bên dưới:</p>
+                          </div>
+                          <div className="et-q-text text-gray-800 leading-relaxed text-[15px]">
+                            <MathRenderer text={group.context.content} />
+                          </div>
+                          {group.context.image && (
+                            <img src={group.context.image} alt="Context image" className="max-w-full rounded-xl border border-gray-200 mt-4 max-h-[300px] object-contain" />
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-col gap-5 pl-2 sm:pl-4 border-l-2 border-indigo-100">
+                          {group.children.map(childQ => {
+                            const currentI = realQIndex++;
+                            return (
+                              <div key={childQ.id} id={`q-card-${currentI}`} onClick={() => setCurrentQ(currentI)}>
+                                <QuestionCard
+                                  question={childQ}
+                                  index={currentI}
+                                  selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
+                                  onAnswerChange={(val) => handleAnswerChange(childQ.id, val)}
+                                  isBookmarked={bookmarks.has(childQ.id)}
+                                  onToggleBookmark={() => {
+                                    const next = new Set(bookmarks);
+                                    if (next.has(childQ.id)) next.delete(childQ.id);
+                                    else next.add(childQ.id);
+                                    setBookmarks(next);
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  // Single normal question
+                  if (!firstChild) return null;
+                  const currentI = realQIndex++;
+                  return (
+                    <div key={firstChild.id} id={`q-card-${currentI}`} onClick={() => setCurrentQ(currentI)}>
+                      {sectionHeader}
+                      
+                      {firstChild.contextHint && (
+                        <div className="et-section-hint">
+                          <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>{firstChild.contextHint}</span>
+                        </div>
+                      )}
+
+                      <QuestionCard
+                        question={firstChild}
+                        index={currentI}
+                        selectedAnswer={answers[firstChild.id] || (firstChild.type === 'TF' ? {} : '')}
+                        onAnswerChange={(val) => handleAnswerChange(firstChild.id, val)}
+                        isBookmarked={bookmarks.has(firstChild.id)}
+                        onToggleBookmark={() => {
+                          const next = new Set(bookmarks);
+                          if (next.has(firstChild.id)) next.delete(firstChild.id);
+                          else next.add(firstChild.id);
+                          setBookmarks(next);
+                        }}
+                      />
+                    </div>
+                  );
+                }
+              });
+            })()}
 
             {/* Bottom Submit Button */}
             <div className="mt-8 mb-24 flex justify-center">
               <button
                 onClick={() => {
-                  const unanswered = questions.length - answeredCount;
+                  const unanswered = realQuestions.length - answeredCount;
                   const msg = unanswered > 0
-                    ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
-                    : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+                    ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+                    : `Bạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
                   showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
                 }}
                 className="px-8 py-3.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-md flex items-center gap-2"
@@ -897,7 +985,7 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div className="et-prog-row mt-2"><span>Đã làm</span><span>{answeredCount} / {questions.length}</span></div>
+            <div className="et-prog-row mt-2"><span>Đã làm</span><span>{answeredCount} / {realQuestions.length}</span></div>
             <div className="et-prog-bg mb-4"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
 
             <div className="mb-4">
@@ -923,10 +1011,10 @@ export default function HomePage() {
               </button>
               <button className="flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2" onClick={() => {
                 setIsDrawerOpen(false);
-                const unanswered = questions.length - answeredCount;
+                const unanswered = realQuestions.length - answeredCount;
                 const msg = unanswered > 0
-                  ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
-                  : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+                  ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+                  : `Bạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
                 showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
               }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 16, height: 16 }}><polyline points="20 6 9 17 4 12" /></svg>
@@ -950,10 +1038,10 @@ export default function HomePage() {
             </div>
 
             <button className="et-btn-submit" onClick={() => {
-              const unanswered = questions.length - answeredCount;
+              const unanswered = realQuestions.length - answeredCount;
               const msg = unanswered > 0
-                ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`
-                : `Bạn đã trả lời ${answeredCount}/${questions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+                ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+                : `Bạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
               showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
             }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><polyline points="20 6 9 17 4 12" /></svg>
@@ -961,7 +1049,7 @@ export default function HomePage() {
             </button>
 
             <div className="et-prog-block">
-              <div className="et-prog-row"><span>Đã làm</span><span>{answeredCount} / {questions.length}</span></div>
+              <div className="et-prog-row"><span>Đã làm</span><span>{answeredCount} / {realQuestions.length}</span></div>
               <div className="et-prog-bg"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
             </div>
 
