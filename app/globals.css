@@ -300,9 +300,14 @@ body {
 /* ─── Collapsible Sidebar Panel (Desktop) ─── */
 .et-sidebar-collapsed {
   width: 0;
-  overflow: hidden;
   border-left: none;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.et-sidebar-collapsed > div,
+.et-sidebar-collapsed > button:not(.et-sidebar-toggle) {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 .et-sidebar {
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
