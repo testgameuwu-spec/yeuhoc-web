@@ -1180,9 +1180,9 @@ export default function HomePage() {
                                   </td>
                                   <td className="px-4 py-3">
                                     {attempt.profiles?.avatar_url ? (
-                                      <img src={attempt.profiles.avatar_url} alt="Avatar" className="w-12 h-12 rounded-full mx-auto object-cover ring-2 ring-gray-100" />
+                                      <img src={attempt.profiles.avatar_url} alt="Avatar" className="w-12 h-12 rounded-full mx-auto object-cover ring-2 ring-gray-100 aspect-square shrink-0" style={{ minWidth: '48px', minHeight: '48px' }} />
                                     ) : (
-                                      <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto font-bold text-sm">
+                                      <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto font-bold text-sm aspect-square shrink-0" style={{ minWidth: '48px', minHeight: '48px' }}>
                                         {(attempt.profiles?.full_name || 'U').charAt(0).toUpperCase()}
                                       </div>
                                     )}
