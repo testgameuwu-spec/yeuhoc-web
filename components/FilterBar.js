@@ -88,11 +88,12 @@ export default function FilterBar({
             )}
             {onSortOrder && (
               <select
-                value={sortOrder || 'newest'}
+                value={sortOrder || 'default'}
                 onChange={e => onSortOrder(e.target.value)}
                 className="pl-3 pr-8 py-1.5 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-600 focus:outline-none focus:border-indigo-400 cursor-pointer appearance-none min-w-[110px]"
                 style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa3b2' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
               >
+                <option value="default">Mặc định</option>
                 <option value="newest">Mới nhất</option>
                 <option value="oldest">Cũ nhất</option>
                 <option value="az">A → Z</option>

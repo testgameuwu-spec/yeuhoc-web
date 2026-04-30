@@ -100,7 +100,7 @@ export default function HomePage() {
   const [selYear, setSelYear] = useState(null);
   const [selType, setSelType] = useState(null);
   const [selSubject, setSelSubject] = useState(null);
-  const [sortOrder, setSortOrder] = useState('newest');
+  const [sortOrder, setSortOrder] = useState('default');
   const ITEMS_PER_PAGE = 9;
   const [browsePage, setBrowsePage] = useState(1);
 
@@ -1366,6 +1366,7 @@ export default function HomePage() {
     if (selSubject && ex.subject !== selSubject) return false;
     return true;
   }).sort((a, b) => {
+    if (sortOrder === 'default') return 0; // Giữ nguyên thứ tự order_index từ database
     if (sortOrder === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     if (sortOrder === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     if (sortOrder === 'az') return a.title.localeCompare(b.title);
