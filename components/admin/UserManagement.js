@@ -290,7 +290,7 @@ export default function UserManagement() {
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Tổng người dùng', value: users.length, color: 'from-indigo-500 to-purple-500', icon: Users },
           { label: 'Tổng lượt thi', value: totalAttempts, color: 'from-emerald-500 to-cyan-500', icon: Activity },
@@ -352,8 +352,8 @@ export default function UserManagement() {
 
       {/* User Table */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] pb-24 overflow-visible">
-        {/* Header */}
-        <div className="grid grid-cols-[1fr_140px_100px_100px_56px] gap-4 px-6 py-3 border-b border-white/10 text-xs font-semibold text-white/30 uppercase tracking-wider">
+        {/* Header - hidden on mobile */}
+        <div className="hidden md:grid grid-cols-[1fr_140px_100px_100px_56px] gap-4 px-6 py-3 border-b border-white/10 text-xs font-semibold text-white/30 uppercase tracking-wider">
           <span>Người dùng</span>
           <span>Email</span>
           <span>Lượt thi</span>
@@ -374,7 +374,7 @@ export default function UserManagement() {
 
           return (
             <div key={user.id}
-              className="grid grid-cols-[1fr_140px_100px_100px_56px] gap-4 px-6 py-4 border-b border-white/5 hover:bg-white/[0.03] transition-colors items-center group">
+              className="flex flex-col md:grid md:grid-cols-[1fr_140px_100px_100px_56px] gap-2 md:gap-4 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 hover:bg-white/[0.03] transition-colors md:items-center group">
               {/* User info */}
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -382,37 +382,76 @@ export default function UserManagement() {
                     <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                   ) : initials}
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className={`text-sm font-semibold transition-colors ${user.is_banned ? 'text-white/40 line-through' : 'text-white/90 group-hover:text-white'}`}>
+                    <p className={`text-sm font-semibold transition-colors truncate ${user.is_banned ? 'text-white/40 line-through' : 'text-white/90 group-hover:text-white'}`}>
                       {user.name}
                     </p>
-                    {user.is_banned && <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold">Bị khóa</span>}
+                    {user.is_banned && <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold shrink-0">Bị khóa</span>}
                   </div>
                   <p className="text-xs text-white/30 flex items-center gap-1 mt-0.5">
                     <Calendar className="w-3 h-3" /> {user.createdAt}
                   </p>
                 </div>
+                {/* Mobile actions button */}
+                <div className="relative md:hidden">
+                  <button onClick={() => setOpenMenu(openMenu === user.id ? null : user.id)}
+                    className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {openMenu === user.id && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
+                      <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-white/10 bg-[#14142a] shadow-2xl shadow-black/50 py-1 animate-scaleIn">
+                        <button onClick={() => { setHistoryUser(user); setOpenMenu(null); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <History className="w-3.5 h-3.5" /> Lịch sử làm bài
+                        </button>
+                        <button onClick={() => handleToggleRole(user.id, user.role)}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <ShieldCheck className="w-3.5 h-3.5" /> Đổi vai trò
+                        </button>
+                        <button onClick={() => handleToggleBan(user.id, user.is_banned)}
+                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${user.is_banned ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}>
+                          <Ban className="w-3.5 h-3.5" /> {user.is_banned ? 'Mở khóa' : 'Khoá TK'}
+                        </button>
+                        <button onClick={() => handleDeleteUser(user.id)}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors border-t border-white/5">
+                          <Trash2 className="w-3.5 h-3.5" /> Xóa tài khoản
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-              {/* Email */}
-              <span className="text-xs text-white/50 truncate" title={user.email}>{user.email}</span>
-              {/* Attempts */}
-              <div className="flex items-center gap-2">
+
+              {/* Mobile meta row */}
+              <div className="flex items-center gap-3 flex-wrap md:hidden pl-12">
+                <span className="text-xs text-white/40 truncate">{user.email}</span>
+                <span className="text-xs text-white/50 font-medium">{user.attempts} lượt thi</span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${role.classes}`}>
+                  <RoleIcon className="w-3 h-3" />
+                  {role.label}
+                </span>
+              </div>
+
+              {/* Desktop columns */}
+              <span className="hidden md:block text-xs text-white/50 truncate" title={user.email}>{user.email}</span>
+              <div className="hidden md:flex items-center gap-2">
                 <div className="flex-1 h-1.5 rounded-full bg-white/10 max-w-[60px]">
                   <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all"
                     style={{ width: `${Math.min(100, (user.attempts / Math.max(1, ...users.map(u => u.attempts))) * 100)}%` }} />
                 </div>
                 <span className="text-sm text-white/60 font-medium">{user.attempts}</span>
               </div>
-              {/* Role */}
-              <div>
+              <div className="hidden md:block">
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${role.classes}`}>
                   <RoleIcon className="w-3 h-3" />
                   {role.label}
                 </span>
               </div>
-              {/* Actions */}
-              <div className="relative">
+              {/* Desktop actions */}
+              <div className="hidden md:block relative">
                 <button onClick={() => setOpenMenu(openMenu === user.id ? null : user.id)}
                   className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
                   <MoreVertical className="w-4 h-4" />
@@ -472,11 +511,11 @@ export default function UserManagement() {
       {/* History Modal */}
       {historyUser && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-3xl rounded-2xl bg-[#14142a] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-scaleIn">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02]">
-              <div>
-                <h3 className="text-lg font-bold text-white">Lịch sử làm bài</h3>
-                <p className="text-sm text-white/40">Học sinh: {historyUser.name} ({historyUser.email})</p>
+          <div className="w-full max-w-3xl rounded-2xl bg-[#14142a] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-scaleIn">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 bg-white/[0.02]">
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-white truncate">Lịch sử làm bài</h3>
+                <p className="text-xs sm:text-sm text-white/40 truncate">{historyUser.name}</p>
               </div>
               <div className="flex items-center gap-2">
                 {userAttempts.length > 0 && !selectedAttempt && (

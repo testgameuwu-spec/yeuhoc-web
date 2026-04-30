@@ -587,21 +587,28 @@ export default function HomePage() {
 
   // ── PRACTICE MODE ──
   if (quizPhase === 'practice' && activeExam) {
-    const q = questions[currentQ];
+    const q = realQuestions[currentQ];
     const isRevealed = practiceRevealed[currentQ] || false;
     const ua = answers[q?.id];
     const hasAnswered = ua !== undefined && ua !== '' && (typeof ua !== 'object' || Object.keys(ua).length > 0);
 
-    let isCorrect = false;
-    if (isRevealed && q) {
-      if (q.type === 'MCQ') isCorrect = ua === q.answer;
-      else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-        const s = typeof ua === 'object' ? ua : {};
-        isCorrect = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-      } else {
-        isCorrect = (ua || '').toString().trim().toLowerCase() === (q.answer || '').toString().trim().toLowerCase();
+    // Check correctness for dot colors
+    const checkCorrect = (qItem, idx) => {
+      const rev = practiceRevealed[idx];
+      if (!rev || !qItem) return null; // null = not revealed yet
+      const a = answers[qItem.id];
+      if (qItem.type === 'MCQ') return a === qItem.answer;
+      if (qItem.type === 'TF' && qItem.answer && typeof qItem.answer === 'object') {
+        const s = typeof a === 'object' ? a : {};
+        return Object.keys(qItem.answer).every(k => s[k] === qItem.answer[k]);
       }
-    }
+      return (a || '').toString().trim().toLowerCase() === (qItem.answer || '').toString().trim().toLowerCase();
+    };
+
+    let isCorrect = checkCorrect(q, currentQ);
+
+    // Find context (TEXT parent) for current question
+    const contextQ = q?.linkedTo ? questions.find(x => x.id === q.linkedTo && x.type === 'TEXT') : null;
 
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
@@ -616,27 +623,49 @@ export default function HomePage() {
             {/* Progress dots */}
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-gray-600">Câu {currentQ + 1}/{questions.length}</span>
+                <span className="text-sm font-bold text-gray-600">Câu {currentQ + 1}/{realQuestions.length}</span>
                 <span className="text-xs font-semibold text-gray-400">{Object.keys(practiceRevealed).length} đã xem</span>
               </div>
               <div className="flex flex-wrap gap-[5px]">
-                {questions.map((qItem, i) => {
+                {realQuestions.map((qItem, i) => {
                   const done = practiceRevealed[i];
                   const isCurrent = i === currentQ;
                   const isMarked = bookmarks.has(qItem.id);
-                  let bg = '#e2e8f0';
-                  if (isCurrent) bg = '#6366f1';
-                  else if (isMarked) bg = '#f59e0b';
-                  else if (done) bg = '#10b981';
+                  const correctness = checkCorrect(qItem, i);
+                  let bg = '#e2e8f0'; // gray - chưa làm
+                  if (isCurrent) bg = '#6366f1'; // indigo - đang xem
+                  else if (isMarked) bg = '#f59e0b'; // yellow - đánh dấu
+                  else if (done && correctness === true) bg = '#10b981'; // green - đúng
+                  else if (done && correctness === false) bg = '#ef4444'; // red - sai
+                  else if (done) bg = '#10b981'; // green fallback
                   return (
                     <button key={i} onClick={() => setCurrentQ(i)} style={{
                       width: isCurrent ? 22 : 9, height: 9, borderRadius: 20, border: 'none', cursor: 'pointer',
                       background: bg, transition: 'all .2s', flexShrink: 0,
-                    }} title={`Câu ${i + 1}${isMarked ? ' (đã đánh dấu)' : ''}`} />
+                    }} title={`Câu ${i + 1}${isMarked ? ' (đánh dấu)' : done ? (correctness ? ' (đúng)' : ' (sai)') : ''}`} />
                   );
                 })}
               </div>
             </div>
+
+            {/* Context block for grouped questions */}
+            {contextQ && (
+              <div className="practice-card-wrap mb-4">
+                <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold">ℹ️ DỬa VÀO THÔNG TIN SAU ĐỂ TRẢ LỜI CÁC CÂU HỎI BÊN DƯỚI</span>
+                  </div>
+                  <div className="text-sm leading-relaxed text-gray-700">
+                    <MathRenderer text={contextQ.content} />
+                  </div>
+                  {contextQ.image && (
+                    <div className="mt-3">
+                      <img src={contextQ.image} alt="" className="rounded-xl max-h-[280px] object-contain" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {q && (
               <div className="practice-card-wrap" style={{ fontSize: '1.1em' }}>
@@ -693,15 +722,15 @@ export default function HomePage() {
               </div>
 
               <button
-                onClick={() => setCurrentQ(prev => Math.min(questions.length - 1, prev + 1))}
-                disabled={currentQ === questions.length - 1}
+                onClick={() => setCurrentQ(prev => Math.min(realQuestions.length - 1, prev + 1))}
+                disabled={currentQ === realQuestions.length - 1}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
                 style={{
-                  background: currentQ === questions.length - 1 ? '#f1f5f9' : 'var(--et-blue)',
-                  color: currentQ === questions.length - 1 ? '#94a3b8' : '#fff',
+                  background: currentQ === realQuestions.length - 1 ? '#f1f5f9' : 'var(--et-blue)',
+                  color: currentQ === realQuestions.length - 1 ? '#94a3b8' : '#fff',
                   border: 'none',
-                  cursor: currentQ === questions.length - 1 ? 'not-allowed' : 'pointer',
-                  boxShadow: currentQ === questions.length - 1 ? 'none' : '0 4px 14px rgba(59,111,212,.3)',
+                  cursor: currentQ === realQuestions.length - 1 ? 'not-allowed' : 'pointer',
+                  boxShadow: currentQ === realQuestions.length - 1 ? 'none' : '0 4px 14px rgba(59,111,212,.3)',
                 }}
               >
                 <span className="hidden sm:inline">Câu tiếp</span> <ChevronRight className="w-4 h-4" />
@@ -714,7 +743,7 @@ export default function HomePage() {
                   🚩 Câu đã đánh dấu ({bookmarks.size})
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {questions.map((qItem, i) => bookmarks.has(qItem.id) && (
+                  {realQuestions.map((qItem, i) => bookmarks.has(qItem.id) && (
                     <button key={i} onClick={() => setCurrentQ(i)}
                       className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                       style={{
@@ -731,11 +760,11 @@ export default function HomePage() {
               </div>
             )}
 
-            {Object.keys(practiceRevealed).length === questions.length && (
+            {Object.keys(practiceRevealed).length === realQuestions.length && (
               <div className="mt-8 p-6 bg-white rounded-2xl border border-gray-200 text-center shadow-sm animate-fadeIn">
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Hoàn thành ôn luyện!</h3>
-                <p className="text-sm text-gray-500 mb-4">Bạn đã xem hết {questions.length} câu hỏi.</p>
+                <p className="text-sm text-gray-500 mb-4">Bạn đã xem hết {realQuestions.length} câu hỏi.</p>
                 <div className="flex justify-center gap-3 flex-wrap">
                   <button onClick={() => { setAnswers({}); setCurrentQ(0); setPracticeRevealed({}); setBookmarks(new Set()); }} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
                     <RotateCcw className="w-4 h-4" /> Ôn lại từ đầu
