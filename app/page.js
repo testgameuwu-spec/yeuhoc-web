@@ -264,6 +264,7 @@ export default function HomePage() {
   });
 
   const isTHPT = activeExam?.examType === 'THPT';
+  const isAntiCheatEnabled = activeExam?.antiCheatEnabled !== false;
   realQuestions.forEach((q, i) => {
     q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i - 1].type !== 'MCQ');
     q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || realQuestions[i - 1].type !== 'TF');
@@ -319,7 +320,7 @@ export default function HomePage() {
     setQuizPhase('quiz');
     setTimerRunning(true);
     setStartTime(Date.now());
-    requestFullscreen();
+    if (isAntiCheatEnabled) requestFullscreen();
   };
 
   const handleBeginQuiz = () => {
@@ -345,7 +346,7 @@ export default function HomePage() {
             setQuizPhase('quiz');
             setTimerRunning(true);
             setStartTime(Date.now());
-            requestFullscreen();
+            if (isAntiCheatEnabled) requestFullscreen();
           } catch (e) {
             startFreshQuiz();
           }
@@ -366,7 +367,7 @@ export default function HomePage() {
 
   // ── Anti-cheat: detect fullscreen exit (desktop) & tab switch (all devices) ──
   useEffect(() => {
-    if (quizPhase !== 'quiz') return;
+    if (quizPhase !== 'quiz' || !isAntiCheatEnabled) return;
 
     const addViolation = () => {
       setViolationCount(prev => {
@@ -405,11 +406,11 @@ export default function HomePage() {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [quizPhase, canFullscreen]);
+  }, [quizPhase, canFullscreen, isAntiCheatEnabled]);
 
   const handleDismissViolationWarning = () => {
     setShowViolationWarning(false);
-    if (canFullscreen) requestFullscreen();
+    if (canFullscreen && isAntiCheatEnabled) requestFullscreen();
   };
 
   const handleTick = (sec) => {
@@ -589,22 +590,40 @@ export default function HomePage() {
             </p>
 
             {/* Fullscreen rules notice */}
-            <div style={{
-              background: '#fefce8', border: '1px solid #fef08a',
-              borderRadius: 12, padding: '14px 20px', marginBottom: 20,
-              textAlign: 'left', maxWidth: 480, margin: '0 auto 20px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 18 }}>🔒</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>Quy định phòng thi</span>
+            {isAntiCheatEnabled ? (
+              <div style={{
+                background: '#fefce8', border: '1px solid #fef08a',
+                borderRadius: 12, padding: '14px 20px', marginBottom: 20,
+                textAlign: 'left', maxWidth: 480, margin: '0 auto 20px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 18 }}>🔒</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>Quy định phòng thi</span>
+                </div>
+                <ul style={{ fontSize: 12, color: '#78350f', lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
+                  {canFullscreen && <li>Bài thi sẽ chạy ở chế độ <b>toàn màn hình (fullscreen)</b></li>}
+                  <li>Không được <b>chuyển tab</b> hoặc rời khỏi trang thi trong lúc thi</li>
+                  <li>Mỗi lần vi phạm sẽ bị <b>cảnh cáo và ghi nhận</b></li>
+                  <li>Sau <b>5 lần vi phạm</b>, hệ thống sẽ <b>tự động nộp bài</b></li>
+                </ul>
               </div>
-              <ul style={{ fontSize: 12, color: '#78350f', lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
-                {canFullscreen && <li>Bài thi sẽ chạy ở chế độ <b>toàn màn hình (fullscreen)</b></li>}
-                <li>Không được <b>chuyển tab</b> hoặc rời khỏi trang thi trong lúc thi</li>
-                <li>Mỗi lần vi phạm sẽ bị <b>cảnh cáo và ghi nhận</b></li>
-                <li>Sau <b>5 lần vi phạm</b>, hệ thống sẽ <b>tự động nộp bài</b></li>
-              </ul>
-            </div>
+            ) : (
+              <div style={{
+                background: '#f0fdf4', border: '1px solid #bbf7d0',
+                borderRadius: 12, padding: '14px 20px', marginBottom: 20,
+                textAlign: 'left', maxWidth: 480, margin: '0 auto 20px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 18 }}>📝</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#166534' }}>Chế độ luyện tập</span>
+                </div>
+                <ul style={{ fontSize: 12, color: '#15803d', lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
+                  <li>Bài thi này <b>không bật</b> chế độ chống gian lận</li>
+                  <li>Bạn có thể tự do chuyển tab mà không bị cảnh báo</li>
+                  <li>Thời gian vẫn được tính bình thường</li>
+                </ul>
+              </div>
+            )}
 
             <button
               onClick={handleBeginQuiz}
@@ -617,7 +636,7 @@ export default function HomePage() {
               onMouseOver={e => e.target.style.background = '#2f5cc0'}
               onMouseOut={e => e.target.style.background = 'var(--et-blue)'}
             >
-              🔒 Đồng ý & Bắt đầu làm bài <ChevronRight style={{ width: 18, height: 18 }} />
+              {isAntiCheatEnabled ? '🔒 Đồng ý & Bắt đầu làm bài' : '📝 Bắt đầu làm bài'} <ChevronRight style={{ width: 18, height: 18 }} />
             </button>
 
             {/* Preview Statistics & Leaderboard */}
@@ -751,7 +770,7 @@ export default function HomePage() {
           <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause} title="Tạm dừng">
             <PauseIcon /> <span className="hidden sm:inline">Tạm dừng</span>
           </button>
-          {violationCount > 0 && (
+          {isAntiCheatEnabled && violationCount > 0 && (
             <div title={`Vi phạm: ${violationCount}/${MAX_VIOLATIONS}`} style={{
               background: violationCount >= 3 ? '#ef4444' : '#f59e0b',
               color: '#fff', fontSize: 10, fontWeight: 800,

@@ -5,7 +5,7 @@ import FileUpload from '@/components/FileUpload';
 import QuestionEditorCard from '@/components/admin/QuestionEditorCard';
 import {
   Save, Eye, EyeOff, Clock, GraduationCap, Calendar,
-  BookOpen, Plus, Upload, Settings, ChevronDown, FileText
+  BookOpen, Plus, Upload, Settings, ChevronDown, FileText, ShieldAlert
 } from 'lucide-react';
 
 const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
@@ -29,6 +29,7 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
   const [questions, setQuestions] = useState(initialQuestions || exam?.questions || []);
   const [scoringPreset, setScoringPreset] = useState('THPT Toán');
   const [scoringConfig, setScoringConfig] = useState(SCORING_PRESETS['THPT Toán']);
+  const [antiCheatEnabled, setAntiCheatEnabled] = useState(exam?.antiCheatEnabled !== false);
   const [activeSection, setActiveSection] = useState('upload'); // upload | settings | questions
   const [draggedIndex, setDraggedIndex] = useState(null);
   const hasQuestions = questions.length > 0;
@@ -42,6 +43,7 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
       setYear(exam.year || 2024);
       setDuration(exam.duration || 90);
       setPublished(exam.published || false);
+      setAntiCheatEnabled(exam.antiCheatEnabled !== false);
       if (exam.questions && exam.questions.length > 0) {
         setQuestions(exam.questions);
       }
@@ -118,6 +120,7 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
       id: exam?.id || null,
       title, subject, examType, year, duration, published,
       questions, scoringConfig, totalQ: questions.length,
+      antiCheatEnabled,
     });
   };
 
@@ -286,6 +289,40 @@ D. Đáp án D
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Anti-cheat Config */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-amber-400" /> Chế độ phòng thi
+            </h3>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/8">
+              <div className="flex-1 mr-4">
+                <div className="text-sm font-semibold text-white/80 mb-1">Cảnh báo vi phạm (Anti-cheat)</div>
+                <p className="text-xs text-white/35 leading-relaxed">
+                  Khi bật, hệ thống sẽ bắt buộc toàn màn hình, theo dõi chuyển tab và thoát fullscreen.
+                  Sau 5 lần vi phạm sẽ tự động nộp bài.
+                </p>
+              </div>
+              <button
+                onClick={() => setAntiCheatEnabled(!antiCheatEnabled)}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${
+                  antiCheatEnabled
+                    ? 'bg-emerald-500 shadow-md shadow-emerald-500/30'
+                    : 'bg-white/15'
+                }`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${
+                  antiCheatEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+            {!antiCheatEnabled && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Chế độ Anti-cheat đã <strong>tắt</strong>. Học sinh sẽ không bị cảnh báo khi chuyển tab hoặc thoát toàn màn hình trong khi làm bài thi này.</span>
               </div>
             )}
           </div>
