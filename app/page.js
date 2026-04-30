@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle } from 'lucide-react';
+import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle, Folder, Lock, ChevronDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import UserProfile from '@/components/UserProfile';
-import { getPublishedExams, getExamById } from '@/lib/examStore';
+import { getPublishedExams, getExamById, getAllFolders } from '@/lib/examStore';
 import FilterBar from '@/components/FilterBar';
 import ExamCard from '@/components/ExamCard';
 import QuestionCard from '@/components/QuestionCard';
@@ -76,6 +76,8 @@ export default function HomePage() {
 
   const router = useRouter();
   const [allExams, setAllExams] = useState([]);
+  const [allFolders, setAllFolders] = useState([]);
+  const [expandedFolders, setExpandedFolders] = useState({ 'root': true });
 
   // Quiz flow states
   const [activeExam, setActiveExam] = useState(null);
@@ -193,8 +195,20 @@ export default function HomePage() {
   // Load published exams from store
   useEffect(() => {
     async function init() {
-      const exams = await getPublishedExams();
+      const [exams, folders] = await Promise.all([
+        getPublishedExams(),
+        getAllFolders()
+      ]);
       setAllExams(exams);
+      setAllFolders(folders || []);
+
+      const initialExpanded = { 'root': true };
+      if (folders) {
+        folders.forEach(f => {
+          if (f.visibility !== 'private') initialExpanded[f.id] = true;
+        });
+      }
+      setExpandedFolders(initialExpanded);
 
       // Auto preview if from Admin
       if (typeof window !== 'undefined') {
@@ -1734,14 +1748,114 @@ export default function HomePage() {
           sortOrder={sortOrder} onSortOrder={setSortOrder}
         />
 
-        {/* Exam Grid */}
+        {/* Exam List (Grid or Accordion) */}
         {visibleExams.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {visibleExams.map(exam => (
-                <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
-              ))}
-            </div>
+            {searchQuery || selYear || selType || selSubject || sortOrder !== 'default' ? (
+              // Flat Grid View when filtering
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {visibleExams.map(exam => (
+                  <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
+                ))}
+              </div>
+            ) : (
+              // Accordion View when not filtering
+              (() => {
+                const publicFolders = allFolders.filter(f => f.visibility !== 'private').sort((a, b) => a.order_index - b.order_index);
+                const examsByFolder = {};
+                const rootExams = [];
+                
+                visibleExams.forEach(ex => {
+                  if (ex.folderId && publicFolders.find(f => f.id === ex.folderId)) {
+                    if (!examsByFolder[ex.folderId]) examsByFolder[ex.folderId] = [];
+                    examsByFolder[ex.folderId].push(ex);
+                  } else {
+                    rootExams.push(ex);
+                  }
+                });
+
+                return (
+                  <div className="space-y-6">
+                    {publicFolders.map(folder => {
+                      const fExams = examsByFolder[folder.id] || [];
+                      // Optionally hide empty folders, but maybe good to show they exist. Let's show if locked or has exams
+                      if (fExams.length === 0 && folder.visibility !== 'locked') return null;
+                      
+                      const isLocked = folder.visibility === 'locked';
+                      const isExpanded = expandedFolders[folder.id];
+
+                      return (
+                        <div key={folder.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                          <div 
+                            onClick={() => setExpandedFolders(prev => ({ ...prev, [folder.id]: !prev[folder.id] }))}
+                            className="flex items-center justify-between p-4 sm:p-5 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100"
+                          >
+                            <div className="flex items-center gap-3">
+                              <button className="p-1 rounded-md text-gray-400 hover:bg-gray-200">
+                                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                              </button>
+                              {isLocked ? <Lock className="w-5 h-5 text-gray-400" /> : <Folder className="w-5 h-5 text-indigo-500" fill="currentColor" fillOpacity={0.2} />}
+                              <h2 className="text-lg font-bold text-gray-800">{folder.name}</h2>
+                              <span className="text-xs font-semibold text-gray-500 bg-gray-200 px-2.5 py-1 rounded-full">{fExams.length} đề</span>
+                              {isLocked && <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-md ml-2 flex items-center gap-1"><Lock className="w-3 h-3" /> Đã khoá</span>}
+                            </div>
+                          </div>
+                          
+                          {isExpanded && (
+                            <div className="p-5 bg-white">
+                              {fExams.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                  {fExams.map(exam => (
+                                    <div key={exam.id} className={isLocked ? 'opacity-60 grayscale-[50%] pointer-events-none relative' : ''}>
+                                      <ExamCard exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
+                                      {isLocked && <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 backdrop-blur-[1px] rounded-2xl cursor-not-allowed">
+                                        <div className="bg-gray-900/80 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg pointer-events-none">
+                                          <Lock className="w-4 h-4" /> Đã khoá
+                                        </div>
+                                      </div>}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-center text-sm text-gray-400 py-4 italic">Chưa có đề thi nào trong thư mục này.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Root Exams */}
+                    {rootExams.length > 0 && (
+                      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                        <div 
+                            onClick={() => setExpandedFolders(prev => ({ ...prev, ['root']: !prev['root'] }))}
+                            className="flex items-center justify-between p-4 sm:p-5 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100"
+                          >
+                            <div className="flex items-center gap-3">
+                              <button className="p-1 rounded-md text-gray-400 hover:bg-gray-200">
+                                {expandedFolders['root'] ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                              </button>
+                              <Folder className="w-5 h-5 text-gray-400" />
+                              <h2 className="text-lg font-bold text-gray-800">Đề thi khác</h2>
+                              <span className="text-xs font-semibold text-gray-500 bg-gray-200 px-2.5 py-1 rounded-full">{rootExams.length} đề</span>
+                            </div>
+                          </div>
+                          {expandedFolders['root'] && (
+                            <div className="p-5 bg-white">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {rootExams.map(exam => (
+                                  <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            )}
 
             {/* Pagination */}
             <div className="mt-6">

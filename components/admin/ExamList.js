@@ -113,6 +113,16 @@ export default function ExamList({
     setDraggedItem(null);
   };
 
+  const handleDropOnFolder = async (e, targetFolder) => {
+    e.preventDefault();
+    if (draggedItem?.type === 'exam' && draggedItem.folderId !== targetFolder.id) {
+      if (onSaveExam) {
+        await onSaveExam({ ...draggedItem, folderId: targetFolder.id });
+      }
+    }
+    setDraggedItem(null);
+  };
+
   const saveOrder = async () => {
     setIsSavingOrder(true);
     if (onUpdateFoldersOrder && localFolders.length > 0) {
@@ -307,9 +317,17 @@ export default function ExamList({
         <div 
           draggable={isEditingOrder}
           onDragStart={(e) => handleDragStart(e, 'folder', folder)}
-          onDragOver={(e) => handleDragOver(e, 'folder', folder)}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (draggedItem?.type === 'exam') {
+              // Allow dropping exam onto folder
+            } else {
+              handleDragOver(e, 'folder', folder);
+            }
+          }}
+          onDrop={(e) => handleDropOnFolder(e, folder)}
           onDragEnd={handleDragEnd}
-          className={`flex items-center justify-between px-4 sm:px-6 py-3 bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${isDragged ? 'opacity-50' : ''}`}
+          className={`flex items-center justify-between px-4 sm:px-6 py-3 bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${isDragged ? 'opacity-50' : ''} ${draggedItem?.type === 'exam' ? 'border-2 border-transparent hover:border-indigo-500/50 hover:bg-indigo-500/10' : ''}`}
         >
           <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => toggleFolder(folder.id)}>
             {isEditingOrder && <GripVertical className="w-5 h-5 text-white/30 cursor-grab" />}
