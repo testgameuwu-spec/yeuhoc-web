@@ -83,6 +83,7 @@ body {
   position: sticky;
   top: 56px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Exam header card */
@@ -299,9 +300,13 @@ body {
 
 /* ─── Collapsible Sidebar Panel (Desktop) ─── */
 .et-sidebar-collapsed {
-  width: 0;
+  width: 0 !important;
+  min-width: 0 !important;
   border-left: none;
+  overflow: hidden !important;
+  padding: 0 !important;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 .et-sidebar-collapsed > div,
 .et-sidebar-collapsed > button:not(.et-sidebar-toggle) {
@@ -315,7 +320,7 @@ body {
   min-width: 0;
 }
 .et-screen.sidebar-hidden {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 0px;
 }
 
 /* ─── Exam Section Divider ─── */
@@ -362,9 +367,9 @@ body {
 
 /* ─── Sidebar Toggle Button ─── */
 .et-sidebar-toggle {
-  position: absolute;
+  position: fixed;
   top: 50%;
-  left: -14px;
+  right: 0;
   transform: translateY(-50%);
   width: 28px;
   height: 28px;
@@ -376,7 +381,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
+  z-index: 210;
   color: var(--et-gray-600);
   transition: all 0.2s;
 }
