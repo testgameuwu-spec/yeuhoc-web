@@ -32,21 +32,21 @@ function renderMathInText(text) {
 
     // 1. Handle display math $$...$$
     result = result.replace(/\$\$([\s\S]*?)\$\$/g, (match, latex) => {
-        const id = `__MATH_DISPLAY_${placeholders.length}__`;
+        const id = `MATH-DISPLAY-TOKEN-${placeholders.length}`;
         placeholders.push({ id, html: renderKatex(latex.trim(), true) });
         return id;
     });
 
     // 2. Handle display math \[...\]
     result = result.replace(/\\\[([\s\S]*?)\\\]/g, (match, latex) => {
-        const id = `__MATH_DISPLAY_${placeholders.length}__`;
+        const id = `MATH-DISPLAY-TOKEN-${placeholders.length}`;
         placeholders.push({ id, html: renderKatex(latex.trim(), true) });
         return id;
     });
 
     // 3. Handle inline math \(...\)
     result = result.replace(/\\\(([\s\S]*?)\\\)/g, (match, latex) => {
-        const id = `__MATH_INLINE_${placeholders.length}__`;
+        const id = `MATH-INLINE-TOKEN-${placeholders.length}`;
         placeholders.push({ id, html: renderKatex(latex.trim(), false) });
         return id;
     });
@@ -55,7 +55,7 @@ function renderMathInText(text) {
     // Matches $...$ where content is non-empty
     // Uses negative lookahead to skip $$
     result = result.replace(/(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g, (match, latex) => {
-        const id = `__MATH_INLINE_${placeholders.length}__`;
+        const id = `MATH-INLINE-TOKEN-${placeholders.length}`;
         placeholders.push({ id, html: renderKatex(latex.trim(), false) });
         return id;
     });
@@ -64,8 +64,8 @@ function renderMathInText(text) {
     // Handles patterns like \sqrt{...}, \frac{...}{...}, \boxed{...}
     // Up to two levels of nested braces
     result = result.replace(/\\(?:frac|dfrac|sqrt|boxed|overline|underline|vec|hat|bar|tilde)(?:\[[^\]]*\])?(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})+/g, (match) => {
-        if (match.includes('__MATH_')) return match;
-        const id = `__MATH_INLINE_${placeholders.length}__`;
+        if (match.includes('MATH-TOKEN')) return match;
+        const id = `MATH-INLINE-TOKEN-${placeholders.length}`;
         placeholders.push({ id, html: renderKatex(match.trim(), false) });
         return id;
     });
