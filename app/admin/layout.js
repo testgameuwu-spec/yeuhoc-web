@@ -6,13 +6,10 @@ import { supabase } from '@/lib/supabase';
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState(true); // BYPASS: Đổi thành true để cho phép truy cập luôn
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
-      // BYPASS ADMIN: Bỏ qua bước kiểm tra quyền
-      return; 
-
       // 1. Lấy thông tin user hiện tại đang đăng nhập
       const { data: { session } } = await supabase.auth.getSession();
 
