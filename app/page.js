@@ -157,7 +157,7 @@ export default function HomePage() {
           .eq('exam_id', activeExam.id)
           .order('score', { ascending: false })
           .order('time_spent', { ascending: true });
-        
+
         if (data) {
           const highestAttemptsMap = new Map();
           data.forEach(attempt => {
@@ -170,8 +170,8 @@ export default function HomePage() {
           const totalParticipants = highestAttempts.length;
           const totalScore = highestAttempts.reduce((acc, curr) => acc + curr.score, 0);
           const avgScore = totalParticipants ? (totalScore / totalParticipants).toFixed(2) : 0;
-          
-          const sortedScores = [...highestAttempts].map(d => d.score).sort((a,b) => a - b);
+
+          const sortedScores = [...highestAttempts].map(d => d.score).sort((a, b) => a - b);
           let medianScore = 0;
           if (totalParticipants > 0) {
             const mid = Math.floor(totalParticipants / 2);
@@ -265,9 +265,9 @@ export default function HomePage() {
 
   const isTHPT = activeExam?.examType === 'THPT';
   realQuestions.forEach((q, i) => {
-    q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i-1].type !== 'MCQ');
-    q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || realQuestions[i-1].type !== 'TF');
-    q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || realQuestions[i-1].type !== 'SA');
+    q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i - 1].type !== 'MCQ');
+    q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || realQuestions[i - 1].type !== 'TF');
+    q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || realQuestions[i - 1].type !== 'SA');
   });
 
   const answeredCount = realQuestions.filter(q => {
@@ -294,14 +294,14 @@ export default function HomePage() {
   const requestFullscreen = useCallback(() => {
     if (!canFullscreen) return;
     const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => { });
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
   }, [canFullscreen]);
 
   const exitFullscreen = useCallback(() => {
     if (!canFullscreen) return;
     if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     } else if (document.webkitFullscreenElement) {
       document.webkitExitFullscreen?.();
     }
@@ -629,7 +629,7 @@ export default function HomePage() {
                 </div>
               ) : examStats ? (
                 <div className="space-y-8 animate-fadeIn">
-                  
+
                   {/* --- Thống kê --- */}
                   <div>
                     <div className="flex items-center gap-2 mb-4">
@@ -638,7 +638,7 @@ export default function HomePage() {
                     </div>
                     <div className="flex bg-white border border-gray-200/60 rounded-xl overflow-hidden shadow-sm">
                       <div className="bg-indigo-600 text-white w-12 flex items-center justify-center shrink-0">
-                         <span className="font-bold tracking-widest text-sm" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CHI TIẾT</span>
+                        <span className="font-bold tracking-widest text-sm" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CHI TIẾT</span>
                       </div>
                       <div className="flex-1 p-4 grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50/50">
                         {/* Hàng 1 */}
@@ -689,9 +689,9 @@ export default function HomePage() {
                                 <tr key={attempt.id} className="hover:bg-gray-50 transition-colors">
                                   <td className="px-4 py-3 text-center">
                                     <div className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center text-xs font-bold text-white
-                                      ${index === 0 ? 'bg-amber-500 shadow-md shadow-amber-500/20' : 
-                                        index === 1 ? 'bg-slate-400 shadow-md shadow-slate-400/20' : 
-                                        index === 2 ? 'bg-amber-700 shadow-md shadow-amber-700/20' : 'bg-gray-300'}
+                                      ${index === 0 ? 'bg-amber-500 shadow-md shadow-amber-500/20' :
+                                        index === 1 ? 'bg-slate-400 shadow-md shadow-slate-400/20' :
+                                          index === 2 ? 'bg-amber-700 shadow-md shadow-amber-700/20' : 'bg-gray-300'}
                                     `}>
                                       {index + 1}
                                     </div>
@@ -822,8 +822,8 @@ export default function HomePage() {
                 display: 'flex', alignItems: 'center', gap: 8,
                 transition: 'background 0.2s',
               }}
-              onMouseOver={e => e.target.style.background = '#b91c1c'}
-              onMouseOut={e => e.target.style.background = '#dc2626'}
+                onMouseOver={e => e.target.style.background = '#b91c1c'}
+                onMouseOut={e => e.target.style.background = '#dc2626'}
               >
                 🔒 {canFullscreen ? 'Quay lại làm bài (Toàn màn hình)' : 'Quay lại làm bài'}
               </button>
@@ -895,7 +895,7 @@ export default function HomePage() {
                             <img src={group.context.image} alt="Context image" className="max-w-full rounded-xl border border-gray-200 mt-4 max-h-[300px] object-contain" />
                           )}
                         </div>
-                        
+
                         <div className="flex flex-col gap-5 pl-2 sm:pl-4 border-l-2 border-indigo-100">
                           {group.children.map(childQ => {
                             const currentI = realQIndex++;
@@ -928,7 +928,7 @@ export default function HomePage() {
                   return (
                     <div key={firstChild.id} id={`q-card-${currentI}`} onClick={() => setCurrentQ(currentI)}>
                       {sectionHeader}
-                      
+
                       {firstChild.contextHint && (
                         <div className="et-section-hint">
                           <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1026,7 +1026,7 @@ export default function HomePage() {
           {/* Sidebar Toggle (outside sidebar to avoid overflow clipping) */}
           {isSidebarCollapsed && (
             <button className="et-sidebar-toggle desktop-only" onClick={() => setIsSidebarCollapsed(false)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 25, height: 25 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
             </button>
           )}
 
@@ -1034,7 +1034,7 @@ export default function HomePage() {
           <div className={`et-sidebar desktop-only ${isSidebarCollapsed ? 'et-sidebar-collapsed' : ''}`}>
             <div style={{ position: 'relative' }}>
               <button className="absolute right-3 top-3 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setIsSidebarCollapsed(true)} title="Đóng panel">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 25, height: 25 }}><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
               <Timer initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
             </div>
@@ -1189,7 +1189,7 @@ export default function HomePage() {
                             <img src={group.context.image} alt="Context image" className="max-w-full rounded-xl border border-gray-200 mt-4 max-h-[300px] object-contain" />
                           )}
                         </div>
-                        
+
                         <div className="flex flex-col gap-5 pl-2 sm:pl-4 border-l-2 border-indigo-100">
                           {group.children.map(childQ => {
                             const currentI = realQIndex++;
@@ -1199,7 +1199,7 @@ export default function HomePage() {
                                   question={childQ}
                                   index={currentI}
                                   selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
-                                  onAnswerChange={() => {}}
+                                  onAnswerChange={() => { }}
                                   showResult
                                   disabled
                                 />
@@ -1217,7 +1217,7 @@ export default function HomePage() {
                   return (
                     <div key={firstChild.id} id={`q-card-${currentI}`}>
                       {sectionHeader}
-                      
+
                       {firstChild.contextHint && (
                         <div className="et-section-hint">
                           <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1229,7 +1229,7 @@ export default function HomePage() {
                         question={firstChild}
                         index={currentI}
                         selectedAnswer={answers[firstChild.id] || (firstChild.type === 'TF' ? {} : '')}
-                        onAnswerChange={() => {}}
+                        onAnswerChange={() => { }}
                         showResult
                         disabled
                       />
