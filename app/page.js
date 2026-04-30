@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, User, ArrowLeft, ChevronRight, RotateCcw, Clock, X, BarChart2, Award, Calendar } from 'lucide-react';
+import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import UserProfile from '@/components/UserProfile';
 import { getPublishedExams, getExamById } from '@/lib/examStore';
@@ -79,7 +79,7 @@ export default function HomePage() {
 
   // Quiz flow states
   const [activeExam, setActiveExam] = useState(null);
-  const [quizPhase, setQuizPhase] = useState('browse'); // browse | preview | quiz | results
+  const [quizPhase, setQuizPhase] = useState('browse'); // browse | preview | quiz | results | practice
   const [answers, setAnswers] = useState({});
   const [timerRunning, setTimerRunning] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
@@ -287,6 +287,20 @@ export default function HomePage() {
     setSavedSecondsLeft(null);
     setIsPaused(false);
     setQuizPhase('preview');
+  };
+
+  // ── Practice mode (ôn luyện) ──
+  const [practiceRevealed, setPracticeRevealed] = useState({});
+
+  const handleStartPractice = () => {
+    setAnswers({});
+    setCurrentQ(0);
+    setPracticeRevealed({});
+    setQuizPhase('practice');
+  };
+
+  const handlePracticeReveal = () => {
+    setPracticeRevealed(prev => ({ ...prev, [currentQ]: true }));
   };
 
   // ── Fullscreen helpers ──
@@ -571,6 +585,174 @@ export default function HomePage() {
     );
   }
 
+  // ── PRACTICE MODE ──
+  if (quizPhase === 'practice' && activeExam) {
+    const q = questions[currentQ];
+    const isRevealed = practiceRevealed[currentQ] || false;
+    const ua = answers[q?.id];
+    const hasAnswered = ua !== undefined && ua !== '' && (typeof ua !== 'object' || Object.keys(ua).length > 0);
+
+    let isCorrect = false;
+    if (isRevealed && q) {
+      if (q.type === 'MCQ') isCorrect = ua === q.answer;
+      else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
+        const s = typeof ua === 'object' ? ua : {};
+        isCorrect = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
+      } else {
+        isCorrect = (ua || '').toString().trim().toLowerCase() === (q.answer || '').toString().trim().toLowerCase();
+      }
+    }
+
+    return (
+      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
+        <Topbar activeExam={activeExam} handleReset={handleReset}>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs font-bold">
+            📖 Chế độ ôn luyện
+          </div>
+        </Topbar>
+
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            {/* Progress dots */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-gray-600">Câu {currentQ + 1}/{questions.length}</span>
+                <span className="text-xs font-semibold text-gray-400">{Object.keys(practiceRevealed).length} đã xem</span>
+              </div>
+              <div className="flex flex-wrap gap-[5px]">
+                {questions.map((qItem, i) => {
+                  const done = practiceRevealed[i];
+                  const isCurrent = i === currentQ;
+                  const isMarked = bookmarks.has(qItem.id);
+                  let bg = '#e2e8f0';
+                  if (isCurrent) bg = '#6366f1';
+                  else if (isMarked) bg = '#f59e0b';
+                  else if (done) bg = '#10b981';
+                  return (
+                    <button key={i} onClick={() => setCurrentQ(i)} style={{
+                      width: isCurrent ? 22 : 9, height: 9, borderRadius: 20, border: 'none', cursor: 'pointer',
+                      background: bg, transition: 'all .2s', flexShrink: 0,
+                    }} title={`Câu ${i + 1}${isMarked ? ' (đã đánh dấu)' : ''}`} />
+                  );
+                })}
+              </div>
+            </div>
+
+            {q && (
+              <div className="practice-card-wrap" style={{ fontSize: '1.1em' }}>
+                <QuestionCard
+                  question={q}
+                  index={currentQ}
+                  selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
+                  onAnswerChange={(val) => !isRevealed && handleAnswerChange(q.id, val)}
+                  showResult={isRevealed}
+                  disabled={isRevealed}
+                  isBookmarked={bookmarks.has(q.id)}
+                  onToggleBookmark={!isRevealed ? () => {
+                    const next = new Set(bookmarks);
+                    if (next.has(q.id)) next.delete(q.id);
+                    else next.add(q.id);
+                    setBookmarks(next);
+                  } : null}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mt-4 sm:mt-6 gap-2 sm:gap-4">
+              <button
+                onClick={() => setCurrentQ(prev => Math.max(0, prev - 1))}
+                disabled={currentQ === 0}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
+                style={{
+                  background: currentQ === 0 ? '#f1f5f9' : '#fff',
+                  color: currentQ === 0 ? '#94a3b8' : '#4b5563',
+                  border: '1.5px solid ' + (currentQ === 0 ? '#e2e8f0' : '#d1d5db'),
+                  cursor: currentQ === 0 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Câu trước</span>
+              </button>
+
+              <div className="flex items-center gap-2 sm:gap-3">
+                {!isRevealed && (
+                  <button
+                    onClick={handlePracticeReveal}
+                    disabled={!hasAnswered}
+                    className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all"
+                    style={{
+                      background: hasAnswered ? 'linear-gradient(135deg, #10b981, #059669)' : '#e2e8f0',
+                      color: hasAnswered ? '#fff' : '#94a3b8',
+                      border: 'none',
+                      cursor: hasAnswered ? 'pointer' : 'not-allowed',
+                      boxShadow: hasAnswered ? '0 4px 14px rgba(16,185,129,.3)' : 'none',
+                    }}
+                  >
+                    <Eye className="w-4 h-4" /> Xem đáp án
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => setCurrentQ(prev => Math.min(questions.length - 1, prev + 1))}
+                disabled={currentQ === questions.length - 1}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
+                style={{
+                  background: currentQ === questions.length - 1 ? '#f1f5f9' : 'var(--et-blue)',
+                  color: currentQ === questions.length - 1 ? '#94a3b8' : '#fff',
+                  border: 'none',
+                  cursor: currentQ === questions.length - 1 ? 'not-allowed' : 'pointer',
+                  boxShadow: currentQ === questions.length - 1 ? 'none' : '0 4px 14px rgba(59,111,212,.3)',
+                }}
+              >
+                <span className="hidden sm:inline">Câu tiếp</span> <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {bookmarks.size > 0 && (
+              <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn">
+                <div className="text-xs font-bold text-amber-700 mb-2 flex items-center gap-1.5">
+                  🚩 Câu đã đánh dấu ({bookmarks.size})
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {questions.map((qItem, i) => bookmarks.has(qItem.id) && (
+                    <button key={i} onClick={() => setCurrentQ(i)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                      style={{
+                        background: i === currentQ ? '#d97706' : '#fff',
+                        color: i === currentQ ? '#fff' : '#92400e',
+                        border: '1.5px solid #fbbf24',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Câu {i + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {Object.keys(practiceRevealed).length === questions.length && (
+              <div className="mt-8 p-6 bg-white rounded-2xl border border-gray-200 text-center shadow-sm animate-fadeIn">
+                <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Hoàn thành ôn luyện!</h3>
+                <p className="text-sm text-gray-500 mb-4">Bạn đã xem hết {questions.length} câu hỏi.</p>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  <button onClick={() => { setAnswers({}); setCurrentQ(0); setPracticeRevealed({}); setBookmarks(new Set()); }} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
+                    <RotateCcw className="w-4 h-4" /> Ôn lại từ đầu
+                  </button>
+                  <button onClick={handleReset} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-2">
+                    <ArrowLeft className="w-4 h-4" /> Chọn đề khác
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+      </div>
+    );
+  }
+
   // ── PREVIEW ──
   if (quizPhase === 'preview' && activeExam) {
     return (
@@ -585,59 +767,58 @@ export default function HomePage() {
               {activeExam.examType && <span className="et-tag">{activeExam.examType} · {activeExam.year}</span>}
             </div>
             <h1 className="text-xl sm:text-2xl font-bold mb-2 text-gray-800">{activeExam.title}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mb-4">
-              Nhấn "Bắt đầu" để vào làm bài. Thời gian sẽ được tính ngay khi bắt đầu.
+            <p className="text-xs sm:text-sm text-gray-500 mb-6">
+              Chọn chế độ phù hợp để bắt đầu.
             </p>
 
-            {/* Fullscreen rules notice */}
-            {isAntiCheatEnabled ? (
+            {/* Mode selection cards */}
+            <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap', maxWidth: 560, margin: '0 auto 24px' }}>
+              {/* Exam mode card */}
               <div style={{
-                background: '#fefce8', border: '1px solid #fef08a',
-                borderRadius: 12, padding: '14px 20px', marginBottom: 20,
-                textAlign: 'left', maxWidth: 480, margin: '0 auto 20px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 18 }}>🔒</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>Quy định phòng thi</span>
-                </div>
-                <ul style={{ fontSize: 12, color: '#78350f', lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
-                  {canFullscreen && <li>Bài thi sẽ chạy ở chế độ <b>toàn màn hình (fullscreen)</b></li>}
-                  <li>Không được <b>chuyển tab</b> hoặc rời khỏi trang thi trong lúc thi</li>
-                  <li>Mỗi lần vi phạm sẽ bị <b>cảnh cáo và ghi nhận</b></li>
-                  <li>Sau <b>5 lần vi phạm</b>, hệ thống sẽ <b>tự động nộp bài</b></li>
-                </ul>
-              </div>
-            ) : (
-              <div style={{
-                background: '#f0fdf4', border: '1px solid #bbf7d0',
-                borderRadius: 12, padding: '14px 20px', marginBottom: 20,
-                textAlign: 'left', maxWidth: 480, margin: '0 auto 20px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 18 }}>📝</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#166534' }}>Chế độ luyện tập</span>
-                </div>
-                <ul style={{ fontSize: 12, color: '#15803d', lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
-                  <li>Bài thi này <b>không bật</b> chế độ chống gian lận</li>
-                  <li>Bạn có thể tự do chuyển tab mà không bị cảnh báo</li>
-                  <li>Thời gian vẫn được tính bình thường</li>
-                </ul>
-              </div>
-            )}
-
-            <button
-              onClick={handleBeginQuiz}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '12px 32px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: 'var(--et-blue)', color: '#fff', fontSize: 15, fontWeight: 600,
-                fontFamily: 'inherit', transition: 'background .2s',
+                flex: '1 1 240px', maxWidth: 270, background: '#fff', border: '2px solid #e0e7ff',
+                borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
+                transition: 'all .2s', position: 'relative'
               }}
-              onMouseOver={e => e.target.style.background = '#2f5cc0'}
-              onMouseOut={e => e.target.style.background = 'var(--et-blue)'}
-            >
-              {isAntiCheatEnabled ? '🔒 Đồng ý & Bắt đầu làm bài' : '📝 Bắt đầu làm bài'} <ChevronRight style={{ width: 18, height: 18 }} />
-            </button>
+              onClick={handleBeginQuiz}
+              onMouseOver={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(99,102,241,.15)'; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = '#e0e7ff'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ fontSize: 32, marginBottom: 8 }}>{isAntiCheatEnabled ? '🔒' : '📝'}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#1e2533', marginBottom: 6 }}>Làm bài thi</div>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                  {isAntiCheatEnabled
+                    ? 'Tính thời gian, toàn màn hình, chống gian lận. Kết quả được lưu lại.'
+                    : 'Tính thời gian, không chống gian lận. Kết quả được lưu lại.'}
+                </p>
+                <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>⏱ Giới hạn thời gian</span>
+                  {isAntiCheatEnabled && (
+                    <span style={{ fontSize: 10, background: '#fce7f3', color: '#9d174d', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>🔒 Fullscreen</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Practice mode card */}
+              <div style={{
+                flex: '1 1 240px', maxWidth: 270, background: '#fff', border: '2px solid #d1fae5',
+                borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
+                transition: 'all .2s', position: 'relative'
+              }}
+              onClick={handleStartPractice}
+              onMouseOver={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(16,185,129,.15)'; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = '#d1fae5'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#1e2533', marginBottom: 6 }}>Ôn luyện</div>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                  Từng câu một, xem đáp án ngay. Không giới hạn thời gian, thoải mái học.
+                </p>
+                <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>✅ Đáp án tức thì</span>
+                  <span style={{ fontSize: 10, background: '#ede9fe', color: '#5b21b6', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>🧘 Không áp lực</span>
+                </div>
+              </div>
+            </div>
 
             {/* Preview Statistics & Leaderboard */}
             <div className="mt-12 text-left">

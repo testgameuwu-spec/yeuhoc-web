@@ -10,7 +10,7 @@ import ExamEditor from '@/components/admin/ExamEditor';
 import ScoringConfig from '@/components/admin/ScoringConfig';
 import UserManagement from '@/components/admin/UserManagement';
 import {
-  BookOpen, Plus, ArrowLeft,
+  BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
 import UserProfile from '@/components/UserProfile';
 import { supabase } from '@/lib/supabase';
@@ -59,7 +59,8 @@ export default function AdminDashboard() {
   const [exams, setExams] = useState([]);
   const [editingExam, setEditingExam] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Upload & parse flow
   const [parsedQuestions, setParsedQuestions] = useState([]);
@@ -226,37 +227,53 @@ export default function AdminDashboard() {
   };
 
   return (
-    <main className="min-h-screen flex">
-      <AdminSidebar
-        activeTab={activeTab}
-        onTabChange={(tab) => { setActiveTab(tab); setIsCreating(false); setEditingExam(null); }}
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
+    <main className="min-h-screen flex" style={{ background: '#0a0a1e' }}>
+      {/* Mobile overlay backdrop */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+      )}
 
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+      {/* Sidebar - overlay on mobile, normal on desktop */}
+      <div className={`md:block ${mobileMenuOpen ? 'block' : 'hidden'}`}>
+        <AdminSidebar
+          activeTab={activeTab}
+          onTabChange={(tab) => { setActiveTab(tab); setIsCreating(false); setEditingExam(null); setMobileMenuOpen(false); }}
+          isOpen={sidebarOpen || mobileMenuOpen}
+          onToggle={() => {
+            if (window.innerWidth < 768) setMobileMenuOpen(false);
+            else setSidebarOpen(!sidebarOpen);
+          }}
+        />
+      </div>
+
+      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} ml-0`}>
         {/* Top bar */}
         <header className="sticky top-0 z-30 glass border-b border-white/8" style={{ isolation: 'isolate' }}>
-          <div className="px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="px-4 sm:px-6 md:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              {/* Mobile menu button */}
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-colors md:hidden">
+                <Menu className="w-5 h-5" />
+              </button>
               {isCreating && (
                 <button onClick={handleBackToList} className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-colors">
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               )}
-              <h1 className="text-lg font-bold text-white">
+              <h1 className="text-sm sm:text-lg font-bold text-white truncate">
                 {activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  'Quản lý người dùng'}
               </h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button 
-                onClick={() => window.open('/yeuhoc/', '_blank')} 
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                onClick={() => window.location.href = '/yeuhoc/'} 
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
                 title="Về trang chủ"
               >
-                <BookOpen className="w-4 h-4" /> Về trang chủ
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Về trang chủ</span>
               </button>
               <UserProfile />
             </div>
@@ -264,7 +281,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* Main content */}
-        <div className="p-8 animate-fadeIn">
+        <div className="p-3 sm:p-5 md:p-8 animate-fadeIn">
           {renderContent()}
         </div>
       </div>

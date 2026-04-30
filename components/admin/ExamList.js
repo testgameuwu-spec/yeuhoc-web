@@ -172,15 +172,15 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {isEditingOrder ? (
             <>
               <button onClick={cancelOrder}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm font-semibold transition-all">
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs sm:text-sm font-semibold transition-all">
                 <X className="w-4 h-4" /> Hủy
               </button>
               <button onClick={saveOrder} disabled={isSavingOrder}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all shadow-lg ${
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all shadow-lg ${
                   isSavingOrder 
                     ? 'bg-gray-500/20 text-gray-400 border-gray-500/30 cursor-not-allowed'
                     : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10'
@@ -196,11 +196,11 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
           ) : (
             <>
               <button onClick={() => setIsEditingOrder(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm font-semibold transition-all border border-white/10">
-                <GripVertical className="w-4 h-4" /> Sắp xếp
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs sm:text-sm font-semibold transition-all border border-white/10">
+                <GripVertical className="w-4 h-4" /> <span className="hidden sm:inline">Sắp xếp</span>
               </button>
               <button onClick={onCreateNew}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/25">
+                className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white text-xs sm:text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/25">
                 <Plus className="w-4 h-4" />
                 Tạo đề mới
               </button>
@@ -211,8 +211,8 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
 
       {/* Exam Table */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.03]">
-        {/* Header */}
-        <div className={`grid gap-4 px-6 py-3 border-b border-white/10 text-xs font-semibold text-white/30 uppercase tracking-wider ${isEditingOrder ? 'grid-cols-[40px_1fr_120px_100px_80px_100px]' : 'grid-cols-[1fr_120px_100px_80px_100px_56px]'}`}>
+        {/* Header - hidden on mobile */}
+        <div className={`hidden md:grid gap-4 px-6 py-3 border-b border-white/10 text-xs font-semibold text-white/30 uppercase tracking-wider ${isEditingOrder ? 'grid-cols-[40px_1fr_120px_100px_80px_100px]' : 'grid-cols-[1fr_120px_100px_80px_100px_56px]'}`}>
           {isEditingOrder && <span></span>}
           <span>Đề thi</span>
           <span>Môn / Kì thi</span>
@@ -232,7 +232,12 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={(e) => handleDragOver(e, index)}
               onDragEnd={handleDragEnd}
-              className={`grid gap-4 px-6 py-4 border-b border-white/5 hover:bg-white/[0.03] transition-colors items-center group ${isEditingOrder ? 'grid-cols-[40px_1fr_120px_100px_80px_100px] cursor-grab active:cursor-grabbing' : 'grid-cols-[1fr_120px_100px_80px_100px_56px]'} ${isDragged ? 'opacity-50 bg-white/5' : ''}`}>
+              className={`
+                md:grid gap-3 md:gap-4 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 hover:bg-white/[0.03] transition-colors items-center group
+                flex flex-col md:flex-row
+                ${isEditingOrder ? 'md:grid-cols-[40px_1fr_120px_100px_80px_100px] cursor-grab active:cursor-grabbing' : 'md:grid-cols-[1fr_120px_100px_80px_100px_56px]'}
+                ${isDragged ? 'opacity-50 bg-white/5' : ''}
+              `}>
               
               {isEditingOrder && (
                 <div className="text-white/20 group-hover:text-white/50 transition-colors">
@@ -249,19 +254,49 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
                   <Calendar className="w-3 h-3" /> {exam.createdAt}
                 </p>
               </div>
+              {/* Mobile meta row */}
+              <div className="flex items-center gap-3 flex-wrap md:hidden w-full">
+                <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r ${sc} border`}>
+                  {exam.subject}
+                </span>
+                <span className="text-xs text-white/40">{exam.totalQ} câu · {exam.year}</span>
+                <button onClick={() => !isEditingOrder && onTogglePublish(exam.id)}
+                  disabled={isEditingOrder}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    exam.published
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                  }`}>
+                  {exam.published ? 'Published' : 'Draft'}
+                </button>
+                {!isEditingOrder && (
+                  <div className="ml-auto flex items-center gap-1">
+                    <button onClick={() => onEdit(exam)}
+                      className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => onDelete(exam.id)}
+                      className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop-only columns */}
               {/* Subject */}
-              <div>
+              <div className="hidden md:block">
                 <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r ${sc} border`}>
                   {exam.subject}
                 </span>
                 <span className="block text-[10px] text-white/30 mt-1">{exam.examType}</span>
               </div>
               {/* Questions */}
-              <span className="text-sm text-white/60 font-medium">{exam.totalQ} câu</span>
+              <span className="hidden md:block text-sm text-white/60 font-medium">{exam.totalQ} câu</span>
               {/* Year */}
-              <span className="text-sm text-white/60 font-medium">{exam.year}</span>
+              <span className="hidden md:block text-sm text-white/60 font-medium">{exam.year}</span>
               {/* Status */}
-              <div>
+              <div className="hidden md:block">
                 <button onClick={() => !isEditingOrder && onTogglePublish(exam.id)}
                   disabled={isEditingOrder}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border ${
@@ -273,9 +308,9 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
                   {exam.published ? 'Published' : 'Draft'}
                 </button>
               </div>
-              {/* Actions */}
+              {/* Actions - desktop */}
               {!isEditingOrder && (
-              <div className="flex items-center gap-1 relative">
+              <div className="hidden md:flex items-center gap-1 relative">
                 <button onClick={() => window.open(`/yeuhoc/?preview_exam_id=${exam.id}`, '_blank')}
                   className="p-2 rounded-lg hover:bg-white/10 text-indigo-400 hover:text-indigo-300 transition-colors" title="Xem trước đề thi">
                   <Eye className="w-4 h-4" />
