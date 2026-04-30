@@ -19,13 +19,14 @@ const SCORING_PRESETS = {
   'Tuỳ chỉnh': null,
 };
 
-export default function ExamEditor({ exam, questions: initialQuestions, onSave, onBack, onFileLoaded, parseError }) {
+export default function ExamEditor({ exam, folders = [], questions: initialQuestions, onSave, onBack, onFileLoaded, parseError }) {
   const [title, setTitle] = useState(exam?.title || '');
   const [subject, setSubject] = useState(exam?.subject || 'Toán');
   const [examType, setExamType] = useState(exam?.examType || 'THPT');
   const [year, setYear] = useState(exam?.year || 2024);
   const [duration, setDuration] = useState(exam?.duration || 90);
   const [published, setPublished] = useState(exam?.published || false);
+  const [folderId, setFolderId] = useState(exam?.folderId || 'root');
   const [questions, setQuestions] = useState(initialQuestions || exam?.questions || []);
   const [scoringPreset, setScoringPreset] = useState('THPT Toán');
   const [scoringConfig, setScoringConfig] = useState(SCORING_PRESETS['THPT Toán']);
@@ -43,6 +44,7 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
       setYear(exam.year || 2024);
       setDuration(exam.duration || 90);
       setPublished(exam.published || false);
+      setFolderId(exam.folderId || 'root');
       setAntiCheatEnabled(exam.antiCheatEnabled !== false);
       if (exam.questions && exam.questions.length > 0) {
         setQuestions(exam.questions);
@@ -213,7 +215,7 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
   const handleSave = () => {
     onSave({
       id: exam?.id || null,
-      title, subject, examType, year, duration, published,
+      title, subject, examType, year, duration, published, folderId: folderId === 'root' ? null : folderId,
       questions, scoringConfig, totalQ: questions.length,
       antiCheatEnabled,
     });
@@ -299,6 +301,17 @@ D. Đáp án D
                 <input type="text" value={title} onChange={e => setTitle(e.target.value)}
                   placeholder="VD: Đề thi THPT QG 2024 — Toán"
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all" />
+              </div>
+              {/* Folder */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Thư mục lưu trữ</label>
+                <select value={folderId} onChange={e => setFolderId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
+                  <option value="root" className="bg-[#14142a]">-- Không thuộc thư mục nào --</option>
+                  {folders.map(f => (
+                    <option key={f.id} value={f.id} className="bg-[#14142a]">{f.name}</option>
+                  ))}
+                </select>
               </div>
               {/* Subject */}
               <div>

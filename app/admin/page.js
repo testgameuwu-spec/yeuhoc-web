@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { parseQuizText } from '@/lib/parser';
-import { getAllExams, saveExam, deleteExam, togglePublish, seedIfEmpty, updateExamsOrder } from '@/lib/examStore';
+import { getAllExams, saveExam, deleteExam, togglePublish, seedIfEmpty, updateExamsOrder, getAllFolders, createFolder, updateFolder, deleteFolder, updateFoldersOrder } from '@/lib/examStore';
 import FileUpload from '@/components/FileUpload';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import ExamList from '@/components/admin/ExamList';
@@ -57,6 +57,7 @@ const MOCK_USERS = [
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('exams');
   const [exams, setExams] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [editingExam, setEditingExam] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -77,7 +78,9 @@ export default function AdminDashboard() {
     if (activeTab === 'exams') {
       async function init() {
         const allExams = await getAllExams();
+        const allFolders = await getAllFolders();
         setExams(allExams);
+        setFolders(allFolders);
       }
       init();
     }
@@ -85,6 +88,7 @@ export default function AdminDashboard() {
 
   // Refresh exams list from store
   const refreshExams = async () => setExams(await getAllExams());
+  const refreshFolders = async () => setFolders(await getAllFolders());
 
   const handleFileLoaded = useCallback((text, name) => {
     setParseError('');
@@ -191,6 +195,51 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCreateFolder = async (folderData) => {
+    try {
+      await createFolder(folderData);
+      await refreshFolders();
+      showAlert('Thành công', 'Tạo thư mục thành công!');
+    } catch (error) {
+      console.error('Create folder error:', error);
+      showAlert('Lỗi', 'Lỗi khi tạo thư mục: ' + (error.message || JSON.stringify(error)));
+    }
+  };
+
+  const handleUpdateFolder = async (id, folderData) => {
+    try {
+      await updateFolder(id, folderData);
+      await refreshFolders();
+      showAlert('Thành công', 'Cập nhật thư mục thành công!');
+    } catch (error) {
+      console.error('Update folder error:', error);
+      showAlert('Lỗi', 'Lỗi khi cập nhật thư mục: ' + (error.message || JSON.stringify(error)));
+    }
+  };
+
+  const handleDeleteFolder = async (id) => {
+    try {
+      await deleteFolder(id);
+      await refreshFolders();
+      await refreshExams(); // Also refresh exams in case their folder_id was nullified
+      showAlert('Thành công', 'Đã xóa thư mục!');
+    } catch (error) {
+      console.error('Delete folder error:', error);
+      showAlert('Lỗi', 'Lỗi khi xóa thư mục: ' + (error.message || JSON.stringify(error)));
+    }
+  };
+
+  const handleUpdateFoldersOrder = async (orderedFolders) => {
+    try {
+      const updates = orderedFolders.map((folder, idx) => ({ id: folder.id, order_index: idx }));
+      await updateFoldersOrder(updates);
+      await refreshFolders();
+    } catch (error) {
+      console.error('Update folder order error:', error);
+      showAlert('Lỗi', 'Lỗi khi lưu thứ tự thư mục: ' + (error.message || JSON.stringify(error)));
+    }
+  };
+
   // Determine what to render in main content
   const renderContent = () => {
     if (activeTab === 'exams') {
@@ -198,6 +247,7 @@ export default function AdminDashboard() {
         return (
           <ExamEditor
             exam={editingExam}
+            folders={folders}
             questions={parsedQuestions}
             onSave={handleSaveExam}
             onBack={handleBackToList}
@@ -209,11 +259,17 @@ export default function AdminDashboard() {
       return (
         <ExamList
           exams={exams}
+          folders={folders}
           onEdit={handleEditExam}
           onDelete={handleDeleteExam}
           onTogglePublish={handleTogglePublish}
           onCreateNew={handleCreateNew}
           onUpdateOrder={handleUpdateOrder}
+          onCreateFolder={handleCreateFolder}
+          onUpdateFolder={handleUpdateFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onUpdateFoldersOrder={handleUpdateFoldersOrder}
+          onSaveExam={handleSaveExam}
         />
       );
     }
