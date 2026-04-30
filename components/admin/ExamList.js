@@ -25,6 +25,7 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
 
   // Ordering states
   const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [localExams, setLocalExams] = useState([]);
   const [draggedIndex, setDraggedIndex] = useState(null);
 
@@ -77,9 +78,11 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
     setDraggedIndex(null);
   };
 
-  const saveOrder = () => {
+  const saveOrder = async () => {
     if (onUpdateOrder) {
-      onUpdateOrder(localExams);
+      setIsSavingOrder(true);
+      await onUpdateOrder(localExams);
+      setIsSavingOrder(false);
     }
     setIsEditingOrder(false);
   };
@@ -176,9 +179,18 @@ export default function ExamList({ exams, onEdit, onDelete, onTogglePublish, onC
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm font-semibold transition-all">
                 <X className="w-4 h-4" /> Hủy
               </button>
-              <button onClick={saveOrder}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 text-sm font-semibold transition-all shadow-lg shadow-emerald-500/10">
-                <Save className="w-4 h-4" /> Lưu thứ tự
+              <button onClick={saveOrder} disabled={isSavingOrder}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all shadow-lg ${
+                  isSavingOrder 
+                    ? 'bg-gray-500/20 text-gray-400 border-gray-500/30 cursor-not-allowed'
+                    : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10'
+                }`}>
+                {isSavingOrder ? (
+                  <span className="w-4 h-4 border-2 border-white/20 border-t-white/80 rounded-full animate-spin"></span>
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSavingOrder ? 'Đang lưu...' : 'Lưu thứ tự'}
               </button>
             </>
           ) : (
