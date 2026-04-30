@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import {
   Trash2, ChevronDown, ChevronUp, GripVertical, Plus, X,
   Image as ImageIcon, FileText, CheckCircle2, XCircle, Type,
-  ToggleLeft, Hash, AlertCircle, BookOpen
+  ToggleLeft, Hash, AlertCircle, BookOpen, ArrowUpDown
 } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import MathRenderer from '@/components/MathRenderer';
@@ -28,7 +28,7 @@ const LEVEL_COLORS = {
 
 const OPTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-export default function QuestionEditorCard({ question, index, allQuestions, onUpdate, onDelete, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
+export default function QuestionEditorCard({ question, index, totalQuestions, allQuestions, onUpdate, onDelete, onReorder, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [expanded, setExpanded] = useState(true);
   const [showSolution, setShowSolution] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -182,13 +182,26 @@ export default function QuestionEditorCard({ question, index, allQuestions, onUp
         >
           <GripVertical className="w-4 h-4 text-white/15 flex-shrink-0" />
         </div>
-        {q.type === 'TEXT' ? (
-          <div className="w-8 flex justify-center items-center">
-            <BookOpen className="w-4 h-4 text-white/30" />
-          </div>
-        ) : (
-          <span className="text-sm font-black text-white/30 w-8">#{index + 1}</span>
+        {q.type === 'TEXT' && (
+          <BookOpen className="w-4 h-4 text-white/30 shrink-0" />
         )}
+        <select
+          value={index}
+          onChange={(e) => {
+            e.stopPropagation();
+            if (onReorder) onReorder(index, Number(e.target.value));
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-white/50 text-xs font-bold focus:outline-none focus:border-indigo-500/40 hover:border-white/20 hover:text-white/70 transition-all appearance-none cursor-pointer"
+          style={{ minWidth: 62, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 4 18 9'/%3E%3Cpolyline points='6 15 12 20 18 15'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 4px center', backgroundSize: '14px', paddingRight: 20 }}
+          title="Chọn vị trí để sắp xếp lại"
+        >
+          {Array.from({ length: totalQuestions || 0 }, (_, i) => (
+            <option key={i} value={i} className="bg-[#14142a]">
+              Câu {i + 1}
+            </option>
+          ))}
+        </select>
 
         {/* Type badge */}
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${typeStyle.color}`}>

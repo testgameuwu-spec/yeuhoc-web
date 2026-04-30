@@ -5,7 +5,7 @@ import FileUpload from '@/components/FileUpload';
 import QuestionEditorCard from '@/components/admin/QuestionEditorCard';
 import {
   Save, Eye, EyeOff, Clock, GraduationCap, Calendar,
-  BookOpen, Plus, Upload, Settings, ChevronDown, FileText, ShieldAlert
+  BookOpen, Plus, Upload, Settings, ChevronDown, FileText, ShieldAlert, Shuffle
 } from 'lucide-react';
 
 const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
@@ -101,19 +101,114 @@ export default function ExamEditor({ exam, questions: initialQuestions, onSave, 
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
 
-    setQuestions(prev => {
-      const newQuestions = [...prev];
-      const draggedItem = newQuestions[draggedIndex];
-      newQuestions.splice(draggedIndex, 1);
-      newQuestions.splice(index, 0, draggedItem);
-      return newQuestions;
-    });
+    handleReorderQuestion(draggedIndex, index);
     setDraggedIndex(null);
   };
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
   };
+
+  const getGroupIds = useCallback((qId, questions) => {
+    const q = questions.find(x => x.id === qId);
+    if (!q) return new Set();
+    let parentId = null;
+    if (q.type === 'TEXT') parentId = q.id;
+    else if (q.linkedTo) parentId = q.linkedTo;
+    
+    if (parentId) {
+      return new Set(questions.filter(x => x.id === parentId || x.linkedTo === parentId).map(x => x.id));
+    }
+    return new Set([q.id]);
+  }, []);
+
+  const handleReorderQuestion = useCallback((fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+    setQuestions(prev => {
+      const sourceItem = prev[fromIndex];
+      const targetItem = prev[toIndex];
+      if (!sourceItem || !targetItem) return prev;
+
+      const sourceGroupIds = getGroupIds(sourceItem.id, prev);
+
+      // Intra-group reorder (reordering within the same linked group)
+      if (sourceGroupIds.has(targetItem.id)) {
+        // Prevent moving a child question above its TEXT context
+        if (targetItem.type === 'TEXT' && fromIndex > toIndex) {
+          return prev;
+        }
+        // Prevent moving a TEXT context below its child
+        if (sourceItem.type === 'TEXT' && fromIndex < toIndex) {
+          return prev;
+        }
+        const newQuestions = [...prev];
+        const [moved] = newQuestions.splice(fromIndex, 1);
+        newQuestions.splice(toIndex, 0, moved);
+        return newQuestions;
+      }
+
+      // Inter-group reorder (moving a group entirely)
+      const targetGroupIds = getGroupIds(targetItem.id, prev);
+      const sourceItems = prev.filter(q => sourceGroupIds.has(q.id));
+      const otherItems = prev.filter(q => !sourceGroupIds.has(q.id));
+      
+      const isMovingDown = fromIndex < toIndex;
+      
+      let insertIndex;
+      if (isMovingDown) {
+        // Find the LAST item of the target group in otherItems
+        const targetGroupItemsInOther = otherItems.filter(q => targetGroupIds.has(q.id));
+        const lastTargetItem = targetGroupItemsInOther[targetGroupItemsInOther.length - 1];
+        insertIndex = otherItems.findIndex(q => q.id === lastTargetItem.id) + 1;
+      } else {
+        // Find the FIRST item of the target group in otherItems
+        const firstTargetItem = otherItems.find(q => targetGroupIds.has(q.id));
+        insertIndex = otherItems.findIndex(q => q.id === firstTargetItem.id);
+      }
+      
+      return [
+        ...otherItems.slice(0, insertIndex),
+        ...sourceItems,
+        ...otherItems.slice(insertIndex)
+      ];
+    });
+  }, [getGroupIds]);
+
+  const handleShuffleQuestions = useCallback(() => {
+    if (!window.confirm('Bạn có chắc chắn muốn xáo trộn ngẫu nhiên toàn bộ câu hỏi? Các câu hỏi trong cùng một ngữ cảnh sẽ vẫn được giữ gần nhau.')) {
+      return;
+    }
+
+    setQuestions(prev => {
+      const groups = [];
+      const groupMap = new Map();
+      
+      prev.forEach(q => {
+        let parentId = q.type === 'TEXT' ? q.id : (q.linkedTo || q.id);
+        
+        if (!groupMap.has(parentId)) {
+          groupMap.set(parentId, groups.length);
+          groups.push([]);
+        }
+        
+        // Đảm bảo TEXT context luôn đứng đầu trong nhóm
+        if (q.type === 'TEXT') {
+          groups[groupMap.get(parentId)].unshift(q);
+        } else {
+          groups[groupMap.get(parentId)].push(q);
+        }
+      });
+      
+      // Fisher-Yates shuffle cho các nhóm
+      const shuffledGroups = [...groups];
+      for (let i = shuffledGroups.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledGroups[i], shuffledGroups[j]] = [shuffledGroups[j], shuffledGroups[i]];
+      }
+      
+      return shuffledGroups.flat();
+    });
+  }, []);
 
   const handleSave = () => {
     onSave({
@@ -336,18 +431,27 @@ D. Đáp án D
             <>
               <div className="flex items-center justify-between">
                 <p className="text-sm text-white/40">{questions.length} câu hỏi</p>
-                <button onClick={handleAddQuestion}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm font-medium transition-all">
-                  <Plus className="w-4 h-4" /> Thêm câu hỏi
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={handleShuffleQuestions}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm font-medium transition-all"
+                    title="Xáo trộn ngẫu nhiên toàn bộ câu hỏi">
+                    <Shuffle className="w-4 h-4" /> Trộn câu hỏi
+                  </button>
+                  <button onClick={handleAddQuestion}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-300 hover:text-white hover:border-indigo-500/50 text-sm font-medium transition-all">
+                    <Plus className="w-4 h-4" /> Thêm câu hỏi
+                  </button>
+                </div>
               </div>
               {questions.map((q, i) => (
                 <QuestionEditorCard
                   key={`${q.id}-${i}`}
                   question={q}
                   index={i}
+                  totalQuestions={questions.length}
                   onUpdate={(updated) => handleQuestionUpdate(i, updated)}
                   onDelete={() => handleQuestionDelete(i)}
+                  onReorder={handleReorderQuestion}
                   isDragged={draggedIndex === i}
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
