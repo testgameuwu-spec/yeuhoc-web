@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import katex from 'katex';
+import { marked } from 'marked';
 
 /**
  * Renders text with inline ($...$) and display ($$...$$) LaTeX math.
@@ -14,8 +15,8 @@ export default function MathRenderer({ text, className = '' }) {
     }, [text]);
 
     return (
-        <span
-            className={className}
+        <div
+            className={`markdown-content ${className}`}
             dangerouslySetInnerHTML={{ __html: renderedHTML }}
         />
     );
@@ -69,8 +70,8 @@ function renderMathInText(text) {
         return id;
     });
 
-    // 6. Convert remaining newlines to <br> for proper display
-    result = result.replace(/\n/g, '<br/>');
+    // 6. Render markdown for the non-math content
+    result = marked.parse(result, { breaks: true, gfm: true });
 
     // 7. Restore math from placeholders
     for (const p of placeholders) {
