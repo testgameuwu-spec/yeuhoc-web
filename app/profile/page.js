@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User, Mail, Camera, LogOut, Save, Shield, BookOpen,
-  AlertCircle, CheckCircle2, Loader2, FileText, History, Activity
+  AlertCircle, CheckCircle2, Loader2, FileText, History, Activity, PauseCircle, PlayCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
@@ -31,8 +31,8 @@ export default function ProfilePage() {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState('info'); // info | history
-
+  const [activeTab, setActiveTab] = useState('overview'); // overview | info | history
+  const [pausedExams, setPausedExams] = useState([]);
 
   const dataLoadedRef = useRef(false);
 
@@ -60,7 +60,21 @@ export default function ProfilePage() {
 
         const [profileRes, historyRes] = await Promise.allSettled([profilePromise, historyPromise]);
 
+        const keys = Object.keys(localStorage);
+        const prefix = `yeuhoc_progress_${sessionUser.id}_`;
+        const savedExamIds = [];
+        keys.forEach(k => {
+          if (k.startsWith(prefix)) {
+            savedExamIds.push(k.substring(prefix.length));
+          }
+        });
+
         if (isMounted) {
+          if (savedExamIds.length > 0) {
+            const { data } = await supabase.from('exams').select('id, title, subject').in('id', savedExamIds);
+            if (data) setPausedExams(data);
+          }
+
           if (profileRes.status === 'fulfilled' && profileRes.value.data) {
             const profileData = profileRes.value.data;
             setProfile(profileData);
@@ -353,14 +367,14 @@ export default function ProfilePage() {
           {/* ─── Right Content ─── */}
           <div className="flex-1 space-y-6">
             {/* Tabs */}
-            <div className="flex items-center gap-2 border-b border-gray-200">
+            <div className="flex items-center gap-2 border-b border-gray-200 overflow-x-auto whitespace-nowrap hide-scrollbar">
               <button
-                onClick={() => setActiveTab('info')}
+                onClick={() => setActiveTab('overview')}
                 className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
-                  activeTab === 'info' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  activeTab === 'overview' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <FileText className="w-4 h-4" /> Thông tin cá nhân
+                <Activity className="w-4 h-4" /> Tổng quan
               </button>
               <button
                 onClick={() => setActiveTab('history')}
@@ -370,10 +384,122 @@ export default function ProfilePage() {
               >
                 <History className="w-4 h-4" /> Lịch sử làm bài
               </button>
+              <button
+                onClick={() => setActiveTab('info')}
+                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'info' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FileText className="w-4 h-4" /> Thông tin cá nhân
+              </button>
             </div>
 
             {/* Content */}
-            {activeTab === 'info' ? (
+            {activeTab === 'overview' ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
+                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-indigo-500" />
+                  Tổng quan học tập
+                </h3>
+                <p className="text-xs text-gray-400 mb-6">Thống kê và tiến trình học tập của bạn</p>
+
+                {(() => {
+                  const highestScore = attempts.length > 0 ? Math.max(...attempts.map(a => a.score || 0)).toFixed(1) : 0;
+                  const averageScore = attempts.length > 0 ? (attempts.reduce((acc, a) => acc + (a.score || 0), 0) / attempts.length).toFixed(1) : 0;
+                  const totalExams = attempts.length;
+                  const recentAttempts = attempts.slice(0, 5);
+
+                  return (
+                    <div className="space-y-8">
+                      {/* Stats grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
+                          <p className="text-xs text-indigo-600 font-semibold mb-1 uppercase tracking-wider">Điểm cao nhất</p>
+                          <p className="text-2xl font-black text-indigo-700">{highestScore}</p>
+                        </div>
+                        <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
+                          <p className="text-xs text-green-600 font-semibold mb-1 uppercase tracking-wider">Điểm trung bình</p>
+                          <p className="text-2xl font-black text-green-700">{averageScore}</p>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
+                          <p className="text-xs text-amber-600 font-semibold mb-1 uppercase tracking-wider">Số bài đã làm</p>
+                          <p className="text-2xl font-black text-amber-700">{totalExams}</p>
+                        </div>
+                      </div>
+
+                      {/* Paused Exams */}
+                      {pausedExams.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider flex items-center gap-2">
+                            <PauseCircle className="w-4 h-4 text-amber-500" /> Bài thi đang bỏ dở
+                          </h4>
+                          <div className="space-y-3">
+                            {pausedExams.map(exam => (
+                              <div key={exam.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors gap-4 shadow-sm">
+                                <div>
+                                  <h4 className="font-bold text-gray-900">{exam.title}</h4>
+                                  <p className="text-xs text-gray-600 mt-1 flex items-center gap-1"><BookOpen className="w-3 h-3"/> {exam.subject}</p>
+                                </div>
+                                <button onClick={() => router.push('/?resume_exam=' + exam.id)} className="px-4 py-2 rounded-lg font-bold text-xs bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                                  <PlayCircle className="w-4 h-4" /> Tiếp tục làm
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Recent Exams */}
+                      {recentAttempts.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider flex items-center gap-2">
+                            <History className="w-4 h-4 text-indigo-500" /> 5 Đề thi gần nhất
+                          </h4>
+                          <div className="space-y-3">
+                            {recentAttempts.map((attempt, index) => (
+                                <div key={attempt.id || index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4">
+                                  <div className="flex-1">
+                                    <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                      <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
+                                      <span>•</span>
+                                      <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm flex-shrink-0">
+                                    <div className="text-center">
+                                      <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
+                                      <p className="font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</p>
+                                    </div>
+                                    <div className="w-px h-8 bg-gray-200"></div>
+                                    <div className="text-center">
+                                      <p className="text-xs text-gray-400 mb-0.5">Đúng</p>
+                                      <p className="font-bold text-gray-900">{attempt.correct_answers}/{attempt.total_questions}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => handleViewAttemptDetails(attempt)}
+                                      className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
+                                    >
+                                      Chi tiết <ChevronRight className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {attempts.length === 0 && pausedExams.length === 0 && (
+                        <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                          <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-500 font-medium">Bạn chưa tham gia học tập</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : activeTab === 'info' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-indigo-500" />
@@ -543,39 +669,39 @@ export default function ProfilePage() {
                   </div>
                 ) : attempts.length > 0 ? (
                   <div className="space-y-4">
-                    {attempts.map(attempt => (
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4">
-                          <div className="flex-1">
-                            <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
-                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                              <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
-                              <span>•</span>
-                              <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm flex-shrink-0">
-                            <div className="text-center">
-                              <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
-                              <p className="font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</p>
-                            </div>
-                            <div className="w-px h-8 bg-gray-200"></div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-400 mb-0.5">Đúng</p>
-                              <p className="font-bold text-gray-900">{attempt.correct_answers}/{attempt.total_questions}</p>
-                            </div>
-                            <div className="w-px h-8 bg-gray-200"></div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-400 mb-0.5">Thời gian</p>
-                              <p className="font-bold text-gray-900">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</p>
-                            </div>
-                            <button
-                              onClick={() => handleViewAttemptDetails(attempt)}
-                              className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
-                            >
-                              Chi tiết <ChevronRight className="w-3 h-3" />
-                            </button>
+                    {attempts.map((attempt, index) => (
+                      <div key={attempt.id || index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                            <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
+                            <span>•</span>
+                            <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
                           </div>
                         </div>
+                        <div className="flex items-center gap-4 text-sm flex-shrink-0">
+                          <div className="text-center">
+                            <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
+                            <p className="font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</p>
+                          </div>
+                          <div className="w-px h-8 bg-gray-200"></div>
+                          <div className="text-center">
+                            <p className="text-xs text-gray-400 mb-0.5">Đúng</p>
+                            <p className="font-bold text-gray-900">{attempt.correct_answers}/{attempt.total_questions}</p>
+                          </div>
+                          <div className="w-px h-8 bg-gray-200"></div>
+                          <div className="text-center">
+                            <p className="text-xs text-gray-400 mb-0.5">Thời gian</p>
+                            <p className="font-bold text-gray-900">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</p>
+                          </div>
+                          <button
+                            onClick={() => handleViewAttemptDetails(attempt)}
+                            className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
+                          >
+                            Chi tiết <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 ) : (

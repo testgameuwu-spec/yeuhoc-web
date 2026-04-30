@@ -219,6 +219,48 @@ export default function HomePage() {
     init();
   }, []);
 
+  // Auto-resume from profile
+  useEffect(() => {
+    if (user && allExams.length > 0 && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const resumeId = urlParams.get('resume_exam');
+      if (resumeId) {
+        let ex = allExams.find(e => e.id.toString() === resumeId);
+        if (ex) {
+          const key = `yeuhoc_progress_${user.id}_${ex.id}`;
+          const saved = localStorage.getItem(key);
+          if (saved) {
+             try {
+                const data = JSON.parse(saved);
+                setActiveExam(ex);
+                setAnswers(data.answers || {});
+                setBookmarks(new Set(data.bookmarks || []));
+                setCurrentQ(data.currentQ || 0);
+                setSavedSecondsLeft(data.secondsLeft);
+                setIsPaused(false);
+                setViolationCount(0);
+                setShowViolationWarning(false);
+                isSubmittingRef.current = false;
+                setQuizPhase('quiz');
+                setTimerRunning(true);
+                setStartTime(Date.now());
+                window.history.replaceState({}, '', window.location.pathname);
+                
+                // Try fullscreen if enabled
+                if (ex.antiCheatEnabled !== false) {
+                  const el = document.documentElement;
+                  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+                  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+                }
+             } catch(e) {
+                console.error(e);
+             }
+          }
+        }
+      }
+    }
+  }, [user, allExams]);
+
   // Fetch session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -992,9 +1034,9 @@ export default function HomePage() {
                                   </td>
                                   <td className="px-4 py-3">
                                     {attempt.profiles?.avatar_url ? (
-                                      <img src={attempt.profiles.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full mx-auto object-cover ring-2 ring-gray-100" />
+                                      <img src={attempt.profiles.avatar_url} alt="Avatar" className="w-12 h-12 rounded-full mx-auto object-cover ring-2 ring-gray-100" />
                                     ) : (
-                                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xs">
+                                      <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto font-bold text-sm">
                                         {(attempt.profiles?.full_name || 'U').charAt(0).toUpperCase()}
                                       </div>
                                     )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, Home } from 'lucide-react';
+import { BookOpen, Home, User } from 'lucide-react';
 import UserProfile from './UserProfile';
 
 export default function Navbar() {
@@ -24,7 +24,14 @@ export default function Navbar() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all no-underline"
           >
             <Home className="w-4 h-4" />
-            Trang chủ
+            Đề thi
+          </a>
+          <a
+            href="/yeuhoc/profile"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all no-underline"
+          >
+            <User className="w-4 h-4" />
+            Hồ sơ
           </a>
         </nav>
 

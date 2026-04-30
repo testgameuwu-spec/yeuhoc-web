@@ -377,7 +377,7 @@ export default function UserManagement() {
               className="flex flex-col md:grid md:grid-cols-[1fr_140px_100px_100px_56px] gap-2 md:gap-4 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 hover:bg-white/[0.03] transition-colors md:items-center group">
               {/* User info */}
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                   {user.avatar ? (
                     <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                   ) : initials}
