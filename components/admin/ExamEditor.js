@@ -19,7 +19,7 @@ const SCORING_PRESETS = {
   'Tuỳ chỉnh': null,
 };
 
-export default function ExamEditor({ exam, folders = [], questions: initialQuestions, onSave, onBack, onFileLoaded, parseError }) {
+export default function ExamEditor({ exam, folders = [], questions: initialQuestions, onSave, onBack, onFileLoaded, parseError, defaultTab = 'settings' }) {
   const [title, setTitle] = useState(exam?.title || '');
   const [subject, setSubject] = useState(exam?.subject || 'Toán');
   const [examType, setExamType] = useState(exam?.examType || 'THPT');
@@ -31,7 +31,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
   const [scoringPreset, setScoringPreset] = useState('THPT Toán');
   const [scoringConfig, setScoringConfig] = useState(SCORING_PRESETS['THPT Toán']);
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(exam?.antiCheatEnabled !== false);
-  const [activeSection, setActiveSection] = useState('upload'); // upload | settings | questions
+  const [activeSection, setActiveSection] = useState(defaultTab || (exam ? 'settings' : 'upload')); // upload | settings | questions
   const [draggedIndex, setDraggedIndex] = useState(null);
   const hasQuestions = questions.length > 0;
 

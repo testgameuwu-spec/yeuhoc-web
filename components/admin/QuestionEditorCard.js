@@ -153,6 +153,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
 
   return (
     <div 
+      id={`editor-question-${q.id}`}
       className={`rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden transition-all hover:border-white/15 ${isDragged ? 'opacity-50 scale-[0.98] shadow-lg shadow-indigo-500/20 z-10 relative' : ''}`}
       draggable={draggable}
       onDragStart={(e) => {

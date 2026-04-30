@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle, Folder, Lock, ChevronDown } from 'lucide-react';
+import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle, Folder, Lock, ChevronDown, AlertTriangle, Send } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import UserProfile from '@/components/UserProfile';
 import { getPublishedExams, getExamById, getAllFolders } from '@/lib/examStore';
@@ -72,6 +72,119 @@ const CustomModal = ({ isOpen, type, title, message, onConfirm, onCancel, confir
 const PauseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
 const PlayIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
 
+// ── Report Modal Component ──
+const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert, REPORT_REASONS }) => {
+  const [reportReason, setReportReason] = useState('');
+  const [reportNote, setReportNote] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (reportModal.isOpen) {
+      setReportReason('');
+      setReportNote('');
+      setReportSubmitting(false);
+    }
+  }, [reportModal.isOpen]);
+
+  const handleSubmitReport = async () => {
+    if (!reportReason) return;
+    setReportSubmitting(true);
+    try {
+      const { error } = await supabase.from('question_reports').insert({
+        user_id: user?.id,
+        exam_id: activeExam?.id,
+        question_id: reportModal.question?.id,
+        question_content: reportModal.question?.content?.substring(0, 200),
+        reason: reportReason,
+        note: reportNote,
+        exam_title: activeExam?.title,
+        status: 'pending',
+      });
+      if (error) throw error;
+      setReportModal({ isOpen: false, question: null });
+      showAlert('Đã gửi báo cáo', 'Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét và xử lý sớm nhất.');
+    } catch (err) {
+      console.error('Report error:', err);
+      showAlert('Lỗi', 'Không thể gửi báo cáo: ' + (err.message || 'Vui lòng thử lại.'));
+    }
+    setReportSubmitting(false);
+  };
+  if (!reportModal.isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn" onClick={() => setReportModal({ isOpen: false, question: null })}>
+      <div className="bg-white rounded-2xl w-[90%] max-w-md p-6 shadow-xl transform transition-all scale-100" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Báo cáo câu hỏi</h3>
+            <p className="text-xs text-gray-500">Câu {reportModal.question?.content?.substring(0, 50)}...</p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Lý do báo cáo *</label>
+          <div className="grid grid-cols-2 gap-2">
+            {REPORT_REASONS.map(r => (
+              <button
+                key={r.value}
+                onClick={() => setReportReason(r.value)}
+                className="px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left"
+                style={{
+                  background: reportReason === r.value ? '#eef2ff' : '#f9fafb',
+                  color: reportReason === r.value ? '#4338ca' : '#6b7280',
+                  border: `1.5px solid ${reportReason === r.value ? '#818cf8' : '#e5e7eb'}`,
+                }}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Ghi chú thêm (không bắt buộc)</label>
+          <textarea
+            value={reportNote}
+            onChange={e => setReportNote(e.target.value)}
+            placeholder="Mô tả chi tiết vấn đề bạn gặp..."
+            rows={3}
+            className="w-full px-4 py-3 rounded-xl border-1.5 border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 resize-none"
+            style={{ border: '1.5px solid #e5e7eb' }}
+          />
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setReportModal({ isOpen: false, question: null })}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleSubmitReport}
+            disabled={!reportReason || reportSubmitting}
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors shadow-md flex items-center gap-2"
+            style={{
+              background: reportReason ? '#ef4444' : '#d1d5db',
+              cursor: reportReason && !reportSubmitting ? 'pointer' : 'not-allowed',
+              opacity: reportSubmitting ? 0.7 : 1,
+            }}
+          >
+            {reportSubmitting ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            {reportSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function HomePage() {
 
   const router = useRouter();
@@ -122,6 +235,22 @@ export default function HomePage() {
   const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null, onCancel: null, extraBtn: null });
   const showConfirm = (title, message, onConfirm, onCancel = null, confirmText = 'Xác nhận', cancelText = 'Hủy', extraBtn = null) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm, onCancel, confirmText, cancelText, extraBtn });
   const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
+
+  // Report modal states
+  const [reportModal, setReportModal] = useState({ isOpen: false, question: null });
+
+  const REPORT_REASONS = [
+    { value: 'wrong_question', label: 'Sai đề / Đề bị lỗi' },
+    { value: 'wrong_answer', label: 'Sai đáp án' },
+    { value: 'wrong_solution', label: 'Sai lời giải' },
+    { value: 'unclear', label: 'Đề không rõ ràng' },
+    { value: 'missing_image', label: 'Thiếu hình ảnh' },
+    { value: 'other', label: 'Lý do khác' },
+  ];
+
+  const handleOpenReport = (question) => {
+    setReportModal({ isOpen: true, question });
+  };
 
   const mainRef = useRef(null);
 
@@ -751,6 +880,7 @@ export default function HomePage() {
                             else next.add(gq.id);
                             setBookmarks(next);
                           } : null}
+                          onReport={handleOpenReport}
                         />
                         {!isRev && (
                           <div className="px-6 pb-6 pt-2 flex justify-end border-t border-gray-50 mt-4">
@@ -795,6 +925,7 @@ export default function HomePage() {
                       else next.add(q.id);
                       setBookmarks(next);
                     } : null}
+                    onReport={handleOpenReport}
                   />
                 </div>
               )
@@ -898,6 +1029,7 @@ export default function HomePage() {
             )}
           </div>
         </div>
+        <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} REPORT_REASONS={REPORT_REASONS} />
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
       </div>
     );
@@ -1233,40 +1365,49 @@ export default function HomePage() {
                     <div key={`group-${gIdx}`}>
                       {sectionHeader}
                       <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
-                        <div className="mb-5">
-                          <div className="flex items-center gap-2 mb-2">
-                            <BookOpen className="w-4 h-4 text-indigo-500" />
-                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Dựa vào thông tin sau để trả lời các câu hỏi bên dưới:</p>
-                          </div>
-                          <div className="et-q-text text-gray-800 leading-relaxed text-[15px]">
-                            <MathRenderer text={group.context.content} />
-                          </div>
-                          {group.context.image && (
-                            <img src={group.context.image} alt="Context image" className="max-w-full rounded-xl border border-gray-200 mt-4 max-h-[300px] object-contain" />
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-5 pl-2 sm:pl-4 border-l-2 border-indigo-100">
-                          {group.children.map(childQ => {
-                            const currentI = realQIndex++;
-                            return (
-                              <div key={childQ.id} id={`q-card-${currentI}`} onClick={() => setCurrentQ(currentI)}>
-                                <QuestionCard
-                                  question={childQ}
-                                  index={currentI}
-                                  selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
-                                  onAnswerChange={(val) => handleAnswerChange(childQ.id, val)}
-                                  isBookmarked={bookmarks.has(childQ.id)}
-                                  onToggleBookmark={() => {
-                                    const next = new Set(bookmarks);
-                                    if (next.has(childQ.id)) next.delete(childQ.id);
-                                    else next.add(childQ.id);
-                                    setBookmarks(next);
-                                  }}
-                                />
+                        <div className="flex flex-col lg:flex-row gap-6 items-start">
+                          {/* Left: Context / Ngữ liệu */}
+                          <div className="lg:w-1/2 w-full lg:sticky lg:top-4">
+                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                              <div className="flex items-center gap-2 mb-3">
+                                <BookOpen className="w-4 h-4 text-indigo-500" />
+                                <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
                               </div>
-                            );
-                          })}
+                              <div className="text-sm leading-relaxed text-gray-700">
+                                <MathRenderer text={group.context.content} />
+                              </div>
+                              {group.context.image && (
+                                <div className="mt-3">
+                                  <img src={group.context.image} alt="Context image" className="rounded-xl max-h-[300px] object-contain" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right: Questions */}
+                          <div className="lg:w-1/2 w-full flex flex-col gap-5">
+                            {group.children.map(childQ => {
+                              const currentI = realQIndex++;
+                              return (
+                                <div key={childQ.id} id={`q-card-${currentI}`} onClick={() => setCurrentQ(currentI)}>
+                                  <QuestionCard
+                                    question={childQ}
+                                    index={currentI}
+                                    selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
+                                    onAnswerChange={(val) => handleAnswerChange(childQ.id, val)}
+                                    isBookmarked={bookmarks.has(childQ.id)}
+                                    onToggleBookmark={() => {
+                                      const next = new Set(bookmarks);
+                                      if (next.has(childQ.id)) next.delete(childQ.id);
+                                      else next.add(childQ.id);
+                                      setBookmarks(next);
+                                    }}
+                                    onReport={handleOpenReport}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1298,6 +1439,7 @@ export default function HomePage() {
                           else next.add(firstChild.id);
                           setBookmarks(next);
                         }}
+                        onReport={handleOpenReport}
                       />
                     </div>
                   );
@@ -1429,6 +1571,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} REPORT_REASONS={REPORT_REASONS} />
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
       </div>
     );
@@ -1455,6 +1598,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} REPORT_REASONS={REPORT_REASONS} />
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
       </div>
     );
@@ -1527,35 +1671,44 @@ export default function HomePage() {
                     <div key={`group-${gIdx}`}>
                       {sectionHeader}
                       <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
-                        <div className="mb-5">
-                          <div className="flex items-center gap-2 mb-2">
-                            <BookOpen className="w-4 h-4 text-indigo-500" />
-                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Dựa vào thông tin sau để trả lời các câu hỏi bên dưới:</p>
-                          </div>
-                          <div className="et-q-text text-gray-800 leading-relaxed text-[15px]">
-                            <MathRenderer text={group.context.content} />
-                          </div>
-                          {group.context.image && (
-                            <img src={group.context.image} alt="Context image" className="max-w-full rounded-xl border border-gray-200 mt-4 max-h-[300px] object-contain" />
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-5 pl-2 sm:pl-4 border-l-2 border-indigo-100">
-                          {group.children.map(childQ => {
-                            const currentI = realQIndex++;
-                            return (
-                              <div key={childQ.id} id={`q-card-${currentI}`}>
-                                <QuestionCard
-                                  question={childQ}
-                                  index={currentI}
-                                  selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
-                                  onAnswerChange={() => { }}
-                                  showResult
-                                  disabled
-                                />
+                        <div className="flex flex-col lg:flex-row gap-6 items-start">
+                          {/* Left: Context */}
+                          <div className="lg:w-1/2 w-full lg:sticky lg:top-4">
+                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                              <div className="flex items-center gap-2 mb-3">
+                                <BookOpen className="w-4 h-4 text-indigo-500" />
+                                <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Ngữ liệu</span>
                               </div>
-                            );
-                          })}
+                              <div className="text-sm leading-relaxed text-gray-700">
+                                <MathRenderer text={group.context.content} />
+                              </div>
+                              {group.context.image && (
+                                <div className="mt-3">
+                                  <img src={group.context.image} alt="Context image" className="rounded-xl max-h-[300px] object-contain" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right: Questions */}
+                          <div className="lg:w-1/2 w-full flex flex-col gap-5">
+                            {group.children.map(childQ => {
+                              const currentI = realQIndex++;
+                              return (
+                                <div key={childQ.id} id={`q-card-${currentI}`}>
+                                  <QuestionCard
+                                    question={childQ}
+                                    index={currentI}
+                                    selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
+                                    onAnswerChange={() => { }}
+                                    showResult
+                                    disabled
+                                    onReport={handleOpenReport}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1582,6 +1735,7 @@ export default function HomePage() {
                         onAnswerChange={() => { }}
                         showResult
                         disabled
+                        onReport={handleOpenReport}
                       />
                     </div>
                   );
@@ -1684,6 +1838,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} REPORT_REASONS={REPORT_REASONS} />
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
       </div>
     );

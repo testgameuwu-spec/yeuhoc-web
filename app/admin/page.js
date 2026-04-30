@@ -9,6 +9,7 @@ import ExamList from '@/components/admin/ExamList';
 import ExamEditor from '@/components/admin/ExamEditor';
 import ScoringConfig from '@/components/admin/ScoringConfig';
 import UserManagement from '@/components/admin/UserManagement';
+import ReportManagement from '@/components/admin/ReportManagement';
 import {
   BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
@@ -56,11 +57,11 @@ const MOCK_USERS = [
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('exams');
+  const [examEditorTab, setExamEditorTab] = useState('settings');
   const [exams, setExams] = useState([]);
   const [folders, setFolders] = useState([]);
   const [editingExam, setEditingExam] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Upload & parse flow
@@ -126,6 +127,39 @@ export default function AdminDashboard() {
   const handleEditExam = (exam) => {
     setEditingExam({ ...exam, questions: exam.questions || [] });
     setIsCreating(true);
+  };
+
+  const handleEditExamById = async (examId, questionIdToScroll) => {
+    let exam = exams.find(e => e.id === examId);
+    if (!exam) {
+      try {
+        const { data } = await supabase.from('exams').select('*').eq('id', examId).single();
+        if (data) exam = data;
+      } catch (err) {
+        console.error("Error fetching exam:", err);
+      }
+    }
+    
+    if (exam) {
+      handleEditExam(exam);
+      setActiveTab('exams');
+      
+      if (questionIdToScroll) {
+        setExamEditorTab('questions');
+        setTimeout(() => {
+          const el = document.getElementById(`editor-question-${questionIdToScroll}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-4', 'ring-amber-500', 'ring-offset-2', 'ring-offset-[#0b0b19]', 'transition-all');
+            setTimeout(() => el.classList.remove('ring-4', 'ring-amber-500', 'ring-offset-2', 'ring-offset-[#0b0b19]'), 3000);
+          }
+        }, 500);
+      } else {
+        setExamEditorTab('settings');
+      }
+    } else {
+      showAlert('Lỗi', "Không tìm thấy đề thi này (có thể đã bị xóa)!");
+    }
   };
 
   const handleBackToList = () => {
@@ -253,6 +287,7 @@ export default function AdminDashboard() {
             onBack={handleBackToList}
             onFileLoaded={handleFileLoaded}
             parseError={parseError}
+            defaultTab={examEditorTab}
           />
         );
       }
@@ -276,6 +311,9 @@ export default function AdminDashboard() {
     if (activeTab === 'scoring') {
       return <ScoringConfig />;
     }
+    if (activeTab === 'reports') {
+      return <ReportManagement onEditExam={handleEditExamById} showAlert={showAlert} showConfirm={showConfirm} />;
+    }
     if (activeTab === 'users') {
       return <UserManagement />;
     }
@@ -294,15 +332,10 @@ export default function AdminDashboard() {
         <AdminSidebar
           activeTab={activeTab}
           onTabChange={(tab) => { setActiveTab(tab); setIsCreating(false); setEditingExam(null); setMobileMenuOpen(false); }}
-          isOpen={sidebarOpen || mobileMenuOpen}
-          onToggle={() => {
-            if (window.innerWidth < 768) setMobileMenuOpen(false);
-            else setSidebarOpen(!sidebarOpen);
-          }}
         />
       </div>
 
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} ml-0`}>
+      <div className={`flex-1 transition-all duration-300 md:ml-64 ml-0`}>
         {/* Top bar */}
         <header className="sticky top-0 z-30 glass border-b border-white/8" style={{ isolation: 'isolate' }}>
           <div className="px-4 sm:px-6 md:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
@@ -319,6 +352,7 @@ export default function AdminDashboard() {
               <h1 className="text-sm sm:text-lg font-bold text-white truncate">
                 {activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
+                 activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :
                  'Quản lý người dùng'}
               </h1>
             </div>

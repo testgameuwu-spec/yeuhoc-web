@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
-import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag } from 'lucide-react';
+import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
 
 const TYPE_LABEL = { MCQ: 'Trắc nghiệm', TF: 'Đúng / Sai', SA: 'Trả lời ngắn' };
 
@@ -16,6 +16,7 @@ export default function QuestionCard({
     disabled = false,
     isBookmarked = false,
     onToggleBookmark = null,
+    onReport = null,
 }) {
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [showSolution, setShowSolution] = useState(false);
@@ -58,7 +59,22 @@ export default function QuestionCard({
                     <span className="et-q-num-badge">{index + 1}</span>
                     <span className="et-q-type-badge">{TYPE_LABEL[type] || type}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {onReport && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onReport(question); }}
+                            title="Báo cáo câu hỏi có vấn đề"
+                            style={{
+                                background: 'none', border: 'none', padding: 4, cursor: 'pointer',
+                                color: '#9ca3af',
+                                display: 'flex', alignItems: 'center', transition: 'color 0.2s',
+                            }}
+                            onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
+                            onMouseOut={e => e.currentTarget.style.color = '#9ca3af'}
+                        >
+                            <AlertTriangle width={17} height={17} />
+                        </button>
+                    )}
                     {!showResult && onToggleBookmark && (
                         <button
                             onClick={onToggleBookmark}
