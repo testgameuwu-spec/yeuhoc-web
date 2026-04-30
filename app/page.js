@@ -609,6 +609,9 @@ export default function HomePage() {
 
     // Find context (TEXT parent) for current question
     const contextQ = q?.linkedTo ? questions.find(x => x.id === q.linkedTo && x.type === 'TEXT') : null;
+    const groupQuestions = contextQ ? realQuestions.filter(x => x.linkedTo === contextQ.id) : [q];
+    const firstIndex = realQuestions.findIndex(x => x.id === groupQuestions[0]?.id);
+    const lastIndex = realQuestions.findIndex(x => x.id === groupQuestions[groupQuestions.length - 1]?.id);
 
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
@@ -618,8 +621,8 @@ export default function HomePage() {
           </div>
         </Topbar>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
-          <div className="max-w-2xl mx-auto">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" id="practice-scroll-container">
+          <div className={`mx-auto transition-all duration-300 ${contextQ ? 'max-w-6xl' : 'max-w-2xl'}`}>
             {/* Progress dots */}
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
@@ -648,62 +651,120 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Context block for grouped questions */}
-            {contextQ && (
-              <div className="practice-card-wrap mb-4">
-                <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold">ℹ️ DỬa VÀO THÔNG TIN SAU ĐỂ TRẢ LỜI CÁC CÂU HỎI BÊN DƯỚI</span>
-                  </div>
-                  <div className="text-sm leading-relaxed text-gray-700">
-                    <MathRenderer text={contextQ.content} />
-                  </div>
-                  {contextQ.image && (
-                    <div className="mt-3">
-                      <img src={contextQ.image} alt="" className="rounded-xl max-h-[280px] object-contain" />
+            {/* Context block and Questions Layout */}
+            {contextQ ? (
+              <div className="flex flex-col lg:flex-row gap-6 mt-4 items-start">
+                {/* Left side: Context */}
+                <div className="lg:w-1/2 w-full lg:sticky lg:top-4">
+                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
                     </div>
-                  )}
+                    <div className="text-sm leading-relaxed text-gray-700">
+                      <MathRenderer text={contextQ.content} />
+                    </div>
+                    {contextQ.image && (
+                      <div className="mt-3">
+                        <img src={contextQ.image} alt="" className="rounded-xl max-h-[300px] object-contain" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Right side: Questions */}
+                <div className="lg:w-1/2 w-full flex flex-col gap-6">
+                  {groupQuestions.map((gq) => {
+                    const rqIndex = realQuestions.findIndex(x => x.id === gq.id);
+                    const isRev = practiceRevealed[rqIndex] || false;
+                    const ua = answers[gq.id];
+                    const hasAns = ua !== undefined && ua !== '' && (typeof ua !== 'object' || Object.keys(ua).length > 0);
+                    
+                    return (
+                      <div key={gq.id} className={`practice-card-wrap bg-white rounded-3xl shadow-sm border ${rqIndex === currentQ ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-gray-100'}`} style={{ fontSize: '1.1em' }} id={`practice-q-${rqIndex}`}>
+                        <QuestionCard
+                          question={gq}
+                          index={rqIndex}
+                          selectedAnswer={answers[gq.id] || (gq.type === 'TF' ? {} : '')}
+                          onAnswerChange={(val) => !isRev && handleAnswerChange(gq.id, val)}
+                          showResult={isRev}
+                          disabled={isRev}
+                          isBookmarked={bookmarks.has(gq.id)}
+                          onToggleBookmark={!isRev ? () => {
+                            const next = new Set(bookmarks);
+                            if (next.has(gq.id)) next.delete(gq.id);
+                            else next.add(gq.id);
+                            setBookmarks(next);
+                          } : null}
+                        />
+                        {!isRev && (
+                          <div className="px-6 pb-6 pt-2 flex justify-end border-t border-gray-50 mt-4">
+                            <button
+                              onClick={() => {
+                                setPracticeRevealed(prev => ({ ...prev, [rqIndex]: true }));
+                                setCurrentQ(rqIndex); // Cập nhật currentQ để dot sáng lên
+                              }}
+                              disabled={!hasAns}
+                              className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all"
+                              style={{
+                                background: hasAns ? 'linear-gradient(135deg, #10b981, #059669)' : '#e2e8f0',
+                                color: hasAns ? '#fff' : '#94a3b8',
+                                border: 'none',
+                                cursor: hasAns ? 'pointer' : 'not-allowed',
+                                boxShadow: hasAns ? '0 4px 14px rgba(16,185,129,.3)' : 'none',
+                              }}
+                            >
+                              <Eye className="w-4 h-4" /> Xem đáp án
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+            ) : (
+              q && (
+                <div className="practice-card-wrap mt-4" style={{ fontSize: '1.1em' }}>
+                  <QuestionCard
+                    question={q}
+                    index={currentQ}
+                    selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
+                    onAnswerChange={(val) => !isRevealed && handleAnswerChange(q.id, val)}
+                    showResult={isRevealed}
+                    disabled={isRevealed}
+                    isBookmarked={bookmarks.has(q.id)}
+                    onToggleBookmark={!isRevealed ? () => {
+                      const next = new Set(bookmarks);
+                      if (next.has(q.id)) next.delete(q.id);
+                      else next.add(q.id);
+                      setBookmarks(next);
+                    } : null}
+                  />
+                </div>
+              )
             )}
 
-            {q && (
-              <div className="practice-card-wrap" style={{ fontSize: '1.1em' }}>
-                <QuestionCard
-                  question={q}
-                  index={currentQ}
-                  selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
-                  onAnswerChange={(val) => !isRevealed && handleAnswerChange(q.id, val)}
-                  showResult={isRevealed}
-                  disabled={isRevealed}
-                  isBookmarked={bookmarks.has(q.id)}
-                  onToggleBookmark={!isRevealed ? () => {
-                    const next = new Set(bookmarks);
-                    if (next.has(q.id)) next.delete(q.id);
-                    else next.add(q.id);
-                    setBookmarks(next);
-                  } : null}
-                />
-              </div>
-            )}
-
-            <div className="flex items-center justify-between mt-4 sm:mt-6 gap-2 sm:gap-4">
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200 gap-2 sm:gap-4">
               <button
-                onClick={() => setCurrentQ(prev => Math.max(0, prev - 1))}
-                disabled={currentQ === 0}
+                onClick={() => {
+                  const target = Math.max(0, firstIndex - 1);
+                  setCurrentQ(target);
+                  document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={firstIndex === 0}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
                 style={{
-                  background: currentQ === 0 ? '#f1f5f9' : '#fff',
-                  color: currentQ === 0 ? '#94a3b8' : '#4b5563',
-                  border: '1.5px solid ' + (currentQ === 0 ? '#e2e8f0' : '#d1d5db'),
-                  cursor: currentQ === 0 ? 'not-allowed' : 'pointer',
+                  background: firstIndex === 0 ? '#f1f5f9' : '#fff',
+                  color: firstIndex === 0 ? '#94a3b8' : '#4b5563',
+                  border: '1.5px solid ' + (firstIndex === 0 ? '#e2e8f0' : '#d1d5db'),
+                  cursor: firstIndex === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
                 <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Câu trước</span>
               </button>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                {!isRevealed && (
+                {!contextQ && !isRevealed && (
                   <button
                     onClick={handlePracticeReveal}
                     disabled={!hasAnswered}
@@ -722,15 +783,19 @@ export default function HomePage() {
               </div>
 
               <button
-                onClick={() => setCurrentQ(prev => Math.min(realQuestions.length - 1, prev + 1))}
-                disabled={currentQ === realQuestions.length - 1}
+                onClick={() => {
+                  const target = Math.min(realQuestions.length - 1, lastIndex + 1);
+                  setCurrentQ(target);
+                  document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={lastIndex === realQuestions.length - 1}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
                 style={{
-                  background: currentQ === realQuestions.length - 1 ? '#f1f5f9' : 'var(--et-blue)',
-                  color: currentQ === realQuestions.length - 1 ? '#94a3b8' : '#fff',
+                  background: lastIndex === realQuestions.length - 1 ? '#f1f5f9' : 'var(--et-blue)',
+                  color: lastIndex === realQuestions.length - 1 ? '#94a3b8' : '#fff',
                   border: 'none',
-                  cursor: currentQ === realQuestions.length - 1 ? 'not-allowed' : 'pointer',
-                  boxShadow: currentQ === realQuestions.length - 1 ? 'none' : '0 4px 14px rgba(59,111,212,.3)',
+                  cursor: lastIndex === realQuestions.length - 1 ? 'not-allowed' : 'pointer',
+                  boxShadow: lastIndex === realQuestions.length - 1 ? 'none' : '0 4px 14px rgba(59,111,212,.3)',
                 }}
               >
                 <span className="hidden sm:inline">Câu tiếp</span> <ChevronRight className="w-4 h-4" />
