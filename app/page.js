@@ -1705,6 +1705,7 @@ export default function HomePage() {
   });
 
   const isFiltering = searchQuery || selYear || selType || selSubject || sortOrder !== 'default';
+  const lockedFolderIds = new Set(allFolders.filter(f => f.visibility === 'locked').map(f => f.id));
 
   let browseTotalPages = 1;
   let renderContent = null;
@@ -1716,9 +1717,19 @@ export default function HomePage() {
     
     renderContent = visibleExams.length > 0 ? (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {visibleExams.map(exam => (
-          <ExamCard key={exam.id} exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
-        ))}
+        {visibleExams.map(exam => {
+          const isLocked = lockedFolderIds.has(exam.folderId);
+          return (
+            <div key={exam.id} className={isLocked ? 'opacity-60 grayscale-[50%] pointer-events-none relative' : ''}>
+              <ExamCard exam={exam} onStart={isLocked ? undefined : handleStartExam} isSaved={savedExams.has(exam.id.toString())} isLocked={isLocked} />
+              {isLocked && <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 backdrop-blur-[1px] rounded-2xl cursor-not-allowed">
+                <div className="bg-gray-900/80 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg pointer-events-none">
+                  <Lock className="w-4 h-4" /> Đã khoá
+                </div>
+              </div>}
+            </div>
+          );
+        })}
       </div>
     ) : null;
   } else {
@@ -1787,7 +1798,7 @@ export default function HomePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                       {fExams.map(exam => (
                         <div key={exam.id} className={isLocked ? 'opacity-60 grayscale-[50%] pointer-events-none relative' : ''}>
-                          <ExamCard exam={exam} onStart={handleStartExam} isSaved={savedExams.has(exam.id.toString())} />
+                          <ExamCard exam={exam} onStart={isLocked ? undefined : handleStartExam} isSaved={savedExams.has(exam.id.toString())} isLocked={isLocked} />
                           {isLocked && <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 backdrop-blur-[1px] rounded-2xl cursor-not-allowed">
                             <div className="bg-gray-900/80 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg pointer-events-none">
                               <Lock className="w-4 h-4" /> Đã khoá

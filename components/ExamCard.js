@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Play } from 'lucide-react';
+import { Clock, Play, Lock } from 'lucide-react';
 
 const SUBJECT_META = {
   'Toán':               { color: 'text-indigo-700',  bg: 'bg-indigo-50'  },
@@ -28,7 +28,7 @@ function QBadge({ label, className }) {
   );
 }
 
-export default function ExamCard({ exam, onStart, isSaved }) {
+export default function ExamCard({ exam, onStart, isSaved, isLocked }) {
   const [hov, setHov] = useState(false);
   const sm = SUBJECT_META[exam.subject] || SUBJECT_META['Khác'];
   const tm = TYPE_META[exam.examType]   || TYPE_META['Other'];
@@ -85,20 +85,29 @@ export default function ExamCard({ exam, onStart, isSaved }) {
 
       {/* CTA */}
       <button
-        onClick={() => onStart?.(exam)}
+        onClick={(e) => {
+          if (isLocked) {
+            e.preventDefault();
+            return;
+          }
+          onStart?.(exam);
+        }}
+        disabled={isLocked}
         className={`
           flex items-center justify-center gap-2 py-2.5 rounded-xl
-          text-sm font-semibold transition-all duration-200 cursor-pointer border-0
-          ${isSaved 
-            ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            : hov
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-              : 'bg-indigo-50 text-indigo-600'
+          text-sm font-semibold transition-all duration-200 border-0
+          ${isLocked
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : isSaved 
+              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer'
+              : hov
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 cursor-pointer'
+                : 'bg-indigo-50 text-indigo-600 cursor-pointer'
           }
         `}
       >
-        {isSaved ? <Clock className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-        {isSaved ? 'Tiếp tục làm bài' : 'Làm bài ngay'}
+        {isLocked ? <Lock className="w-3.5 h-3.5" /> : isSaved ? <Clock className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+        {isLocked ? 'Đã khoá' : isSaved ? 'Tiếp tục làm bài' : 'Làm bài ngay'}
       </button>
     </div>
   );
