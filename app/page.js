@@ -77,17 +77,49 @@ const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert,
   const [reportReason, setReportReason] = useState('');
   const [reportNote, setReportNote] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [existingReport, setExistingReport] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   useEffect(() => {
     if (reportModal.isOpen) {
       setReportReason('');
       setReportNote('');
       setReportSubmitting(false);
+      setExistingReport(null);
     }
   }, [reportModal.isOpen]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!reportModal.isOpen || !user?.id || !activeExam?.id || !reportModal.question?.id) {
+        setExistingReport(null);
+        return;
+      }
+      setLoadingExisting(true);
+      try {
+        const { data, error } = await supabase
+          .from('question_reports')
+          .select('id, status, reason, note, created_at, resolved_at, admin_reply, admin_replied_at')
+          .eq('user_id', user.id)
+          .eq('exam_id', activeExam.id)
+          .eq('question_id', reportModal.question.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!cancelled && !error) setExistingReport(data || null);
+      } catch {
+        if (!cancelled) setExistingReport(null);
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [reportModal.isOpen, reportModal.question?.id, user?.id, activeExam?.id]);
+
   const handleSubmitReport = async () => {
-    if (!reportReason) return;
+    if (!reportReason || existingReport) return;
     setReportSubmitting(true);
     try {
       const { error } = await supabase.from('question_reports').insert({
@@ -102,7 +134,7 @@ const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert,
       });
       if (error) throw error;
       setReportModal({ isOpen: false, question: null });
-      showAlert('Đã gửi báo cáo', 'Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét và xử lý sớm nhất.');
+      showAlert('Đã gửi báo cáo', 'Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét và xử lý sớm nhất. Bạn có thể theo dõi trong Hồ sơ → Báo cáo câu hỏi.');
     } catch (err) {
       console.error('Report error:', err);
       showAlert('Lỗi', 'Không thể gửi báo cáo: ' + (err.message || 'Vui lòng thử lại.'));
@@ -110,6 +142,11 @@ const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert,
     setReportSubmitting(false);
   };
   if (!reportModal.isOpen) return null;
+
+  const existingReasonLabel = existingReport
+    ? (REPORT_REASONS.find((r) => r.value === existingReport.reason)?.label || existingReport.reason)
+    : '';
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn" onClick={() => setReportModal({ isOpen: false, question: null })}>
       <div className="bg-white rounded-2xl w-[90%] max-w-md p-6 shadow-xl transform transition-all scale-100" onClick={e => e.stopPropagation()}>
@@ -123,12 +160,49 @@ const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert,
           </div>
         </div>
 
-        <div className="mb-4">
+        {loadingExisting ? (
+          <p className="text-sm text-gray-500 mb-4">Đang kiểm tra báo cáo trước đó...</p>
+        ) : existingReport ? (
+          <div className="mb-5 p-4 rounded-xl bg-indigo-50 border border-indigo-100 text-sm text-indigo-900">
+            <p className="font-semibold mb-1">Bạn đã gửi báo cáo cho câu này</p>
+            <p className="text-xs text-indigo-800/90 mb-2">
+              Lý do: {existingReasonLabel}
+              {existingReport.note ? ` — ${existingReport.note}` : ''}
+            </p>
+            <p className="text-xs font-bold uppercase tracking-wide">
+              Trạng thái:{' '}
+              {existingReport.status === 'resolved' ? (
+                <span className="text-green-700">Đã xử lý</span>
+              ) : (
+                <span className="text-amber-700">Đang chờ xử lý</span>
+              )}
+            </p>
+            <p className="text-[11px] text-indigo-700/80 mt-2">
+              Xem tất cả báo cáo tại Hồ sơ → Báo cáo câu hỏi.
+            </p>
+            {existingReport.admin_reply && (
+              <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                  Phản hồi từ Đội ngũ YeuHoc
+                </p>
+                <p className="text-xs text-emerald-800 mt-1">{existingReport.admin_reply}</p>
+                {existingReport.admin_replied_at && (
+                  <p className="text-[11px] text-emerald-700/80 mt-1">
+                    {new Date(existingReport.admin_replied_at).toLocaleString('vi-VN')}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        <div className={`mb-4 ${existingReport ? 'opacity-50 pointer-events-none' : ''}`}>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Lý do báo cáo *</label>
           <div className="grid grid-cols-2 gap-2">
             {REPORT_REASONS.map(r => (
               <button
                 key={r.value}
+                type="button"
                 onClick={() => setReportReason(r.value)}
                 className="px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left"
                 style={{
@@ -143,7 +217,7 @@ const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert,
           </div>
         </div>
 
-        <div className="mb-5">
+        <div className={`mb-5 ${existingReport ? 'opacity-50 pointer-events-none' : ''}`}>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Ghi chú thêm (không bắt buộc)</label>
           <textarea
             value={reportNote}
@@ -157,28 +231,32 @@ const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert,
 
         <div className="flex justify-end gap-3">
           <button
+            type="button"
             onClick={() => setReportModal({ isOpen: false, question: null })}
             className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
           >
-            Hủy
+            Đóng
           </button>
-          <button
-            onClick={handleSubmitReport}
-            disabled={!reportReason || reportSubmitting}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors shadow-md flex items-center gap-2"
-            style={{
-              background: reportReason ? '#ef4444' : '#d1d5db',
-              cursor: reportReason && !reportSubmitting ? 'pointer' : 'not-allowed',
-              opacity: reportSubmitting ? 0.7 : 1,
-            }}
-          >
-            {reportSubmitting ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-            {reportSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
-          </button>
+          {!existingReport && (
+            <button
+              type="button"
+              onClick={handleSubmitReport}
+              disabled={!reportReason || reportSubmitting}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors shadow-md flex items-center gap-2"
+              style={{
+                background: reportReason ? '#ef4444' : '#d1d5db',
+                cursor: reportReason && !reportSubmitting ? 'pointer' : 'not-allowed',
+                opacity: reportSubmitting ? 0.7 : 1,
+              }}
+            >
+              {reportSubmitting ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              {reportSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -421,6 +499,43 @@ export default function HomePage() {
       if (subscription) subscription.unsubscribe();
     };
   }, [router]);
+
+  // Thông báo khi báo cáo câu hỏi được đánh dấu đã xử lý (cần Realtime trên bảng question_reports)
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`question-reports-user-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'question_reports',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const next = payload.new;
+          const prev = payload.old;
+          if (next?.status === 'resolved' && prev?.status === 'pending') {
+            setModal({
+              isOpen: true,
+              type: 'alert',
+              title: 'Báo cáo đã được xử lý',
+              message: `Báo cáo của bạn về câu hỏi trong "${next.exam_title || 'đề thi'}" đã được đội ngũ xem xét. Chi tiết xem tại Hồ sơ → Báo cáo câu hỏi.`,
+              onConfirm: null,
+              onCancel: null,
+              extraBtn: null,
+            });
+            window.dispatchEvent(new Event('yeuhoc-reports-seen'));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   // ── Quiz flow ──
   const questions = activeExam?.questions || [];

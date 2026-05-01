@@ -28,6 +28,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [adminReplyDraft, setAdminReplyDraft] = useState('');
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -77,6 +78,27 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
     fetchReports();
   }, [fetchReports]);
 
+  useEffect(() => {
+    const reportChannel = supabase
+      .channel('admin-question-reports')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'question_reports' },
+        () => {
+          fetchReports();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(reportChannel);
+    };
+  }, [fetchReports]);
+
+  useEffect(() => {
+    setAdminReplyDraft(selectedReport?.admin_reply || '');
+  }, [selectedReport]);
+
   const handleResolve = async (reportId) => {
     setActionLoading(true);
     try {
@@ -111,6 +133,43 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
       }
       setActionLoading(false);
     });
+  };
+
+  const handleSaveAdminReply = async (reportId) => {
+    setActionLoading(true);
+    try {
+      const cleanReply = adminReplyDraft.trim();
+      const updates = {
+        admin_reply: cleanReply || null,
+        admin_replied_at: cleanReply ? new Date().toISOString() : null,
+      };
+      if (cleanReply) {
+        updates.status = 'resolved';
+        updates.resolved_at = new Date().toISOString();
+      }
+      const { error } = await supabase
+        .from('question_reports')
+        .update(updates)
+        .eq('id', reportId);
+      if (error) throw error;
+      await fetchReports();
+      const { data: refreshed } = await supabase
+        .from('question_reports')
+        .select('*')
+        .eq('id', reportId)
+        .maybeSingle();
+      if (refreshed) {
+        setSelectedReport((prev) => ({
+          ...(prev || {}),
+          ...refreshed,
+        }));
+      }
+      showAlert('Thành công', cleanReply ? 'Đã lưu phản hồi ẩn danh cho user.' : 'Đã xóa phản hồi admin.');
+    } catch (err) {
+      console.error('Error saving admin reply:', err);
+      showAlert('Lỗi', err.message);
+    }
+    setActionLoading(false);
   };
 
   const handleDeleteQuestion = async (report) => {
@@ -171,6 +230,14 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
 
   const pendingCount = reports.filter(r => r.status === 'pending').length;
 
+  useEffect(() => {
+    if (!selectedReport?.id) return;
+    const latest = reports.find((r) => r.id === selectedReport.id);
+    if (latest) {
+      setSelectedReport((prev) => ({ ...(prev || {}), ...latest }));
+    }
+  }, [reports, selectedReport?.id]);
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header stats */}
@@ -211,7 +278,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white/[0.02] p-3 sm:p-4 rounded-2xl border border-white/5">
         <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 flex-1 w-full sm:max-w-md">
           <Search className="w-4 h-4 text-white/40" />
           <input
@@ -222,9 +289,9 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
             className="bg-transparent text-sm text-white placeholder:text-white/30 outline-none flex-1 font-medium"
           />
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {/* Status Pills */}
-          <div className="flex items-center bg-[#14142a] p-1 rounded-xl border border-white/10 w-full sm:w-auto">
+          <div className="flex items-center bg-[#14142a] p-1 rounded-xl border border-white/10 w-full sm:w-auto overflow-x-auto">
             <button
               onClick={() => setFilterStatus('all')}
               className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -287,9 +354,9 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
               <div
                 key={report.id}
                 onClick={() => setSelectedReport(report)}
-                className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/8 hover:border-white/15 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all group"
+                className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/8 hover:border-white/15 rounded-2xl p-3.5 sm:p-5 cursor-pointer transition-all group"
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
                   {/* Avatar */}
                   <div className="shrink-0">
                     {report.profiles?.avatar_url ? (
@@ -304,7 +371,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-sm font-bold text-white">{report.profiles?.full_name || 'Ẩn danh'}</span>
+                      <span className="text-sm font-bold text-white truncate max-w-[180px] sm:max-w-none">{report.profiles?.full_name || 'Ẩn danh'}</span>
                       <span
                         className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase"
                         style={{ background: statusConf.bg, color: statusConf.color }}
@@ -315,9 +382,9 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                         {reasonLabel}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-white/40 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-white/40 mb-2">
                       <FileText className="w-3.5 h-3.5" />
-                      <span className="truncate">{report.exam_title || 'Không rõ đề thi'}</span>
+                      <span className="truncate max-w-[200px] sm:max-w-none">{report.exam_title || 'Không rõ đề thi'}</span>
                       <span>·</span>
                       <span>{new Date(report.created_at).toLocaleDateString('vi-VN')} {new Date(report.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
@@ -330,10 +397,15 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                         💬 "{report.note}"
                       </p>
                     )}
+                    {report.admin_reply && (
+                      <p className="text-xs text-emerald-300/80 mt-1">
+                        Đã phản hồi cho user
+                      </p>
+                    )}
                   </div>
 
                   {/* Actions */}
-                  <div className="shrink-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="hidden sm:flex shrink-0 items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     {report.status === 'pending' && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleResolve(report.id); }}
@@ -352,6 +424,22 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                     </button>
                   </div>
                 </div>
+                <div className="mt-3 flex sm:hidden items-center gap-2">
+                  {report.status === 'pending' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleResolve(report.id); }}
+                      className="flex-1 p-2 rounded-lg bg-green-500/15 text-green-300 hover:bg-green-500/25 transition-colors text-xs font-bold"
+                    >
+                      Đã xử lý
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }}
+                    className="flex-1 p-2 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 transition-colors text-xs font-bold"
+                  >
+                    Xóa report
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -360,8 +448,8 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
 
       {/* Detail Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={() => setSelectedReport(null)}>
-          <div className="bg-[#14142a] border border-white/10 rounded-2xl w-[90%] max-w-lg p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={() => setSelectedReport(null)}>
+          <div className="bg-[#14142a] border border-white/10 rounded-t-2xl sm:rounded-2xl w-full sm:w-[90%] max-w-lg p-4 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-400" />
@@ -389,7 +477,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-white/5 rounded-xl p-3">
                   <div className="text-[10px] font-bold text-white/40 uppercase mb-1">Đề thi</div>
                   <div className="text-sm text-white font-medium truncate">{selectedReport.exam_title || 'N/A'}</div>
@@ -414,12 +502,36 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                 </div>
               )}
 
-              <div className="flex items-center gap-3 pt-2 flex-wrap">
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
+                <div className="text-[10px] font-bold text-emerald-300/70 uppercase mb-2">Phản hồi ẩn danh cho user</div>
+                <textarea
+                  value={adminReplyDraft}
+                  onChange={(e) => setAdminReplyDraft(e.target.value)}
+                  placeholder="Nhập phản hồi để user thấy trong hồ sơ (sẽ hiển thị dưới tên Đội ngũ YeuHoc)..."
+                  rows={3}
+                  className="w-full rounded-xl bg-[#0f1021] border border-white/10 px-3 py-2 text-sm text-white/80 placeholder:text-white/35 outline-none focus:border-emerald-400/50"
+                />
+                {selectedReport.admin_replied_at && (
+                  <p className="text-[11px] text-emerald-200/60 mt-2">
+                    Cập nhật lần cuối: {new Date(selectedReport.admin_replied_at).toLocaleString('vi-VN')}
+                  </p>
+                )}
+                <button
+                  onClick={() => handleSaveAdminReply(selectedReport.id)}
+                  disabled={actionLoading}
+                  className="mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-xs bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Lưu phản hồi cho user
+                </button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
                 {selectedReport.status === 'pending' && (
                   <button
                     onClick={() => handleResolve(selectedReport.id)}
                     disabled={actionLoading}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                    className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     Đã xử lý xong
@@ -428,7 +540,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                 <button
                   onClick={() => handleDeleteQuestion(selectedReport)}
                   disabled={actionLoading}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                  className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
                   Xóa câu hỏi
@@ -436,7 +548,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                 <button
                   onClick={() => handleDeleteReport(selectedReport.id)}
                   disabled={actionLoading}
-                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors disabled:opacity-50"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors disabled:opacity-50"
                 >
                   <X className="w-4 h-4" />
                   Xóa báo cáo

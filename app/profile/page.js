@@ -1,18 +1,29 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Mail, Camera, LogOut, Save, Shield, BookOpen,
-  AlertCircle, CheckCircle2, Loader2, FileText, History, Activity, PauseCircle, PlayCircle
+  AlertCircle, CheckCircle2, Loader2, FileText, History, Activity, PauseCircle, PlayCircle, Flag
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import QuestionCard from '@/components/QuestionCard';
 import { ChevronRight, X } from 'lucide-react';
+import { markResolvedReportsAsSeen } from '@/lib/reportSeenStorage';
 
-export default function ProfilePage() {
+const REPORT_REASON_LABELS = {
+  wrong_question: 'Sai đề / Đề bị lỗi',
+  wrong_answer: 'Sai đáp án',
+  wrong_solution: 'Sai lời giải',
+  unclear: 'Đề không rõ ràng',
+  missing_image: 'Thiếu hình ảnh',
+  other: 'Lý do khác',
+};
+
+function ProfilePageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,10 +42,23 @@ export default function ProfilePage() {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // overview | info | history
+  const [activeTab, setActiveTab] = useState('overview'); // overview | info | history | reports
   const [pausedExams, setPausedExams] = useState([]);
+  const [myReports, setMyReports] = useState([]);
 
   const dataLoadedRef = useRef(false);
+  const avatarFileInputRef = useRef(null);
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t === 'reports') setActiveTab('reports');
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (activeTab !== 'reports') return;
+    const resolvedIds = myReports.filter((r) => r.status === 'resolved' && r.id).map((r) => r.id);
+    if (resolvedIds.length) markResolvedReportsAsSeen(resolvedIds);
+  }, [activeTab, myReports]);
 
   useEffect(() => {
     let isMounted = true;
@@ -58,7 +82,13 @@ export default function ProfilePage() {
           .eq('user_id', sessionUser.id)
           .order('created_at', { ascending: false });
 
-        const [profileRes, historyRes] = await Promise.allSettled([profilePromise, historyPromise]);
+        const reportsPromise = supabase
+          .from('question_reports')
+          .select('id, exam_id, question_id, question_content, reason, note, exam_title, status, resolved_at, created_at, admin_reply, admin_replied_at')
+          .eq('user_id', sessionUser.id)
+          .order('created_at', { ascending: false });
+
+        const [profileRes, historyRes, reportsRes] = await Promise.allSettled([profilePromise, historyPromise, reportsPromise]);
 
         const keys = Object.keys(localStorage);
         const prefix = `yeuhoc_progress_${sessionUser.id}_`;
@@ -86,6 +116,10 @@ export default function ProfilePage() {
 
           if (historyRes.status === 'fulfilled' && historyRes.value.data) {
             setAttempts(historyRes.value.data);
+          }
+
+          if (reportsRes.status === 'fulfilled' && reportsRes.value.data) {
+            setMyReports(reportsRes.value.data);
           }
         }
       } catch (error) {
@@ -136,6 +170,41 @@ export default function ProfilePage() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const reportChannel = supabase
+      .channel(`profile-question-reports-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'question_reports',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setMyReports((prev) => {
+            let nextReports = prev;
+            if (payload.eventType === 'INSERT' && payload.new) {
+              nextReports = [payload.new, ...prev.filter((r) => r.id !== payload.new.id)];
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              nextReports = prev.map((r) => (r.id === payload.new.id ? payload.new : r));
+            } else if (payload.eventType === 'DELETE' && payload.old?.id) {
+              nextReports = prev.filter((r) => r.id !== payload.old.id);
+            }
+            return [...nextReports].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          });
+          window.dispatchEvent(new Event('yeuhoc-reports-seen'));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(reportChannel);
+    };
+  }, [user?.id]);
 
   const handleViewAttemptDetails = async (attempt) => {
     setSelectedAttempt(attempt);
@@ -310,6 +379,14 @@ export default function ProfilePage() {
             <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center shadow-sm">
               {/* Avatar */}
               <div className="relative inline-block mb-4">
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={handleAvatarUpload}
+                  disabled={uploadingAvatar || !user}
+                />
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
@@ -321,9 +398,19 @@ export default function ProfilePage() {
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center shadow-sm">
-                  <Camera className="w-4 h-4 text-gray-400" />
-                </div>
+                <button
+                  type="button"
+                  title="Đổi ảnh đại diện"
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  disabled={uploadingAvatar || !user}
+                  className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4 text-gray-500" />
+                  )}
+                </button>
               </div>
 
               {/* Name */}
@@ -383,6 +470,14 @@ export default function ProfilePage() {
                 }`}
               >
                 <History className="w-4 h-4" /> Lịch sử làm bài
+              </button>
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'reports' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Flag className="w-4 h-4" /> Báo cáo câu hỏi
               </button>
               <button
                 onClick={() => setActiveTab('info')}
@@ -498,6 +593,89 @@ export default function ProfilePage() {
                     </div>
                   );
                 })()}
+              </div>
+            ) : activeTab === 'reports' ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
+                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+                  <Flag className="w-5 h-5 text-indigo-500" />
+                  Báo cáo của tôi
+                </h3>
+                <p className="text-xs text-gray-400 mb-6">
+                  Danh sách câu hỏi bạn đã báo cáo và trạng thái xử lý. Khi chuyển sang trạng thái đã xử lý, bạn sẽ thấy tại đây; nếu đang mở trang đề thi, ứng dụng có thể báo ngay khi Supabase Realtime được bật cho bảng báo cáo.
+                </p>
+
+                {myReports.length > 0 ? (
+                  <div className="space-y-3 sm:space-y-4">
+                    {myReports.map((r) => {
+                      const rawContent = (r.question_content || '').replace(/\s+/g, ' ').trim();
+                      const preview = rawContent.slice(0, 120);
+                      const previewTruncated = rawContent.length > 120;
+                      const reasonLabel = REPORT_REASON_LABELS[r.reason] || r.reason;
+                      const isPending = r.status === 'pending';
+                      const hasAdminReply = Boolean(r.admin_reply);
+                      return (
+                        <div
+                          key={r.id}
+                          className="p-3.5 sm:p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:flex-wrap items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{r.exam_title || 'Đề thi'}</p>
+                              <p className="text-sm text-gray-900 font-medium line-clamp-2">
+                                {preview || '(Không có nội dung câu)'}
+                                {previewTruncated ? '…' : ''}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Lý do: <span className="text-gray-700">{reasonLabel}</span>
+                                {r.note ? (
+                                  <span className="block mt-1 italic">Ghi chú: {r.note}</span>
+                                ) : null}
+                              </p>
+                              {hasAdminReply && (
+                                <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                                  <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                                    Phản hồi từ Đội ngũ YeuHoc
+                                  </p>
+                                  <p className="text-xs text-emerald-800 mt-1">{r.admin_reply}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="w-full sm:w-auto flex flex-col sm:items-end gap-1 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                              <span
+                                className={`inline-flex w-fit items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                                  isPending
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : 'bg-green-100 text-green-800 border border-green-200'
+                                }`}
+                              >
+                                {isPending ? 'Đang chờ xử lý' : 'Đã xử lý'}
+                              </span>
+                              <span className="text-[11px] text-gray-500">
+                                Gửi {new Date(r.created_at).toLocaleString('vi-VN')}
+                              </span>
+                              {!isPending && r.resolved_at && (
+                                <span className="text-[11px] text-gray-500">
+                                  Xử lý {new Date(r.resolved_at).toLocaleString('vi-VN')}
+                                </span>
+                              )}
+                              {hasAdminReply && r.admin_replied_at && (
+                                <span className="text-[11px] text-emerald-600">
+                                  Phản hồi {new Date(r.admin_replied_at).toLocaleString('vi-VN')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                    <Flag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500 font-medium">Bạn chưa gửi báo cáo nào</p>
+                    <p className="text-xs text-gray-400 mt-1">Khi làm bài, dùng mục báo cáo trên từng câu hỏi để gửi phản hồi.</p>
+                  </div>
+                )}
               </div>
             ) : activeTab === 'info' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
@@ -771,5 +949,20 @@ export default function ProfilePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+          <Navbar />
+          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mt-20" />
+        </div>
+      }
+    >
+      <ProfilePageInner />
+    </Suspense>
   );
 }
