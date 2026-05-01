@@ -26,6 +26,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
   const [year, setYear] = useState(exam?.year || 2024);
   const [duration, setDuration] = useState(exam?.duration || 90);
   const [published, setPublished] = useState(exam?.published || false);
+  const [note, setNote] = useState(exam?.note || '');
   const [folderId, setFolderId] = useState(exam?.folderId || 'root');
   const [questions, setQuestions] = useState(initialQuestions || exam?.questions || []);
   const [scoringPreset, setScoringPreset] = useState('THPT Toán');
@@ -44,6 +45,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
       setYear(exam.year || 2024);
       setDuration(exam.duration || 90);
       setPublished(exam.published || false);
+      setNote(exam.note || '');
       setFolderId(exam.folderId || 'root');
       setAntiCheatEnabled(exam.antiCheatEnabled !== false);
       if (exam.questions && exam.questions.length > 0) {
@@ -215,7 +217,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
   const handleSave = () => {
     onSave({
       id: exam?.id || null,
-      title, subject, examType, year, duration, published, folderId: folderId === 'root' ? null : folderId,
+      title, subject, examType, year, duration, published, note, folderId: folderId === 'root' ? null : folderId,
       questions, scoringConfig, totalQ: questions.length,
       antiCheatEnabled,
     });
@@ -312,6 +314,16 @@ D. Đáp án D
                     <option key={f.id} value={f.id} className="bg-[#14142a]">{f.name}</option>
                   ))}
                 </select>
+              </div>
+              {/* Note (Admin Only) */}
+              <div className="sm:col-span-2 mt-2">
+                <label className="block text-xs font-semibold text-amber-400/80 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  Ghi chú nội bộ (Chỉ Admin thấy)
+                </label>
+                <textarea value={note} onChange={e => setNote(e.target.value)}
+                  placeholder="Thêm ghi chú, nguồn gốc đề thi, các phần cần sửa chữa..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-white placeholder-white/20 text-sm focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition-all resize-none" />
               </div>
               {/* Subject */}
               <div>
