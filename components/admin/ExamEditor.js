@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import FileUpload from '@/components/FileUpload';
+import AIExamGenerator from '@/components/admin/AIExamGenerator';
 import QuestionEditorCard from '@/components/admin/QuestionEditorCard';
 import {
   Save, Eye, EyeOff, Clock, GraduationCap, Calendar,
@@ -223,6 +224,14 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
     });
   };
 
+  const handleAIQuestionsReady = ({ questions: aiQuestions, fileName }) => {
+    setQuestions(aiQuestions);
+    if (!title && fileName) {
+      setTitle(fileName.replace(/\.[^.]+$/, ''));
+    }
+    setActiveSection('questions');
+  };
+
   return (
     <div className="space-y-6 w-full">
       {/* Tab Navigation */}
@@ -246,6 +255,8 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
       {/* ─── Upload Section ─── */}
       {activeSection === 'upload' && (
         <div className="animate-fadeIn space-y-6">
+          <AIExamGenerator onQuestionsReady={handleAIQuestionsReady} />
+
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 space-y-6">
             <div className="text-center space-y-2">
               <h3 className="text-xl font-bold text-white">Upload file đề thi</h3>

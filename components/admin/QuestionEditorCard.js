@@ -432,6 +432,12 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
 
           {/* ── Image ── */}
           <div className="space-y-3">
+            {q.needsImageReview && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{q.aiImageNote || 'AI phát hiện câu này có hình. Vui lòng kiểm tra hoặc tải ảnh đúng trước khi lưu.'}</span>
+              </div>
+            )}
             <label 
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}

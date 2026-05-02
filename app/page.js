@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle, Folder, Lock, ChevronDown, AlertTriangle, Send } from 'lucide-react';
+import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle, Folder, Lock, ChevronDown, AlertTriangle, Send, Bot } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import UserProfile from '@/components/UserProfile';
 import { getPublishedExams, getExamById, getAllFolders } from '@/lib/examStore';
 import FilterBar from '@/components/FilterBar';
 import ExamCard from '@/components/ExamCard';
 import QuestionCard from '@/components/QuestionCard';
+import PracticeAIChatbox from '@/components/PracticeAIChatbox';
 import MathRenderer from '@/components/MathRenderer';
 import Pagination from '@/components/Pagination';
 import ResultsView from '@/components/ResultsView';
@@ -287,6 +288,7 @@ export default function HomePage() {
   const [savedExams, setSavedExams] = useState(new Set());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
 
   // Browse filter & pagination states (must be before any conditional returns)
   const [searchQuery, setSearchQuery] = useState('');
@@ -596,6 +598,7 @@ export default function HomePage() {
     setAnswers({});
     setCurrentQ(0);
     setPracticeRevealed({});
+    setIsAIChatOpen(false);
     setQuizPhase('practice');
   };
 
@@ -818,6 +821,7 @@ export default function HomePage() {
     setAnswers({});
     setTimerRunning(false);
     setCurrentQ(0);
+    setIsAIChatOpen(false);
     setStartTime(null);
     setIsPaused(false);
     setViolationCount(0);
@@ -912,6 +916,29 @@ export default function HomePage() {
     const groupQuestions = contextQ ? realQuestions.filter(x => x.linkedTo === contextQ.id) : [q];
     const firstIndex = realQuestions.findIndex(x => x.id === groupQuestions[0]?.id);
     const lastIndex = realQuestions.findIndex(x => x.id === groupQuestions[groupQuestions.length - 1]?.id);
+    const aiQuestionData = q ? {
+      exam: {
+        id: activeExam.id,
+        title: activeExam.title,
+        subject: activeExam.subject,
+        examType: activeExam.examType,
+      },
+      context: contextQ ? {
+        id: contextQ.id,
+        content: contextQ.content,
+        image: contextQ.image || null,
+      } : null,
+      question: {
+        id: q.id,
+        type: q.type,
+        content: q.content,
+        options: q.options || [],
+        statements: q.statements || [],
+        answer: q.answer,
+        solution: q.solution,
+        image: q.image || null,
+      },
+    } : null;
 
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
@@ -942,7 +969,7 @@ export default function HomePage() {
                   else if (done && correctness === false) bg = '#ef4444'; // red - sai
                   else if (done) bg = '#10b981'; // green fallback
                   return (
-                    <button key={i} onClick={() => setCurrentQ(i)} style={{
+                    <button key={i} onClick={() => { setIsAIChatOpen(false); setCurrentQ(i); }} style={{
                       width: isCurrent ? 22 : 9, height: 9, borderRadius: 20, border: 'none', cursor: 'pointer',
                       background: bg, transition: 'all .2s', flexShrink: 0,
                     }} title={`Câu ${i + 1}${isMarked ? ' (đánh dấu)' : done ? (correctness ? ' (đúng)' : ' (sai)') : ''}`} />
@@ -997,11 +1024,22 @@ export default function HomePage() {
                           } : null}
                           onReport={handleOpenReport}
                         />
-                        {!isRev && (
-                          <div className="px-6 pb-6 pt-2 flex justify-end border-t border-gray-50 mt-4">
+                        <div className="px-6 pb-6 pt-2 flex items-center justify-between gap-3 border-t border-gray-50 mt-4">
+                          <button
+                            onClick={() => {
+                              setCurrentQ(rqIndex);
+                              setIsAIChatOpen(true);
+                            }}
+                            className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                            type="button"
+                          >
+                            <Bot className="w-4 h-4" /> Xem gợi ý
+                          </button>
+                          {!isRev && (
                             <button
                               onClick={() => {
                                 setPracticeRevealed(prev => ({ ...prev, [rqIndex]: true }));
+                                setIsAIChatOpen(false);
                                 setCurrentQ(rqIndex); // Cập nhật currentQ để dot sáng lên
                               }}
                               disabled={!hasAns}
@@ -1016,8 +1054,8 @@ export default function HomePage() {
                             >
                               <Eye className="w-4 h-4" /> Xem đáp án
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -1050,6 +1088,7 @@ export default function HomePage() {
               <button
                 onClick={() => {
                   const target = Math.max(0, firstIndex - 1);
+                  setIsAIChatOpen(false);
                   setCurrentQ(target);
                   document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
@@ -1066,6 +1105,13 @@ export default function HomePage() {
               </button>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  onClick={() => setIsAIChatOpen(true)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                  type="button"
+                >
+                  <Bot className="w-4 h-4" /> Xem gợi ý
+                </button>
                 {!contextQ && !isRevealed && (
                   <button
                     onClick={handlePracticeReveal}
@@ -1087,6 +1133,7 @@ export default function HomePage() {
               <button
                 onClick={() => {
                   const target = Math.min(realQuestions.length - 1, lastIndex + 1);
+                  setIsAIChatOpen(false);
                   setCurrentQ(target);
                   document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
@@ -1111,7 +1158,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {realQuestions.map((qItem, i) => bookmarks.has(qItem.id) && (
-                    <button key={i} onClick={() => setCurrentQ(i)}
+                    <button key={i} onClick={() => { setIsAIChatOpen(false); setCurrentQ(i); }}
                       className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                       style={{
                         background: i === currentQ ? '#d97706' : '#fff',
@@ -1133,7 +1180,7 @@ export default function HomePage() {
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Hoàn thành ôn luyện!</h3>
                 <p className="text-sm text-gray-500 mb-4">Bạn đã xem hết {realQuestions.length} câu hỏi.</p>
                 <div className="flex justify-center gap-3 flex-wrap">
-                  <button onClick={() => { setAnswers({}); setCurrentQ(0); setPracticeRevealed({}); setBookmarks(new Set()); }} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
+                  <button onClick={() => { setAnswers({}); setCurrentQ(0); setIsAIChatOpen(false); setPracticeRevealed({}); setBookmarks(new Set()); }} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
                     <RotateCcw className="w-4 h-4" /> Ôn lại từ đầu
                   </button>
                   <button onClick={handleReset} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-2">
@@ -1144,6 +1191,14 @@ export default function HomePage() {
             )}
           </div>
         </div>
+        <PracticeAIChatbox
+          key={q ? `${activeExam.id}-${q.id}` : 'practice-ai-chat'}
+          isOpen={isAIChatOpen}
+          onClose={() => setIsAIChatOpen(false)}
+          questionKey={q ? `${activeExam.id}-${q.id}` : ''}
+          questionData={aiQuestionData}
+          questionNumber={currentQ + 1}
+        />
         <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} REPORT_REASONS={REPORT_REASONS} />
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
       </div>
