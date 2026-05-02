@@ -30,44 +30,34 @@ function renderMathInText(text) {
     const placeholders = [];
     let result = text;
 
-    // 1. Handle display math $$...$$
-    result = result.replace(/\$\$([\s\S]*?)\$\$/g, (match, latex) => {
-        const id = `MATH-DISPLAY-TOKEN-${placeholders.length}`;
-        placeholders.push({ id, html: renderKatex(latex.trim(), true) });
+    // Helper: create a placeholder that is purely alphanumeric so marked cannot alter it
+    function ph(html) {
+        const idx = placeholders.length;
+        const id = `MATHPH${idx}MATHPH`;
+        placeholders.push({ id, html });
         return id;
-    });
+    }
+
+    // 1. Handle display math $$...$$
+    result = result.replace(/\$\$([\s\S]*?)\$\$/g, (_m, latex) => ph(renderKatex(latex.trim(), true)));
 
     // 2. Handle display math \[...\]
-    result = result.replace(/\\\[([\s\S]*?)\\\]/g, (match, latex) => {
-        const id = `MATH-DISPLAY-TOKEN-${placeholders.length}`;
-        placeholders.push({ id, html: renderKatex(latex.trim(), true) });
-        return id;
-    });
+    result = result.replace(/\\\[([\s\S]*?)\\\]/g, (_m, latex) => ph(renderKatex(latex.trim(), true)));
 
     // 3. Handle inline math \(...\)
-    result = result.replace(/\\\(([\s\S]*?)\\\)/g, (match, latex) => {
-        const id = `MATH-INLINE-TOKEN-${placeholders.length}`;
-        placeholders.push({ id, html: renderKatex(latex.trim(), false) });
-        return id;
-    });
+    result = result.replace(/\\\(([\s\S]*?)\\\)/g, (_m, latex) => ph(renderKatex(latex.trim(), false)));
 
     // 4. Handle inline math $...$
     // Matches $...$ where content is non-empty
-    // Uses negative lookahead to skip $$
-    result = result.replace(/(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g, (match, latex) => {
-        const id = `MATH-INLINE-TOKEN-${placeholders.length}`;
-        placeholders.push({ id, html: renderKatex(latex.trim(), false) });
-        return id;
-    });
+    // Uses negative lookbehind/lookahead to skip $$
+    result = result.replace(/(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)/g, (_m, latex) => ph(renderKatex(latex.trim(), false)));
 
     // 5. Fallback: detect common bare LaTeX commands outside any delimiters
     // Handles patterns like \sqrt{...}, \frac{...}{...}, \boxed{...}
     // Up to two levels of nested braces
     result = result.replace(/\\(?:frac|dfrac|sqrt|boxed|overline|underline|vec|hat|bar|tilde)(?:\[[^\]]*\])?(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})+/g, (match) => {
-        if (match.includes('MATH-TOKEN')) return match;
-        const id = `MATH-INLINE-TOKEN-${placeholders.length}`;
-        placeholders.push({ id, html: renderKatex(match.trim(), false) });
-        return id;
+        if (match.includes('MATHPH')) return match;
+        return ph(renderKatex(match.trim(), false));
     });
 
     // 6. Render markdown for the non-math content
@@ -75,7 +65,7 @@ function renderMathInText(text) {
 
     // 7. Restore math from placeholders
     for (const p of placeholders) {
-        result = result.split(p.id).join(p.html);
+        result = result.replaceAll(p.id, p.html);
     }
 
     return result;
