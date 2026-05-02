@@ -29,38 +29,124 @@ const SUPPORTED_TYPES = new Set([
   'image/jpeg',
 ]);
 
-const STRUCTURE_PROMPT = `Vai trò: Bạn là một chuyên gia số hóa dữ liệu giáo dục và chuyên gia LaTeX.
-Nhiệm vụ: Đọc nội dung đã được trích xuất/OCR từ file đề thi và chuyển đổi sang định dạng văn bản cấu trúc .txt chính xác nhất.
+const STRUCTURE_PROMPT = `Vai trò: Bạn là một chuyên gia số hóa dữ liệu giáo dục và chuyên gia LaTeX. Nhiệm vụ của bạn: Đọc file đính kèm (PDF/DOCX/PNG/JPG), nhận diện nội dung (bao gồm chữ viết, công thức toán học, bảng biểu) và chuyển đổi chúng sang định dạng văn bản cấu trúc .txt chính xác 100%.
 
-Quy tắc cấu trúc:
-- Mỗi câu hỏi hoặc đoạn ngữ cảnh phải nằm giữa ====START==== và ====END====.
-- Mỗi khối bắt buộc có [ID], [TYPE], [LEVEL], [CONTENT], [OPTIONS], [ANSWER], [SOL].
-- [TYPE] chỉ dùng MCQ, SA, TF, TEXT.
-- [LINKED_TO] chỉ thêm cho câu hỏi con phụ thuộc ngữ cảnh TEXT.
-- [IMAGE] ghi "Có" nếu câu hỏi có hình vẽ, đồ thị, bảng biểu hoặc ảnh minh họa; bỏ qua nếu không có.
-- Sau tên trường không dùng dấu hai chấm. Viết đúng: [ID] 001, sai: [ID]: 001.
-- Công thức inline dùng $...$, công thức block dùng $$...$$.
-- Không thêm dẫn nhập, không giải thích ngoài định dạng.
+Quy tắc cấu trúc: Mỗi câu hỏi (hoặc đoạn ngữ cảnh) phải được bao bọc bởi ====START==== và ====END====. Trong mỗi khối, bắt buộc có các trường sau:
 
-Quy tắc nhận diện ngữ cảnh chung:
-- Nếu có cụm "Đọc đoạn trích dưới đây...", "Dựa vào thông tin sau...", "Read the following passage..." hoặc tương tự, tách thành một khối [TYPE] TEXT với [ID] như CONTEXT_1.
-- Các câu hỏi con bên dưới phải có [LINKED_TO] CONTEXT_1.
+[ID] Số thứ tự câu hỏi hoặc mã định danh.
+[TYPE]
+Ghi MCQ nếu là trắc nghiệm 4 lựa chọn.
+Ghi SA nếu là câu hỏi điền số/trả lời ngắn.
+Ghi TF nếu là câu hỏi trắc nghiệm Đúng/Sai (thường gồm nhiều ý nhỏ a, b, c, d).
+Ghi TEXT nếu đây là một đoạn NGỮ CẢNH CHUNG (không có đáp án, dùng để đọc và trả lời cho các câu hỏi bên dưới).
+[LEVEL] Phân loại (Dễ, Trung bình, Khó) dựa trên nội dung đề bài.
+[CONTENT] Nội dung câu hỏi hoặc nội dung đoạn ngữ cảnh chung. Bắt buộc dùng LaTeX cho mọi công thức toán học (ví dụ: x^2 + \sqrt{x}). Nếu có hình ảnh/biểu đồ, hãy mô tả ngắn gọn nội dung hình ảnh trong dấu ngoặc vuông [Mô tả hình ảnh: ...].
+[LINKED_TO] (TRƯỜNG MỚI CHỈ DÀNH CHO CÂU HỎI CON): Nếu câu hỏi này phụ thuộc vào một đoạn "Ngữ cảnh chung" ở trên, hãy ghi [ID] của đoạn ngữ cảnh đó vào đây. Nếu không, không ghi trường này.
+[OPTIONS]
+Với MCQ: Liệt kê các phương án A, B, C, D trên từng dòng.
+Với TF: Liệt kê các ý chọn a), b), c), d) trên từng dòng.
+Với SA hoặc TEXT: Ghi "None".
+[ANSWER] Đáp án đúng.
+Với MCQ: Ghi A, B, C hoặc D.
+Với TF: Ghi định dạng a-Đ, b-S, c-Đ, d-S (Đ: Đúng, S: Sai).
+Với SA: Ghi giá trị cụ thể (ví dụ: 123.45).
+Với TEXT: Bỏ trống hoặc ghi "None".
+[SOL] Lời giải chi tiết (Dùng LaTeX cho công thức).
+[IMAGE] Ghi "Có" nếu có hình vẽ (hình học, đồ thị), bỏ qua trường này nếu không có.
+LƯU Ý QUAN TRỌNG VỀ CÂU HỎI LIÊN KẾT (SHARED CONTEXT):
 
-Định dạng ví dụ:
+Hãy tinh ý nhận diện những cụm từ như: "Đọc đoạn trích dưới đây và trả lời các câu hỏi từ [X] đến [Y]", "Dựa vào thông tin sau để trả lời câu...", "Read the following passage and answer the questions...", hoặc các định dạng tương tự.
+Khi gặp trường hợp này, bạn phải TÁCH đoạn văn bản dùng chung đó ra thành 1 khối độc lập với [TYPE] TEXT, cấp cho nó một [ID] riêng biệt (ví dụ: [ID] CONTEXT_1).
+Sau đó, ở các câu hỏi con (từ [X] đến [Y]), bạn phân loại [TYPE] như bình thường (MCQ, SA, TF) nhưng PHẢI THÊM trường [LINKED_TO] CONTEXT_1 để hệ thống biết các câu này lấy thông tin từ khối TEXT phía trên.
+LƯU Ý VỀ ĐỊNH DẠNG CHUNG:
+
+MỖI SAU KHI GHI TÊN TRƯỜNG KHÔNG ĐƯỢC CÓ DẤU HAI CHẤM (:) MÀ HÃY CÁCH RA (space). Ví dụ: [ID] 001 thay vì [ID]: 001.
+Quy tắc định dạng Toán học: Sử dụng cặp dấu $...$ cho công thức nằm trong dòng. Sử dụng cặp dấu $$...$$ cho công thức nằm riêng một dòng. Đảm bảo các ký hiệu đặc biệt như \Delta, \in, \mathbb{R}, các phân số \frac{a}{b}, căn thức \sqrt{} được viết đúng chuẩn LaTeX.
+Bảng biểu: Nếu đề bài có bảng số liệu, hãy mô tả vào phần [IMAGE].
+Ví dụ mẫu kết quả đầu ra có chứa câu hỏi liên kết:
+
+====START====
+ [ID] CONTEXT_1 
+[TYPE] TEXT 
+[LEVEL] Trung bình 
+[CONTENT] Hãy đọc đoạn văn sau để trả lời câu 1 và câu 2: "Một chất điểm dao động điều hòa với phương trình $x = 5 \cos(4\pi t + \pi/2) \text{ (cm)}$." 
+[OPTIONS] None 
+[ANSWER] None 
+[SOL] None 
+====END====
+
+====START==== 
+[ID] 1 
+[TYPE] MCQ 
+[LINKED_TO] CONTEXT_1 
+[LEVEL] Dễ 
+[CONTENT] Biên độ dao động của chất điểm là bao nhiêu? 
+[OPTIONS] A. $4\pi \text{ cm}$ B. $5 \text{ cm}$ C. $\pi/2 \text{ cm}$ D. $10 \text{ cm}$ [ANSWER] B [SOL] Nhìn vào phương trình, ta có dạng tổng quát $x = A \cos(\omega t + \varphi)$. Biên độ $A = 5 \text{ cm}$. 
+====END====
+
+====START==== 
+[ID] 2
+[TYPE] SA 
+[LINKED_TO] CONTEXT_1 
+[LEVEL] Trung bình 
+[CONTENT] Tần số góc của dao động là bao nhiêu (đơn vị rad/s)? 
+[OPTIONS] None 
+[ANSWER] 4\pi 
+[SOL] Từ phương trình, hệ số của $t$ chính là tần số góc $\omega = 4\pi \text{ rad/s}$. 
+====END====
+Ví dụ về các câu hỏi khác:
 ====START====
 [ID] MATH_001
 [TYPE] MCQ
 [LEVEL] Khó
-[CONTENT] Tính tích phân xác định $I = \\int_{0}^{1} \\frac{x^3}{\\sqrt{1 - x^2}} \\, dx$.
+[CONTENT] Tính tích phân xác định $I = \int_{0}^{1} \frac{x^3}{\sqrt{1 - x^2}} \, dx$.
 [OPTIONS]
-A. $\\dfrac{2}{3}$
-B. $\\dfrac{1}{3}$
-C. $\\dfrac{\\pi}{4}$
-D. $\\dfrac{1}{2}$
+A. $\dfrac{2}{3}$
+B. $\dfrac{1}{3}$
+C. $\dfrac{\pi}{4}$
+D. $\dfrac{1}{2}$
 [ANSWER] A
 [SOL]
-Đặt $x = \\sin t$, suy ra $dx = \\cos t\\,dt$.
-====END====`;
+Đặt $x = \sin t$, suy ra $dx = \cos t \, dt$.
+Khi $x = 0 \Rightarrow t = 0$; $x = 1 \Rightarrow t = \dfrac{\pi}{2}$.
+$$I = \int_{0}^{\pi/2} \frac{\sin^3 t}{\cos t} \cdot \cos t \, dt = \int_{0}^{\pi/2} \sin^3 t \, dt$$
+$$= \int_{0}^{\pi/2} \sin t (1 - \cos^2 t) \, dt = \left[-\cos t + \frac{\cos^3 t}{3}\right]_{0}^{\pi/2} = \frac{2}{3}$$
+====END====
+
+====START====
+[ID] MATH_002
+[TYPE] TF
+[LEVEL] Trung bình
+[CONTENT] Cho hàm số $f(x) = x^2 - 2x$. Xét tính đúng sai của các khẳng định sau đây:
+[OPTIONS]
+a) Đồ thị hàm số là một đường Parabol có bề lõm hướng lên trên.
+b) Hàm số nghịch biến trên khoảng $(1; +\infty)$.
+c) Đỉnh của đồ thị hàm số có tọa độ $I(1; -1)$.
+d) Đồ thị hàm số cắt trục hoành tại hai điểm phân biệt có hoành độ dương.
+[ANSWER] a-Đ, b-S, c-Đ, d-S
+[SOL]
+a) Đúng vì hệ số $a = 1 > 0$.
+b) Sai vì hàm số đồng biến trên $(1; +\infty)$.
+c) Đúng: $x_I = -b/2a = 1 \Rightarrow y_I = -1$.
+d) Sai vì đồ thị cắt trục hoành tại $x=0$ (không dương) và $x=2$.
+[IMAGE] Có
+====END====
+
+====START====
+[ID] PHYS_003
+[TYPE] SA
+[LEVEL] Trung bình
+[CONTENT] Một vật có khối lượng $2 \, \text{kg}$ đang đứng yên thì chịu tác dụng của lực $F = 10 \, \text{N}$. Tính gia tốc của vật (đơn vị: $m/s^2$).
+[OPTIONS] None
+[ANSWER] 5
+[SOL]
+Áp dụng định luật II Newton: $F = ma \Rightarrow a = \frac{F}{m}$.
+Thay số: $a = \frac{10}{2} = 5 \, \text{m/s}^2$.
+====END====
+
+
+
+Bắt đầu hành động: Hãy quét toàn bộ file đính kèm và trả về nội dung theo định dạng trên dưới dạng code block để tôi có thể sao chép dễ dàng. Không cần lời giải thích dẫn nhập.`;
 
 const OCR_PROMPT = `Bạn là DeepSeek OCR cho đề thi. Hãy đọc chính xác toàn bộ chữ, công thức toán, bảng biểu và mô tả hình ảnh trong file. Trả về raw text tiếng Việt, giữ thứ tự câu hỏi, dùng LaTeX cho công thức nếu nhận diện được. Không chuẩn hóa sang START/END ở bước này.`;
 
