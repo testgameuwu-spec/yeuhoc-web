@@ -1027,10 +1027,18 @@ export default function HomePage() {
                         <div className="px-6 pb-6 pt-2 flex items-center justify-between gap-3 border-t border-gray-50 mt-4">
                           <button
                             onClick={() => {
+                              if (isRev) return;
                               setCurrentQ(rqIndex);
                               setIsAIChatOpen(true);
                             }}
-                            className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                            disabled={isRev}
+                            className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all"
+                            style={{
+                              background: isRev ? '#f1f5f9' : '#eef2ff',
+                              color: isRev ? '#94a3b8' : '#4f46e5',
+                              border: 'none',
+                              cursor: isRev ? 'not-allowed' : 'pointer',
+                            }}
                             type="button"
                           >
                             <Bot className="w-4 h-4" /> Xem gợi ý
@@ -1106,8 +1114,18 @@ export default function HomePage() {
 
               <div className="flex items-center gap-2 sm:gap-3">
                 <button
-                  onClick={() => setIsAIChatOpen(true)}
-                  className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                  onClick={() => {
+                    if (isRevealed) return;
+                    setIsAIChatOpen(true);
+                  }}
+                  disabled={isRevealed}
+                  className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all"
+                  style={{
+                    background: isRevealed ? '#f1f5f9' : '#eef2ff',
+                    color: isRevealed ? '#94a3b8' : '#4f46e5',
+                    border: 'none',
+                    cursor: isRevealed ? 'not-allowed' : 'pointer',
+                  }}
                   type="button"
                 >
                   <Bot className="w-4 h-4" /> Xem gợi ý
