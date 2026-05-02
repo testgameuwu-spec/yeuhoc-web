@@ -1,16 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Mail, Lock, UserPlus, Eye, EyeOff, BookOpen, AlertCircle,
-  ArrowRight, User, CheckCircle2,
+  ArrowRight, User, CheckCircle2, ShieldCheck, RefreshCw, ArrowLeft,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 
+const OTP_LENGTH = 6;
+const RESEND_COOLDOWN = 60; // seconds
+
 export default function RegisterPage() {
   const router = useRouter();
+
+  // ── Registration form state ──
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,8 +24,34 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
+  // ── OTP verification state ──
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
+  const [verifying, setVerifying] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const otpRefs = useRef([]);
+
+  // ── Resend cooldown timer ──
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // ── Auto-focus first OTP input when OTP screen shows ──
+  useEffect(() => {
+    if (otpSent && otpRefs.current[0]) {
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    }
+  }, [otpSent]);
+
+  // ── Validation ──
   const validate = () => {
     if (!fullName.trim()) return 'Vui lòng nhập họ tên.';
     if (fullName.trim().length < 2) return 'Họ tên phải có ít nhất 2 ký tự.';
@@ -32,6 +63,7 @@ export default function RegisterPage() {
     return null;
   };
 
+  // ── Handle Registration (Step 1) ──
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -56,11 +88,16 @@ export default function RegisterPage() {
     });
 
     if (authError) {
-      setError(
-        authError.message === 'User already registered'
-          ? 'Email này đã được sử dụng.'
-          : authError.message
-      );
+      const msg = authError.message.toLowerCase();
+      let friendlyMsg = authError.message;
+      if (msg.includes('user already registered')) {
+        friendlyMsg = 'Email này đã được sử dụng.';
+      } else if (msg.includes('rate limit') || msg.includes('email rate limit')) {
+        friendlyMsg = 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi vài phút rồi thử lại.';
+      } else if (msg.includes('signup is disabled')) {
+        friendlyMsg = 'Chức năng đăng ký đang tạm thời bị tắt.';
+      }
+      setError(friendlyMsg);
       setLoading(false);
       return;
     }
@@ -71,32 +108,152 @@ export default function RegisterPage() {
       return;
     }
 
-    setSuccess(true);
+    // OTP was sent via email — show OTP input screen
+    setOtpSent(true);
+    setResendCooldown(RESEND_COOLDOWN);
     setLoading(false);
   };
 
-  // ── Success screen ──
-  if (success) {
+  // ── Handle OTP input ──
+  const handleOtpChange = useCallback((index, value) => {
+    // Only allow digits
+    const digit = value.replace(/\D/g, '').slice(-1);
+
+    setOtp((prev) => {
+      const newOtp = [...prev];
+      newOtp[index] = digit;
+      return newOtp;
+    });
+
+    // Auto-focus next input
+    if (digit && index < OTP_LENGTH - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  }, []);
+
+  const handleOtpKeyDown = useCallback((index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      // Move to previous input on backspace if current is empty
+      otpRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  }, [otp]);
+
+  const handleOtpPaste = useCallback((e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
+    if (!pasted) return;
+
+    const newOtp = Array(OTP_LENGTH).fill('');
+    for (let i = 0; i < pasted.length; i++) {
+      newOtp[i] = pasted[i];
+    }
+    setOtp(newOtp);
+
+    // Focus the last filled input or the next empty one
+    const focusIndex = Math.min(pasted.length, OTP_LENGTH - 1);
+    otpRefs.current[focusIndex]?.focus();
+  }, []);
+
+  // ── Verify OTP (Step 2) ──
+  const handleVerifyOtp = async () => {
+    const otpCode = otp.join('');
+    if (otpCode.length !== OTP_LENGTH) {
+      setOtpError('Vui lòng nhập đủ 6 chữ số.');
+      return;
+    }
+
+    setVerifying(true);
+    setOtpError('');
+
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: otpCode,
+      type: 'email',
+    });
+
+    if (verifyError) {
+      setOtpError(
+        verifyError.message === 'Token has expired or is invalid'
+          ? 'Mã xác nhận không đúng hoặc đã hết hạn. Vui lòng thử lại.'
+          : verifyError.message
+      );
+      setOtp(Array(OTP_LENGTH).fill(''));
+      otpRefs.current[0]?.focus();
+      setVerifying(false);
+      return;
+    }
+
+    // Verified successfully!
+    setVerified(true);
+    setVerifying(false);
+
+    // Redirect after a short delay to show success animation
+    setTimeout(() => {
+      window.location.href = '/yeuhoc/';
+    }, 1500);
+  };
+
+  // ── Resend OTP ──
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+
+    setOtpError('');
+    setResendCooldown(RESEND_COOLDOWN);
+
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+    });
+
+    if (resendError) {
+      const msg = resendError.message.toLowerCase();
+      if (msg.includes('rate limit') || msg.includes('email rate limit')) {
+        setOtpError('Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi vài phút rồi thử lại.');
+      } else {
+        setOtpError('Không thể gửi lại mã. Vui lòng thử lại sau.');
+      }
+      setResendCooldown(0);
+    }
+  };
+
+  // ── Back to register form ──
+  const handleBackToRegister = () => {
+    setOtpSent(false);
+    setOtp(Array(OTP_LENGTH).fill(''));
+    setOtpError('');
+    setResendCooldown(0);
+  };
+
+  // ══════════════════════════════════════════
+  // ── SCREEN 3: Verified Success ──
+  // ══════════════════════════════════════════
+  if (verified) {
     return (
       <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
         <Navbar />
         <div className="flex items-center justify-center px-4 py-12 sm:py-20">
           <div className="w-full max-w-md">
             <div className="auth-card text-center">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Đăng ký thành công! 🎉</h2>
-              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                Chúng tôi đã gửi email xác nhận đến <strong className="text-gray-700">{email}</strong>.
-                Vui lòng kiểm tra hộp thư và nhấn vào liên kết xác nhận để kích hoạt tài khoản.
-              </p>
-              <a
-                href="/yeuhoc/login"
-                className="auth-btn-primary inline-flex no-underline"
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
+                style={{
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                  animation: 'otpSuccessPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                }}
               >
-                Đi đến Đăng nhập <ArrowRight className="w-4 h-4" />
-              </a>
+                <CheckCircle2 className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Xác thực thành công! 🎉</h2>
+              <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                Tài khoản của bạn đã được kích hoạt. Đang chuyển hướng...
+              </p>
+              <div className="auth-spinner mx-auto" style={{ borderTopColor: '#22c55e' }} />
             </div>
           </div>
         </div>
@@ -104,6 +261,169 @@ export default function RegisterPage() {
     );
   }
 
+  // ══════════════════════════════════════════
+  // ── SCREEN 2: OTP Verification ──
+  // ══════════════════════════════════════════
+  if (otpSent) {
+    const otpCode = otp.join('');
+    const isOtpComplete = otpCode.length === OTP_LENGTH;
+
+    return (
+      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+        <Navbar />
+        <div className="flex items-center justify-center px-4 py-12 sm:py-16">
+          <div className="w-full max-w-md">
+            <div className="auth-card">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+                  }}
+                >
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <h1 className="text-2xl font-extrabold text-gray-900 mb-2">
+                  Xác thực Email
+                </h1>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  Chúng tôi đã gửi mã xác nhận 6 số đến
+                </p>
+                <p className="text-sm font-semibold text-indigo-600 mt-1">
+                  {email}
+                </p>
+              </div>
+
+              {/* OTP Error */}
+              {otpError && (
+                <div className="flex items-start gap-2.5 p-3.5 mb-5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{otpError}</span>
+                </div>
+              )}
+
+              {/* OTP Inputs */}
+              <div className="flex justify-center gap-2 sm:gap-3 mb-6">
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => (otpRefs.current[index] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    onPaste={index === 0 ? handleOtpPaste : undefined}
+                    disabled={verifying}
+                    className="otp-input"
+                    style={{
+                      width: '48px',
+                      height: '56px',
+                      textAlign: 'center',
+                      fontSize: '22px',
+                      fontWeight: '700',
+                      borderRadius: '12px',
+                      border: digit
+                        ? '2px solid #6366f1'
+                        : '2px solid #e5e7eb',
+                      background: digit ? '#eef2ff' : '#f9fafb',
+                      color: '#1f2937',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      caretColor: '#6366f1',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#6366f1';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.15)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = digit ? '#6366f1' : '#e5e7eb';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Verify Button */}
+              <button
+                type="button"
+                onClick={handleVerifyOtp}
+                disabled={!isOtpComplete || verifying}
+                className="auth-btn-primary"
+                style={{
+                  opacity: isOtpComplete && !verifying ? 1 : 0.5,
+                  cursor: isOtpComplete && !verifying ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {verifying ? (
+                  <div className="auth-spinner" />
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    Xác nhận
+                  </>
+                )}
+              </button>
+
+              {/* Resend & Back */}
+              <div className="mt-6 text-center space-y-3">
+                {/* Resend */}
+                <p className="text-sm text-gray-500">
+                  Không nhận được mã?{' '}
+                  {resendCooldown > 0 ? (
+                    <span className="text-gray-400">
+                      Gửi lại sau <span className="font-semibold text-indigo-500">{resendCooldown}s</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors bg-transparent border-0 p-0 cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Gửi lại mã
+                    </button>
+                  )}
+                </p>
+
+                {/* Back to register */}
+                <button
+                  type="button"
+                  onClick={handleBackToRegister}
+                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-0 p-0 cursor-pointer inline-flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Quay lại đăng ký
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* OTP specific animations */}
+        <style jsx global>{`
+          @keyframes otpSuccessPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          .otp-input::selection {
+            background: rgba(99, 102, 241, 0.2);
+          }
+          .otp-input:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════
+  // ── SCREEN 1: Registration Form ──
+  // ══════════════════════════════════════════
   return (
     <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
       <Navbar />
