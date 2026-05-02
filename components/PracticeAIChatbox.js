@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { Bot, Loader2, Send, Sparkles, X } from 'lucide-react';
@@ -26,9 +26,16 @@ export default function PracticeAIChatbox({
   questionNumber,
 }) {
   const [input, setInput] = useState('');
+  // Global follow-up count — shared across ALL questions, never resets until page unload
   const [followUpCount, setFollowUpCount] = useState(0);
-  const initialRequestRef = useRef('');
   const messagesEndRef = useRef(null);
+
+  // Cache: questionKey → { messages, initialRequested }
+  const cacheRef = useRef(new Map());
+  // Track which questionKey we've already sent the initial hint for
+  const requestedKeysRef = useRef(new Set());
+  // Track the previous questionKey to save messages before switching
+  const prevKeyRef = useRef('');
 
   const transport = useMemo(() => new DefaultChatTransport({ api: 'api/chat' }), []);
 
@@ -47,11 +54,48 @@ export default function PracticeAIChatbox({
 
   useEffect(() => () => stop(), [stop]);
 
+  // ── Save & restore messages when questionKey changes ──
+  useEffect(() => {
+    const prev = prevKeyRef.current;
+    const next = questionKey;
+
+    // Same question — nothing to do
+    if (prev === next) return;
+
+    // Save current messages to cache for the previous question
+    if (prev && messages.length > 0) {
+      cacheRef.current.set(prev, { messages: [...messages] });
+    }
+
+    // Restore cached messages for the new question, or start fresh
+    const cached = cacheRef.current.get(next);
+    if (cached && cached.messages.length > 0) {
+      setMessages(cached.messages);
+    } else {
+      setMessages([]);
+    }
+
+    prevKeyRef.current = next;
+  }, [questionKey]); // intentionally only depend on questionKey
+
+  // ── Keep cache up-to-date as messages stream in ──
+  useEffect(() => {
+    if (questionKey && messages.length > 0) {
+      cacheRef.current.set(questionKey, { messages: [...messages] });
+    }
+  }, [messages, questionKey]);
+
+  // ── Send initial hint for a new question (only once per questionKey) ──
   useEffect(() => {
     if (!isOpen || !questionKey || !questionData || status !== 'ready') return;
-    if (initialRequestRef.current === questionKey || messages.length > 0) return;
+    if (requestedKeysRef.current.has(questionKey)) return;
+    // If we already have cached messages for this question, don't re-request
+    const cached = cacheRef.current.get(questionKey);
+    if (cached && cached.messages.length > 0) return;
+    // If messages are already loaded (from cache restore), skip
+    if (messages.length > 0) return;
 
-    initialRequestRef.current = questionKey;
+    requestedKeysRef.current.add(questionKey);
     sendMessage(
       {
         text: 'Hãy tạo một gợi ý đầu tiên cho câu hỏi này. Không nêu trực tiếp đáp án cuối cùng.',
@@ -67,6 +111,7 @@ export default function PracticeAIChatbox({
     );
   }, [isOpen, questionKey, questionData, status, messages.length, sendMessage]);
 
+  // ── Auto-scroll ──
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, status]);
@@ -107,8 +152,10 @@ export default function PracticeAIChatbox({
 
   const handleRetryInitialHint = () => {
     clearError();
+    // Remove from requested set so it can re-fire
+    requestedKeysRef.current.delete(questionKey);
+    cacheRef.current.delete(questionKey);
     setMessages([]);
-    initialRequestRef.current = '';
   };
 
   return (
@@ -216,7 +263,7 @@ export default function PracticeAIChatbox({
 
           {isLimitReached ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
-              Bạn đã hết lượt hỏi thêm cho câu này.
+              Bạn đã hết lượt hỏi thêm.
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex items-end gap-2">

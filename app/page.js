@@ -1210,7 +1210,6 @@ export default function HomePage() {
           </div>
         </div>
         <PracticeAIChatbox
-          key={q ? `${activeExam.id}-${q.id}` : 'practice-ai-chat'}
           isOpen={isAIChatOpen}
           onClose={() => setIsAIChatOpen(false)}
           questionKey={q ? `${activeExam.id}-${q.id}` : ''}
