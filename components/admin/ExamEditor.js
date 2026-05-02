@@ -20,7 +20,18 @@ const SCORING_PRESETS = {
   'Tuỳ chỉnh': null,
 };
 
-export default function ExamEditor({ exam, folders = [], questions: initialQuestions, onSave, onBack, onFileLoaded, parseError, defaultTab = 'settings' }) {
+export default function ExamEditor({
+  exam,
+  folders = [],
+  questions: initialQuestions,
+  onSave,
+  onBack,
+  onFileLoaded,
+  parseError,
+  defaultTab = 'settings',
+  trackedOcrRequestId = '',
+  onTrackedOcrRequestChange = null,
+}) {
   const [title, setTitle] = useState(exam?.title || '');
   const [subject, setSubject] = useState(exam?.subject || 'Toán');
   const [examType, setExamType] = useState(exam?.examType || 'THPT');
@@ -35,6 +46,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(exam?.antiCheatEnabled !== false);
   const [activeSection, setActiveSection] = useState(defaultTab || (exam ? 'settings' : 'upload')); // upload | settings | questions
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasQuestions = questions.length > 0;
 
   // Sync local state when parent passes new exam data (e.g. after file upload)
@@ -59,22 +71,41 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
   useEffect(() => {
     if (initialQuestions && initialQuestions.length > 0) {
       setQuestions(initialQuestions);
+      setHasUnsavedChanges(true);
     }
   }, [initialQuestions]);
+
+  // Handle beforeunload to warn user about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
 
   const handlePresetChange = (preset) => {
     setScoringPreset(preset);
     if (SCORING_PRESETS[preset]) {
       setScoringConfig({ ...SCORING_PRESETS[preset] });
+      setHasUnsavedChanges(true);
     }
   };
 
   const handleQuestionUpdate = useCallback((index, updatedQ) => {
     setQuestions(prev => prev.map((q, i) => i === index ? updatedQ : q));
+    setHasUnsavedChanges(true);
   }, []);
 
   const handleQuestionDelete = useCallback((index) => {
     setQuestions(prev => prev.filter((_, i) => i !== index));
+    setHasUnsavedChanges(true);
   }, []);
 
   const handleAddQuestion = () => {
@@ -89,6 +120,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
       image: null,
     };
     setQuestions(prev => [...prev, newQ]);
+    setHasUnsavedChanges(true);
   };
 
   const handleDragStart = (e, index) => {
@@ -177,6 +209,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
         ...otherItems.slice(insertIndex)
       ];
     });
+    setHasUnsavedChanges(true);
   }, [getGroupIds]);
 
   const handleShuffleQuestions = useCallback(() => {
@@ -213,6 +246,7 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
       
       return shuffledGroups.flat();
     });
+    setHasUnsavedChanges(true);
   }, []);
 
   const handleSave = () => {
@@ -222,10 +256,12 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
       questions, scoringConfig, totalQ: questions.length,
       antiCheatEnabled,
     });
+    setHasUnsavedChanges(false);
   };
 
   const handleAIQuestionsReady = ({ questions: aiQuestions, fileName }) => {
     setQuestions(aiQuestions);
+    setHasUnsavedChanges(true);
     if (!title && fileName) {
       setTitle(fileName.replace(/\.[^.]+$/, ''));
     }
@@ -255,7 +291,11 @@ export default function ExamEditor({ exam, folders = [], questions: initialQuest
       {/* ─── Upload Section ─── */}
       {activeSection === 'upload' && (
         <div className="animate-fadeIn space-y-6">
-          <AIExamGenerator onQuestionsReady={handleAIQuestionsReady} />
+          <AIExamGenerator
+            onQuestionsReady={handleAIQuestionsReady}
+            trackedRequestId={trackedOcrRequestId}
+            onTrackedRequestIdChange={onTrackedOcrRequestChange}
+          />
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 space-y-6">
             <div className="text-center space-y-2">
@@ -311,14 +351,14 @@ D. Đáp án D
               {/* Title */}
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Tên đề thi</label>
-                <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+                <input type="text" value={title} onChange={e => { setTitle(e.target.value); setHasUnsavedChanges(true); }}
                   placeholder="VD: Đề thi THPT QG 2024 — Toán"
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all" />
               </div>
               {/* Folder */}
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Thư mục lưu trữ</label>
-                <select value={folderId} onChange={e => setFolderId(e.target.value)}
+                <select value={folderId} onChange={e => { setFolderId(e.target.value); setHasUnsavedChanges(true); }}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
                   <option value="root" className="bg-[#14142a]">-- Không thuộc thư mục nào --</option>
                   {folders.map(f => (
@@ -331,7 +371,7 @@ D. Đáp án D
                 <label className="block text-xs font-semibold text-amber-400/80 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                   Ghi chú nội bộ (Chỉ Admin thấy)
                 </label>
-                <textarea value={note} onChange={e => setNote(e.target.value)}
+                <textarea value={note} onChange={e => { setNote(e.target.value); setHasUnsavedChanges(true); }}
                   placeholder="Thêm ghi chú, nguồn gốc đề thi, các phần cần sửa chữa..."
                   rows={3}
                   className="w-full px-4 py-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-white placeholder-white/20 text-sm focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition-all resize-none" />
@@ -339,7 +379,7 @@ D. Đáp án D
               {/* Subject */}
               <div>
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Môn học</label>
-                <select value={subject} onChange={e => setSubject(e.target.value)}
+                <select value={subject} onChange={e => { setSubject(e.target.value); setHasUnsavedChanges(true); }}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
                   {SUBJECTS.map(s => <option key={s} value={s} className="bg-[#14142a]">{s}</option>)}
                 </select>
@@ -347,7 +387,7 @@ D. Đáp án D
               {/* Exam Type */}
               <div>
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Kì thi</label>
-                <select value={examType} onChange={e => setExamType(e.target.value)}
+                <select value={examType} onChange={e => { setExamType(e.target.value); setHasUnsavedChanges(true); }}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
                   {EXAM_TYPES.map(t => <option key={t} value={t} className="bg-[#14142a]">{t}</option>)}
                 </select>
@@ -355,7 +395,7 @@ D. Đáp án D
               {/* Year */}
               <div>
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Năm</label>
-                <select value={year} onChange={e => setYear(Number(e.target.value))}
+                <select value={year} onChange={e => { setYear(Number(e.target.value)); setHasUnsavedChanges(true); }}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
                   {YEARS.map(y => <option key={y} value={y} className="bg-[#14142a]">{y}</option>)}
                 </select>
@@ -363,7 +403,7 @@ D. Đáp án D
               {/* Duration */}
               <div>
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Thời gian (phút)</label>
-                <input type="number" value={duration} onChange={e => setDuration(Number(e.target.value))} min={1} max={180}
+                <input type="number" value={duration} onChange={e => { setDuration(Number(e.target.value)); setHasUnsavedChanges(true); }} min={1} max={180}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
               </div>
             </div>
@@ -393,13 +433,13 @@ D. Đáp án D
                   <div className="p-4 bg-[#0e0e22]">
                     <p className="text-xs text-white/30 uppercase tracking-wider mb-1">MCQ (điểm/câu)</p>
                     <input type="number" step={0.05} value={scoringConfig.mcq}
-                      onChange={e => setScoringConfig(prev => ({ ...prev, mcq: Number(e.target.value) }))}
+                      onChange={e => { setScoringConfig(prev => ({ ...prev, mcq: Number(e.target.value) })); setHasUnsavedChanges(true); }}
                       className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
                   </div>
                   <div className="p-4 bg-[#0e0e22]">
                     <p className="text-xs text-white/30 uppercase tracking-wider mb-1">SA (điểm/câu)</p>
                     <input type="number" step={0.05} value={scoringConfig.sa}
-                      onChange={e => setScoringConfig(prev => ({ ...prev, sa: Number(e.target.value) }))}
+                      onChange={e => { setScoringConfig(prev => ({ ...prev, sa: Number(e.target.value) })); setHasUnsavedChanges(true); }}
                       className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
                   </div>
                   <div className="p-4 bg-[#0e0e22]">
@@ -413,6 +453,7 @@ D. Đáp án D
                               const newTf = [...scoringConfig.tf];
                               newTf[i] = Number(e.target.value);
                               setScoringConfig(prev => ({ ...prev, tf: newTf }));
+                              setHasUnsavedChanges(true);
                             }}
                             className="w-full px-2 py-1 rounded-md bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500/50 transition-all" />
                         </div>
@@ -438,7 +479,7 @@ D. Đáp án D
                 </p>
               </div>
               <button
-                onClick={() => setAntiCheatEnabled(!antiCheatEnabled)}
+                onClick={() => { setAntiCheatEnabled(!antiCheatEnabled); setHasUnsavedChanges(true); }}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${
                   antiCheatEnabled
                     ? 'bg-emerald-500 shadow-md shadow-emerald-500/30'

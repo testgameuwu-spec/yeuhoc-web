@@ -10,6 +10,7 @@ import ExamEditor from '@/components/admin/ExamEditor';
 import ScoringConfig from '@/components/admin/ScoringConfig';
 import UserManagement from '@/components/admin/UserManagement';
 import ReportManagement from '@/components/admin/ReportManagement';
+import OcrLogManagement from '@/components/admin/OcrLogManagement';
 import {
   BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
@@ -63,6 +64,7 @@ export default function AdminDashboard() {
   const [editingExam, setEditingExam] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [trackedOcrRequestId, setTrackedOcrRequestId] = useState('');
 
   // Upload & parse flow
   const [parsedQuestions, setParsedQuestions] = useState([]);
@@ -122,6 +124,27 @@ export default function AdminDashboard() {
     setEditingExam(null);
     setParsedQuestions([]);
     setParseError('');
+  };
+
+  const openExamTabForOcrRequest = (requestId) => {
+    if (!requestId) return;
+    if (!isCreating) {
+      setIsCreating(true);
+      setEditingExam({
+        id: null,
+        title: '',
+        subject: 'Toán',
+        examType: 'THPT',
+        year: 2024,
+        duration: 90,
+        published: false,
+        questions: [],
+        scoringConfig: null,
+      });
+    }
+    setExamEditorTab('upload');
+    setTrackedOcrRequestId(requestId);
+    setActiveTab('exams');
   };
 
   const handleEditExam = (exam) => {
@@ -288,6 +311,8 @@ export default function AdminDashboard() {
             onFileLoaded={handleFileLoaded}
             parseError={parseError}
             defaultTab={examEditorTab}
+            trackedOcrRequestId={trackedOcrRequestId}
+            onTrackedOcrRequestChange={setTrackedOcrRequestId}
           />
         );
       }
@@ -317,6 +342,9 @@ export default function AdminDashboard() {
     if (activeTab === 'users') {
       return <UserManagement />;
     }
+    if (activeTab === 'ocrLogs') {
+      return <OcrLogManagement showAlert={showAlert} onTrackRequest={openExamTabForOcrRequest} />;
+    }
     return null;
   };
 
@@ -331,7 +359,7 @@ export default function AdminDashboard() {
       <div className={`md:block ${mobileMenuOpen ? 'block' : 'hidden'}`}>
         <AdminSidebar
           activeTab={activeTab}
-          onTabChange={(tab) => { setActiveTab(tab); setIsCreating(false); setEditingExam(null); setMobileMenuOpen(false); }}
+          onTabChange={(tab) => { setActiveTab(tab); setMobileMenuOpen(false); }}
         />
       </div>
 
@@ -353,6 +381,7 @@ export default function AdminDashboard() {
                 {activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :
+                 activeTab === 'ocrLogs' ? 'Theo dõi OCR Logs' :
                  'Quản lý người dùng'}
               </h1>
             </div>

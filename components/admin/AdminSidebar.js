@@ -2,13 +2,14 @@
 
 import {
   BookOpen, FileText, Settings, Users,
-  LayoutDashboard, Trophy, AlertTriangle
+  LayoutDashboard, Trophy, AlertTriangle, ScanText
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { key: 'exams', label: 'Đề thi', icon: FileText },
   { key: 'scoring', label: 'Điểm số', icon: Trophy },
   { key: 'reports', label: 'Báo cáo', icon: AlertTriangle },
+  { key: 'ocrLogs', label: 'OCR Logs', icon: ScanText },
   { key: 'users', label: 'Người dùng', icon: Users },
 ];
 
