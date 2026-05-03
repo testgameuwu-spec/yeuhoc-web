@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS sepay_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() -- Thời gian nhận webhook vào hệ thống
 );
 
--- Bật Row Level Security (nếu cần)
+-- Bật Row Level Security
 ALTER TABLE sepay_transactions ENABLE ROW LEVEL SECURITY;
 
--- Tạo policy chỉ cho phép admin select và read (chỉ áp dụng nếu user kết nối qua Supabase client)
+-- Cho phép admin xem giao dịch (qua Supabase client đã đăng nhập)
 CREATE POLICY "Cho phép admin xem giao dịch" ON sepay_transactions
 FOR SELECT
 TO authenticated
@@ -28,9 +28,8 @@ USING (
   )
 );
 
--- Tắt policy insert/update cho client. Việc insert/update chỉ thực hiện qua Service Role Key trên API Endpoint
-CREATE POLICY "Chỉ Service Role mới được thay đổi giao dịch" ON sepay_transactions
-FOR ALL
-TO service_role
-USING (true)
+-- Cho phép anon INSERT (webhook gọi bằng anon key, bảo mật bởi API Key ở tầng route)
+CREATE POLICY "Cho phép webhook insert giao dịch" ON sepay_transactions
+FOR INSERT
+TO anon
 WITH CHECK (true);

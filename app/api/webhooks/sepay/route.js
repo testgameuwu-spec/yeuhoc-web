@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Dùng Anon Key thay vì Service Role Key — RLS đã cho phép anon INSERT
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-// Ưu tiên dùng Service Role Key để bỏ qua RLS khi insert từ backend
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request) {
