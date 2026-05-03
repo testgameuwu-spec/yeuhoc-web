@@ -11,6 +11,7 @@ import ScoringConfig from '@/components/admin/ScoringConfig';
 import UserManagement from '@/components/admin/UserManagement';
 import ReportManagement from '@/components/admin/ReportManagement';
 import OcrLogManagement from '@/components/admin/OcrLogManagement';
+import AdminOverview from '@/components/admin/AdminOverview';
 import {
   BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
@@ -57,7 +58,7 @@ const MOCK_USERS = [
 ];
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('exams');
+  const [activeTab, setActiveTab] = useState('overview');
   const [examEditorTab, setExamEditorTab] = useState('settings');
   const [exams, setExams] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -299,6 +300,9 @@ export default function AdminDashboard() {
 
   // Determine what to render in main content
   const renderContent = () => {
+    if (activeTab === 'overview') {
+      return <AdminOverview onNavigate={setActiveTab} />;
+    }
     if (activeTab === 'exams') {
       if (isCreating) {
         return (
@@ -378,7 +382,8 @@ export default function AdminDashboard() {
                 </button>
               )}
               <h1 className="text-sm sm:text-lg font-bold text-white truncate">
-                {activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
+                {activeTab === 'overview' ? 'Tổng quan hệ thống' :
+                 activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :
                  activeTab === 'ocrLogs' ? 'Theo dõi OCR Logs' :

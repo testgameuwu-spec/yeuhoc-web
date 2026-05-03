@@ -7,6 +7,7 @@ import {
 import LogoIcon from '../LogoIcon';
 
 const NAV_ITEMS = [
+  { key: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
   { key: 'exams', label: 'Đề thi', icon: FileText },
   { key: 'scoring', label: 'Điểm số', icon: Trophy },
   { key: 'reports', label: 'Báo cáo', icon: AlertTriangle },

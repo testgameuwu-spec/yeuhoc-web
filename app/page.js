@@ -16,6 +16,7 @@ import Pagination from '@/components/Pagination';
 import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
 import { supabase } from '@/lib/supabase';
+import DonateWidget from '@/components/DonateWidget';
 
 // ── Topbar (exam-tool style) ──
 const Topbar = ({ activeExam, handleReset, children }) => (
@@ -2196,63 +2197,73 @@ export default function HomePage() {
     <main className="min-h-screen bg-gray-50" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 flex flex-col gap-6">
-        {/* Banner Section */}
-        <div className="relative bg-gradient-to-r from-indigo-50 to-white border border-indigo-100 rounded-3xl p-6 sm:p-8 overflow-hidden shadow-sm">
-          <div className="relative z-10 max-w-xl">
-            <h1 className="text-2xl sm:text-3xl font-black text-indigo-950 mb-2 flex items-center gap-2">
-              Kho đề thi luyện tập <span className="text-2xl">📚</span>
-            </h1>
-            <p className="text-sm sm:text-base text-indigo-800/80 mb-3 font-medium">
-              {allExams.length} đề — THPT Quốc gia · HSA · TSA
-            </p>
-            <p className="text-sm text-indigo-900/60 leading-relaxed max-w-md">
-              Luyện tập với kho đề đa dạng, bám sát cấu trúc đề thi thật, giúp bạn nâng cao kỹ năng và tự tin chinh phục kỳ thi.
-            </p>
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 flex flex-col xl:flex-row justify-center gap-6 xl:gap-8">
+        
+        {/* Main Content Area */}
+        <div className="w-full max-w-5xl flex flex-col gap-6 min-w-0">
+          {/* Banner Section */}
+          <div className="relative bg-gradient-to-r from-indigo-50 to-white border border-indigo-100 rounded-3xl p-6 sm:p-8 overflow-hidden shadow-sm">
+            <div className="relative z-10 max-w-xl">
+              <h1 className="text-2xl sm:text-3xl font-black text-indigo-950 mb-2 flex items-center gap-2">
+                Kho đề thi luyện tập <span className="text-2xl">📚</span>
+              </h1>
+              <p className="text-sm sm:text-base text-indigo-800/80 mb-3 font-medium">
+                {allExams.length} đề — THPT Quốc gia · HSA · TSA
+              </p>
+              <p className="text-sm text-indigo-900/60 leading-relaxed max-w-md">
+                Luyện tập với kho đề đa dạng, bám sát cấu trúc đề thi thật, giúp bạn nâng cao kỹ năng và tự tin chinh phục kỳ thi.
+              </p>
+            </div>
+            {/* Decorative elements */}
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-indigo-50/50 to-transparent z-0 pointer-events-none" />
           </div>
-          {/* Decorative elements */}
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-indigo-50/50 to-transparent z-0 pointer-events-none" />
+
+          {/* Filter Bar */}
+          <FilterBar
+            search={searchQuery} onSearch={setSearchQuery}
+            selYear={selYear} onYear={setSelYear}
+            selType={selType} onType={setSelType}
+            selSubject={selSubject} onSubject={setSelSubject}
+            resultCount={filteredExams.length}
+            totalCount={allExams.length}
+            onClear={handleClearFilters}
+            sortOrder={sortOrder} onSortOrder={setSortOrder}
+          />
+
+          {/* Exam List (Grid or Accordion) */}
+          {renderContent ? (
+            <>
+              {renderContent}
+
+              {/* Pagination */}
+              {browseTotalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={browsePage}
+                    totalPages={browseTotalPages}
+                    onPageChange={setBrowsePage}
+                    variant="light"
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+              <div className="text-5xl mb-4">🔍</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-1">Không tìm thấy đề thi</h3>
+              <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem các đề thi khác.</p>
+              <button onClick={handleClearFilters} className="px-5 py-2.5 rounded-xl bg-indigo-50 text-indigo-600 font-semibold text-sm hover:bg-indigo-100 transition-colors">
+                Xóa bộ lọc
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Filter Bar */}
-        <FilterBar
-          search={searchQuery} onSearch={setSearchQuery}
-          selYear={selYear} onYear={setSelYear}
-          selType={selType} onType={setSelType}
-          selSubject={selSubject} onSubject={setSelSubject}
-          resultCount={filteredExams.length}
-          totalCount={allExams.length}
-          onClear={handleClearFilters}
-          sortOrder={sortOrder} onSortOrder={setSortOrder}
-        />
+        {/* Right Sidebar - Donate Widget */}
+        <div className="w-full xl:w-[320px] shrink-0 space-y-6">
+          <DonateWidget user={user} />
+        </div>
 
-        {/* Exam List (Grid or Accordion) */}
-        {renderContent ? (
-          <>
-            {renderContent}
-
-            {/* Pagination */}
-            {browseTotalPages > 1 && (
-              <div className="mt-6">
-                <Pagination
-                  currentPage={browsePage}
-                  totalPages={browseTotalPages}
-                  onPageChange={setBrowsePage}
-                  variant="light"
-                />
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-            <div className="text-5xl mb-4">🔍</div>
-            <h3 className="text-lg font-bold text-gray-800 mb-1">Không tìm thấy đề thi</h3>
-            <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem các đề thi khác.</p>
-            <button onClick={handleClearFilters} className="px-5 py-2.5 rounded-xl bg-indigo-50 text-indigo-600 font-semibold text-sm hover:bg-indigo-100 transition-colors">
-              Xóa bộ lọc
-            </button>
-          </div>
-        )}
       </div>
     </main>
   );
