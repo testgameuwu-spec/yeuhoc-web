@@ -9,16 +9,16 @@ export default function DonateWidget({ user }) {
   const [showQR, setShowQR] = useState(false);
 
   const BANK_INFO = {
-    bankId: 'MBBank',
-    bankName: 'MB Bank',
+    bankId: 'TPBank',
+    bankName: 'TP Bank',
     accountName: 'PHAM DUY MINH',
-    accountNumber: '0971928106',
+    accountNumber: '10004005052',
   };
 
-  const memo = 'DONATE YEUHOC';
+  const memo = 'TKPYH1';
 
-  // Tạo mã QR bằng SePay API
-  const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}&amount=20000&des=${encodeURIComponent(memo)}`;
+  // Tạo mã QR bằng SePay API (QR động nhúng web/app)
+  const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}&des=${memo}`;
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(BANK_INFO.accountNumber);
