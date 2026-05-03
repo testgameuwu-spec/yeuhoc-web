@@ -352,7 +352,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
         if (response.status === 413) {
           throw new Error('File tải lên quá lớn (Lỗi 413: Payload Too Large).');
         }
-        throw new Error(`Lỗi máy chủ (${response.status}): Định dạng phản hồi không hợp lệ.`);
+        throw new Error(`Lỗi máy chủ (${response.status}): ${text.substring(0, 150)}...`);
       }
 
       if (!response.ok) {
