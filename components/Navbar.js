@@ -5,6 +5,7 @@ import { BookOpen, Home, User } from 'lucide-react';
 import UserProfile from './UserProfile';
 import { supabase } from '@/lib/supabase';
 import { countUnseenResolvedReports } from '@/lib/reportSeenStorage';
+import LogoIcon from './LogoIcon';
 
 export default function Navbar() {
   const [unseenResolvedReports, setUnseenResolvedReports] = useState(0);
@@ -93,7 +94,7 @@ export default function Navbar() {
         {/* ─── Left: Logo ─── */}
         <a href="/yeuhoc/" className="flex items-center gap-2.5 no-underline group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-shadow">
-            <BookOpen className="w-4 h-4" />
+            <LogoIcon size={1000} color="white" />
           </div>
           <span className="font-extrabold text-[17px] text-gray-900 group-hover:text-indigo-600 transition-colors">
             YeuHoc

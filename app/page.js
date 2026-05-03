@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, User, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Calendar, Eye, CheckCircle2, XCircle, Folder, Lock, ChevronDown, AlertTriangle, Send, Bot } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import LogoIcon from '@/components/LogoIcon';
 import UserProfile from '@/components/UserProfile';
 import { getPublishedExams, getExamById, getAllFolders } from '@/lib/examStore';
 import FilterBar from '@/components/FilterBar';
@@ -20,8 +21,10 @@ import { supabase } from '@/lib/supabase';
 const Topbar = ({ activeExam, handleReset, children }) => (
   <div className="et-topbar">
     <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleReset}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="var(--et-blue)" strokeWidth="2.2" strokeLinecap="round" style={{ width: 22, height: 22 }}>
-        <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+      <svg viewBox="0 0 970 836" xmlns="http://www.w3.org/2000/svg" width="70" height="70" className="" style={{ display: 'block' }}>
+        <g>
+          <path d="M 610.08 611.00 C581.86,569.21 553.33,543.51 489.00,501.97 C461.93,484.48 451.48,476.62 439.82,464.96 C420.52,445.66 409.10,422.51 406.06,396.50 C405.44,391.18 405.01,363.58 405.01,329.00 C405.01,282.32 405.30,268.67 406.48,261.44 C413.24,219.74 448.63,184.49 492.43,175.82 C500.34,174.25 525.44,174.26 535.00,175.82 C562.27,180.30 592.85,197.09 617.34,221.04 L 627.42 230.90 L 637.96 220.67 C662.60,196.76 687.66,182.37 715.00,176.45 C731.18,172.94 755.67,173.66 772.00,178.12 C781.66,180.76 797.70,188.68 806.03,194.93 C814.41,201.22 827.95,215.32 832.63,222.63 C840.84,235.47 847.11,252.28 848.42,265.00 C849.60,276.47 849.32,396.28 848.09,403.00 C844.13,424.72 833.54,444.97 817.07,462.30 C804.78,475.22 796.19,481.81 763.00,503.80 C746.78,514.54 728.10,527.26 721.50,532.05 C690.28,554.73 666.05,579.63 644.46,611.22 C641.18,616.02 638.14,619.96 637.71,619.97 C637.27,619.99 637.06,578.94 637.25,528.75 L 637.58 437.50 L 640.22 427.50 C652.45,381.16 687.64,346.72 748.50,321.53 C756.89,318.05 777.00,311.15 785.04,308.99 L 789.17 307.88 L 788.79 287.19 C788.43,267.58 788.27,266.14 785.73,259.70 C782.18,250.69 777.78,244.76 770.69,239.43 C759.94,231.35 742.88,228.23 726.94,231.44 C696.46,237.58 673.87,254.15 656.28,283.29 C645.64,300.91 639.38,306.13 628.80,306.20 C616.74,306.28 609.87,301.68 602.18,288.38 C581.24,252.15 548.25,230.08 514.93,230.02 C507.02,230.00 496.27,232.33 489.58,235.52 C483.06,238.63 473.66,248.21 470.25,255.22 C465.65,264.68 464.84,270.32 465.19,290.39 L 465.50 308.27 L 470.59 309.57 C473.39,310.29 481.26,312.76 488.09,315.06 C523.75,327.10 554.78,344.49 575.17,363.86 C595.52,383.20 606.88,402.20 613.76,428.42 L 616.41 438.50 L 616.75 519.00 C616.93,563.28 616.95,604.22 616.79,610.00 L 616.50 620.50 L 610.08 611.00 ZM 566.60 473.25 C565.60,463.38 562.30,447.66 559.31,438.50 C549.12,407.32 525.31,386.77 477.08,367.56 C470.79,365.06 465.48,363.19 465.27,363.40 C465.05,363.61 464.90,369.57 464.93,376.64 C465.02,398.17 470.12,411.37 483.41,424.51 C490.54,431.56 496.70,435.74 522.50,450.98 C538.43,460.40 564.48,477.35 565.46,478.94 C566.92,481.30 567.24,479.67 566.60,473.25 ZM 702.01 469.48 C715.99,460.12 727.00,453.28 747.50,441.23 C754.10,437.34 762.20,431.98 765.50,429.30 C773.63,422.71 781.36,412.19 785.18,402.50 C788.14,395.00 788.36,393.51 788.79,378.75 C789.04,370.09 789.00,363.00 788.70,363.00 C787.17,363.00 760.29,374.32 752.45,378.26 C724.22,392.47 704.57,411.85 696.22,433.74 C693.25,441.54 688.76,460.75 687.52,471.00 C687.15,474.02 686.62,477.34 686.33,478.36 C685.93,479.74 686.15,479.99 687.15,479.36 C687.90,478.89 694.58,474.44 702.01,469.48 Z" fill="var(--et-blue)"></path>
+        </g>
       </svg>
       <span className="hidden sm:inline font-bold text-[17px] text-[var(--et-blue)]">YeuHoc</span>
     </div>
@@ -453,31 +456,31 @@ export default function HomePage() {
           const key = `yeuhoc_progress_${user.id}_${ex.id}`;
           const saved = localStorage.getItem(key);
           if (saved) {
-             try {
-                const data = JSON.parse(saved);
-                setActiveExam(ex);
-                setAnswers(data.answers || {});
-                setBookmarks(new Set(data.bookmarks || []));
-                setCurrentQ(data.currentQ || 0);
-                setSavedSecondsLeft(data.secondsLeft);
-                setIsPaused(false);
-                setViolationCount(0);
-                setShowViolationWarning(false);
-                isSubmittingRef.current = false;
-                setQuizPhase('quiz');
-                setTimerRunning(true);
-                setStartTime(Date.now());
-                window.history.replaceState({}, '', window.location.pathname);
-                
-                // Try fullscreen if enabled
-                if (ex.antiCheatEnabled !== false) {
-                  const el = document.documentElement;
-                  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-                  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-                }
-             } catch(e) {
-                console.error(e);
-             }
+            try {
+              const data = JSON.parse(saved);
+              setActiveExam(ex);
+              setAnswers(data.answers || {});
+              setBookmarks(new Set(data.bookmarks || []));
+              setCurrentQ(data.currentQ || 0);
+              setSavedSecondsLeft(data.secondsLeft);
+              setIsPaused(false);
+              setViolationCount(0);
+              setShowViolationWarning(false);
+              isSubmittingRef.current = false;
+              setQuizPhase('quiz');
+              setTimerRunning(true);
+              setStartTime(Date.now());
+              window.history.replaceState({}, '', window.location.pathname);
+
+              // Try fullscreen if enabled
+              if (ex.antiCheatEnabled !== false) {
+                const el = document.documentElement;
+                if (el.requestFullscreen) el.requestFullscreen().catch(() => { });
+                else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+              }
+            } catch (e) {
+              console.error(e);
+            }
           }
         }
       }
@@ -997,7 +1000,7 @@ export default function HomePage() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Right side: Questions */}
                 <div className="lg:w-1/2 w-full flex flex-col gap-6">
                   {groupQuestions.map((gq) => {
@@ -1005,7 +1008,7 @@ export default function HomePage() {
                     const isRev = practiceRevealed[rqIndex] || false;
                     const ua = answers[gq.id];
                     const hasAns = ua !== undefined && ua !== '' && (typeof ua !== 'object' || Object.keys(ua).length > 0);
-                    
+
                     return (
                       <div key={gq.id} className={`practice-card-wrap bg-white rounded-3xl shadow-sm border ${rqIndex === currentQ ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-gray-100'}`} style={{ fontSize: '1.1em' }} id={`practice-q-${rqIndex}`}>
                         <QuestionCard
@@ -1248,9 +1251,9 @@ export default function HomePage() {
                 borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
                 transition: 'all .2s', position: 'relative'
               }}
-              onClick={handleBeginQuiz}
-              onMouseOver={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(99,102,241,.15)'; }}
-              onMouseOut={e => { e.currentTarget.style.borderColor = '#e0e7ff'; e.currentTarget.style.boxShadow = 'none'; }}
+                onClick={handleBeginQuiz}
+                onMouseOver={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(99,102,241,.15)'; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = '#e0e7ff'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 <div style={{ fontSize: 32, marginBottom: 8 }}>{isAntiCheatEnabled ? '🔒' : '📝'}</div>
                 <div style={{ fontWeight: 800, fontSize: 15, color: '#1e2533', marginBottom: 6 }}>Làm bài thi</div>
@@ -1273,9 +1276,9 @@ export default function HomePage() {
                 borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
                 transition: 'all .2s', position: 'relative'
               }}
-              onClick={handleStartPractice}
-              onMouseOver={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(16,185,129,.15)'; }}
-              onMouseOut={e => { e.currentTarget.style.borderColor = '#d1fae5'; e.currentTarget.style.boxShadow = 'none'; }}
+                onClick={handleStartPractice}
+                onMouseOver={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(16,185,129,.15)'; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = '#d1fae5'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
                 <div style={{ fontWeight: 800, fontSize: 15, color: '#1e2533', marginBottom: 6 }}>Ôn luyện</div>
@@ -2056,7 +2059,7 @@ export default function HomePage() {
     // ── FLAT GRID VIEW (Paginated by Exams) ──
     browseTotalPages = Math.ceil(filteredExams.length / ITEMS_PER_PAGE);
     const visibleExams = filteredExams.slice((browsePage - 1) * ITEMS_PER_PAGE, browsePage * ITEMS_PER_PAGE);
-    
+
     renderContent = visibleExams.length > 0 ? (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {visibleExams.map(exam => {
@@ -2077,11 +2080,11 @@ export default function HomePage() {
   } else {
     // ── ACCORDION FOLDER VIEW (Paginated by Folders) ──
     const FOLDERS_PER_PAGE = 5;
-    
+
     const publicFolders = allFolders.filter(f => f.visibility !== 'private').sort((a, b) => a.order_index - b.order_index);
     const examsByFolder = {};
     const rootExams = [];
-    
+
     filteredExams.forEach(ex => {
       if (ex.folderId && publicFolders.find(f => f.id === ex.folderId)) {
         if (!examsByFolder[ex.folderId]) examsByFolder[ex.folderId] = [];
@@ -2096,7 +2099,7 @@ export default function HomePage() {
       isRoot: false,
       exams: examsByFolder[f.id] || []
     })).filter(f => f.exams.length > 0 || f.visibility === 'locked');
-    
+
     if (rootExams.length > 0) {
       renderableFolders.push({
         id: 'root',
@@ -2119,7 +2122,7 @@ export default function HomePage() {
 
           return (
             <div key={folder.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-              <div 
+              <div
                 onClick={() => setExpandedFolders(prev => ({ ...prev, [folder.id]: !prev[folder.id] }))}
                 className="flex items-center justify-between p-4 sm:p-5 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100"
               >
@@ -2133,7 +2136,7 @@ export default function HomePage() {
                   {isLocked && <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-md ml-2 flex items-center gap-1"><Lock className="w-3 h-3" /> Đã khoá</span>}
                 </div>
               </div>
-              
+
               {isExpanded && (
                 <div className="p-5 bg-white">
                   {fExams.length > 0 ? (
