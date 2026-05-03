@@ -10,7 +10,7 @@ import LogoIcon from '@/components/LogoIcon';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 8;
 const RESEND_COOLDOWN = 60; // seconds
 
 export default function RegisterPage() {
@@ -165,7 +165,7 @@ export default function RegisterPage() {
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
     if (otpCode.length !== OTP_LENGTH) {
-      setOtpError('Vui lòng nhập đủ 6 chữ số.');
+      setOtpError('Vui lòng nhập đủ 8 chữ số.');
       return;
     }
 
@@ -289,7 +289,7 @@ export default function RegisterPage() {
                   Xác thực Email
                 </h1>
                 <p className="text-sm text-gray-500 leading-relaxed">
-                  Chúng tôi đã gửi mã xác nhận 6 số đến
+                  Chúng tôi đã gửi mã xác nhận 8 số đến
                 </p>
                 <p className="text-sm font-semibold text-indigo-600 mt-1">
                   {email}
