@@ -15,7 +15,28 @@ export default function DonateWidget({ user }) {
     accountNumber: '0971928106',
   };
 
-  const memo = 'DONATE YEUHOC';
+  const getMemo = () => {
+    if (!user) return 'DONATE YEUHOC';
+
+    let parts = [];
+    if (user.email) {
+      parts.push(user.email.split('@')[0]);
+    }
+
+    const name = user.user_metadata?.full_name;
+    if (name) {
+      const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
+      parts.push(normalized);
+    }
+
+    if (parts.length > 0) {
+      return parts.join(' ').toUpperCase().substring(0, 40);
+    }
+
+    return `YEUHOC ${user.id.substring(0, 6)}`.toUpperCase();
+  };
+
+  const memo = getMemo();
 
   // Tạo mã QR bằng SePay API
   const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}&amount=20000&des=${encodeURIComponent(memo)}`;
