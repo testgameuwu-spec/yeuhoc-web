@@ -16,7 +16,7 @@ const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 const SCORING_PRESETS = {
   'THPT Toán': { mcq: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] },
   'THPT Lý & Hoá': { mcq: 0.25, sa: 0.25, tf: [0.1, 0.25, 0.5, 1.0] },
-  'HSA': { mcq: 1, sa: 1, tf: [0.25, 0.25, 0.25, 0.25] },
+  'HSA / TSA': { mcq: 1, sa: 1, tf: [0.25, 0.25, 0.25, 0.25] },
   'Tuỳ chỉnh': null,
 };
 
@@ -49,6 +49,21 @@ export default function ExamEditor({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasQuestions = questions.length > 0;
 
+  const updatePreset = useCallback((subj, type) => {
+    let preset = 'Tuỳ chỉnh';
+    if (type === 'HSA' || type === 'TSA') {
+      preset = 'HSA / TSA';
+    } else if (type === 'THPT') {
+      if (subj === 'Toán') preset = 'THPT Toán';
+      else if (subj === 'Vật Lý' || subj === 'Hoá Học') preset = 'THPT Lý & Hoá';
+    }
+    
+    if (SCORING_PRESETS[preset]) {
+      setScoringPreset(preset);
+      setScoringConfig({ ...SCORING_PRESETS[preset] });
+    }
+  }, []);
+
   // Sync local state when parent passes new exam data (e.g. after file upload)
   useEffect(() => {
     if (exam) {
@@ -64,8 +79,24 @@ export default function ExamEditor({
       if (exam.questions && exam.questions.length > 0) {
         setQuestions(exam.questions);
       }
+      
+      // Load saved scoring config
+      if (exam.scoringConfig) {
+        setScoringConfig(exam.scoringConfig);
+        // Attempt to match preset
+        let matchedPreset = 'Tuỳ chỉnh';
+        for (const [key, preset] of Object.entries(SCORING_PRESETS)) {
+          if (preset && JSON.stringify(preset) === JSON.stringify(exam.scoringConfig)) {
+            matchedPreset = key;
+            break;
+          }
+        }
+        setScoringPreset(matchedPreset);
+      } else {
+        updatePreset(exam.subject || 'Toán', exam.examType || 'THPT');
+      }
     }
-  }, [exam]);
+  }, [exam, updatePreset]);
 
   // Sync questions when initialQuestions prop changes (file upload result)
   useEffect(() => {
@@ -95,7 +126,28 @@ export default function ExamEditor({
     if (SCORING_PRESETS[preset]) {
       setScoringConfig({ ...SCORING_PRESETS[preset] });
       setHasUnsavedChanges(true);
+    } else if (preset === 'Tuỳ chỉnh') {
+      if (!scoringConfig) {
+        setScoringConfig({ mcq: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] });
+      }
+      setHasUnsavedChanges(true);
     }
+  };
+
+
+
+  const handleSubjectChange = (e) => {
+    const newSubject = e.target.value;
+    setSubject(newSubject);
+    setHasUnsavedChanges(true);
+    updatePreset(newSubject, examType);
+  };
+
+  const handleExamTypeChange = (e) => {
+    const newType = e.target.value;
+    setExamType(newType);
+    setHasUnsavedChanges(true);
+    updatePreset(subject, newType);
   };
 
   const handleQuestionUpdate = useCallback((index, updatedQ) => {
@@ -379,7 +431,7 @@ D. Đáp án D
               {/* Subject */}
               <div>
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Môn học</label>
-                <select value={subject} onChange={e => { setSubject(e.target.value); setHasUnsavedChanges(true); }}
+                <select value={subject} onChange={handleSubjectChange}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
                   {SUBJECTS.map(s => <option key={s} value={s} className="bg-[#14142a]">{s}</option>)}
                 </select>
@@ -387,7 +439,7 @@ D. Đáp án D
               {/* Exam Type */}
               <div>
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Kì thi</label>
-                <select value={examType} onChange={e => { setExamType(e.target.value); setHasUnsavedChanges(true); }}
+                <select value={examType} onChange={handleExamTypeChange}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
                   {EXAM_TYPES.map(t => <option key={t} value={t} className="bg-[#14142a]">{t}</option>)}
                 </select>
@@ -433,13 +485,13 @@ D. Đáp án D
                   <div className="p-4 bg-[#0e0e22]">
                     <p className="text-xs text-white/30 uppercase tracking-wider mb-1">MCQ (điểm/câu)</p>
                     <input type="number" step={0.05} value={scoringConfig.mcq}
-                      onChange={e => { setScoringConfig(prev => ({ ...prev, mcq: Number(e.target.value) })); setHasUnsavedChanges(true); }}
+                      onChange={e => { setScoringPreset('Tuỳ chỉnh'); setScoringConfig(prev => ({ ...prev, mcq: Number(e.target.value) })); setHasUnsavedChanges(true); }}
                       className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
                   </div>
                   <div className="p-4 bg-[#0e0e22]">
                     <p className="text-xs text-white/30 uppercase tracking-wider mb-1">SA (điểm/câu)</p>
                     <input type="number" step={0.05} value={scoringConfig.sa}
-                      onChange={e => { setScoringConfig(prev => ({ ...prev, sa: Number(e.target.value) })); setHasUnsavedChanges(true); }}
+                      onChange={e => { setScoringPreset('Tuỳ chỉnh'); setScoringConfig(prev => ({ ...prev, sa: Number(e.target.value) })); setHasUnsavedChanges(true); }}
                       className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
                   </div>
                   <div className="p-4 bg-[#0e0e22]">
@@ -452,6 +504,7 @@ D. Đáp án D
                             onChange={e => {
                               const newTf = [...scoringConfig.tf];
                               newTf[i] = Number(e.target.value);
+                              setScoringPreset('Tuỳ chỉnh');
                               setScoringConfig(prev => ({ ...prev, tf: newTf }));
                               setHasUnsavedChanges(true);
                             }}

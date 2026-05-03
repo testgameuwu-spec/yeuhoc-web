@@ -3,10 +3,11 @@
 import { CheckCircle2, XCircle, RotateCcw, Star } from 'lucide-react';
 
 // Score ring component
-function ScoreRing({ score }) {
+function ScoreRing({ score, maxScore }) {
     const radius = 52;
     const circ = 2 * Math.PI * radius;
-    const pct = Math.min(100, Math.max(0, (score / 10) * 100));
+    const max = maxScore > 0 ? maxScore : 10;
+    const pct = Math.min(100, Math.max(0, (score / max) * 100));
     const dashOffset = circ - (pct / 100) * circ;
     const color = pct >= 80 ? '#17a86a' : pct >= 60 ? '#3b6fd4' : pct >= 40 ? '#d97706' : '#e5534b';
 
@@ -27,40 +28,65 @@ function ScoreRing({ score }) {
                 position: 'absolute', inset: 0,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             }}>
-                <div style={{ fontSize: 30, fontWeight: 800, color, lineHeight: 1 }}>{score.toFixed(1)}</div>
-                <div style={{ fontSize: 11, color: '#9aa3b2', fontWeight: 600, marginTop: 2 }}>/ 10</div>
+                <div style={{ fontSize: maxScore > 10 ? 24 : 30, fontWeight: 800, color, lineHeight: 1 }}>{score.toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</div>
+                <div style={{ fontSize: 11, color: '#9aa3b2', fontWeight: 600, marginTop: 2 }}>/ {maxScore}</div>
             </div>
         </div>
     );
 }
 
-export default function ResultsView({ questions, answers, onReset }) {
-    const total = questions.length;
+export default function ResultsView({ questions, answers, onReset, scoringConfig, examType }) {
+    const realQs = questions.filter(q => q.type !== 'TEXT');
+    const total = realQs.length;
     let correct = 0;
+    let score = 0;
+    let maxScore = 0;
 
-    questions.forEach(q => {
+    realQs.forEach(q => {
         const ua = answers[q.id] || '';
+        
         if (q.type === 'MCQ') {
-            if (ua === q.answer) correct++;
+            maxScore += scoringConfig ? scoringConfig.mcq : 1;
+            if (ua === q.answer) {
+                correct++;
+                score += scoringConfig ? scoringConfig.mcq : 1;
+            }
         } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
+            maxScore += scoringConfig ? scoringConfig.tf[3] : 1;
             const tfSel = typeof ua === 'object' ? ua : {};
-            const allOk = Object.keys(q.answer).every(k => tfSel[k] === q.answer[k]);
-            if (allOk) correct++;
+            let subCorrect = 0;
+            const keys = Object.keys(q.answer);
+            keys.forEach(k => {
+                if (tfSel[k] === q.answer[k]) subCorrect++;
+            });
+            if (subCorrect === keys.length) correct++;
+            if (scoringConfig && subCorrect > 0) {
+                score += scoringConfig.tf[subCorrect - 1];
+            } else if (!scoringConfig && subCorrect === keys.length) {
+                score += 1;
+            }
         } else {
-            if ((ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase()) correct++;
+            maxScore += scoringConfig ? scoringConfig.sa : 1;
+            if ((ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase()) {
+                correct++;
+                score += scoringConfig ? scoringConfig.sa : 1;
+            }
         }
     });
 
-    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const score = total > 0 ? (correct / total) * 10 : 0;
+    if (!scoringConfig) {
+        score = total > 0 ? (correct / total) * 10 : 0;
+        maxScore = 10;
+    }
+
+    const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
     const grade = pct >= 80 ? 'Giỏi' : pct >= 60 ? 'Khá' : pct >= 40 ? 'Trung bình' : 'Cần cố gắng';
     const pass = pct >= 50;
-    const gradeColor = pct >= 80 ? '#17a86a' : pct >= 60 ? '#3b6fd4' : pct >= 40 ? '#d97706' : '#e5534b';
 
     return (
         <div className="et-score-card" style={{ padding: '32px 28px' }}>
             {/* Score ring */}
-            <ScoreRing score={score} />
+            <ScoreRing score={score} maxScore={maxScore} />
 
             {/* Grade badge */}
             <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
@@ -103,7 +129,7 @@ export default function ResultsView({ questions, answers, onReset }) {
                 <div style={{ width: 1, background: '#f0f2f6' }} />
 
                 <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: '#5a6478' }}>{pct}%</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#5a6478' }}>{total > 0 ? Math.round((correct / total) * 100) : 0}%</div>
                     <div style={{ fontSize: 11, color: '#9aa3b2', marginTop: 3 }}>Tỉ lệ đúng</div>
                 </div>
             </div>

@@ -779,22 +779,43 @@ export default function HomePage() {
       localStorage.removeItem(getProgressKey(activeExam.id));
 
       const timeSpentSecs = savedSecondsLeft !== null ? (activeExam.duration * 60 - savedSecondsLeft) : (startTime ? Math.floor((Date.now() - startTime) / 1000) : 0);
+      let score = 0;
       let correctCount = 0;
 
       const realQs = activeExam.questions.filter(q => q.type !== 'TEXT');
       realQs.forEach(q => {
         const ua = answers[q.id] || '';
+        const config = activeExam.scoringConfig;
+        
         if (q.type === 'MCQ') {
-          if (ua === q.answer) correctCount++;
+          if (ua === q.answer) {
+            correctCount++;
+            score += config ? config.mcq : 1;
+          }
         } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
           const s = typeof ua === 'object' ? ua : {};
-          if (Object.keys(q.answer).every(k => s[k] === q.answer[k])) correctCount++;
+          let subCorrect = 0;
+          const keys = Object.keys(q.answer);
+          keys.forEach(k => {
+             if (s[k] === q.answer[k]) subCorrect++;
+          });
+          if (subCorrect === keys.length) correctCount++;
+          if (config && subCorrect > 0) {
+             score += config.tf[subCorrect - 1];
+          } else if (!config && subCorrect === keys.length) {
+             score += 1;
+          }
         } else {
-          if (ua && (ua.toString().trim().toLowerCase() === (q.answer || '').toString().trim().toLowerCase())) correctCount++;
+          if (ua && (ua.toString().trim().toLowerCase() === (q.answer || '').toString().trim().toLowerCase())) {
+            correctCount++;
+            score += config ? config.sa : 1;
+          }
         }
       });
 
-      const score = realQs.length > 0 ? (correctCount / realQs.length) * 10 : 0;
+      if (!activeExam.scoringConfig) {
+        score = realQs.length > 0 ? (correctCount / realQs.length) * 10 : 0;
+      }
 
       const { error } = await supabase.from('exam_attempts').insert({
         user_id: user.id,
@@ -1774,7 +1795,7 @@ export default function HomePage() {
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-sm text-center animate-fadeIn">
-            <ResultsView questions={questions} answers={answers} onReset={handleRetry} />
+            <ResultsView questions={questions} answers={answers} onReset={handleRetry} scoringConfig={activeExam.scoringConfig} examType={activeExam.examType} />
             <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
               <button
                 onClick={() => setQuizPhase('results-detail')}
