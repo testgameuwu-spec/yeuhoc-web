@@ -11,6 +11,7 @@ import ScoringConfig from '@/components/admin/ScoringConfig';
 import UserManagement from '@/components/admin/UserManagement';
 import ReportManagement from '@/components/admin/ReportManagement';
 import OcrLogManagement from '@/components/admin/OcrLogManagement';
+import TransactionManagement from '@/components/admin/TransactionManagement';
 import AdminOverview from '@/components/admin/AdminOverview';
 import {
   BookOpen, Plus, ArrowLeft, Menu,
@@ -349,6 +350,9 @@ export default function AdminDashboard() {
     if (activeTab === 'ocrLogs') {
       return <OcrLogManagement showAlert={showAlert} onTrackRequest={openExamTabForOcrRequest} />;
     }
+    if (activeTab === 'transactions') {
+      return <TransactionManagement />;
+    }
     return null;
   };
 
@@ -387,6 +391,7 @@ export default function AdminDashboard() {
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :
                  activeTab === 'ocrLogs' ? 'Theo dõi OCR Logs' :
+                 activeTab === 'transactions' ? 'Lịch sử giao dịch' :
                  'Quản lý người dùng'}
               </h1>
             </div>

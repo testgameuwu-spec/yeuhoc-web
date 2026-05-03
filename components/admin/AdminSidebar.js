@@ -2,7 +2,7 @@
 
 import {
   BookOpen, FileText, Settings, Users,
-  LayoutDashboard, Trophy, AlertTriangle, ScanText
+  LayoutDashboard, Trophy, AlertTriangle, ScanText, CreditCard
 } from 'lucide-react';
 import LogoIcon from '../LogoIcon';
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { key: 'reports', label: 'Báo cáo', icon: AlertTriangle },
   { key: 'ocrLogs', label: 'OCR Logs', icon: ScanText },
   { key: 'users', label: 'Người dùng', icon: Users },
+  { key: 'transactions', label: 'Giao dịch', icon: CreditCard },
 ];
 
 export default function AdminSidebar({ activeTab, onTabChange }) {
