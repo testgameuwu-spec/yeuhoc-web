@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS sepay_transactions (
     sub_account VARCHAR(100), -- Tài khoản ngân hàng phụ (tài khoản định danh)
     reference_code VARCHAR(150), -- Mã tham chiếu của tin nhắn sms
     description TEXT, -- Toàn bộ nội dung tin nhắn sms
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() -- Thời gian nhận webhook vào hệ thống
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- Thời gian nhận webhook vào hệ thống
+    user_id UUID REFERENCES profiles(id) -- Tự động nhận diện user đã nạp tiền
 );
 
 -- Bật Row Level Security

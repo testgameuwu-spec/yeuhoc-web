@@ -17,22 +17,11 @@ export default function DonateWidget({ user }) {
 
   const getMemo = () => {
     if (!user) return 'DONATE YEUHOC';
-
-    let parts = [];
+    
     if (user.email) {
-      parts.push(user.email.split('@')[0]);
+      return `YEUHOC ${user.email.split('@')[0].toUpperCase().substring(0, 30)}`;
     }
-
-    const name = user.user_metadata?.full_name;
-    if (name) {
-      const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
-      parts.push(normalized);
-    }
-
-    if (parts.length > 0) {
-      return parts.join(' ').toUpperCase().substring(0, 40);
-    }
-
+    
     return `YEUHOC ${user.id.substring(0, 6)}`.toUpperCase();
   };
 

@@ -14,7 +14,7 @@ export default function TransactionManagement() {
     try {
       const { data, error } = await supabase
         .from('sepay_transactions')
-        .select('*')
+        .select('*, profiles(full_name, email, avatar_url)')
         .order('transaction_date', { ascending: false });
 
       if (error) {
@@ -33,13 +33,40 @@ export default function TransactionManagement() {
 
   useEffect(() => {
     fetchTransactions();
+
+    const channel = supabase
+      .channel('sepay_transactions_changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'sepay_transactions' },
+        (payload) => {
+          // When a new transaction comes in, add it to the top of the list
+          // Lấy thêm thông tin profile cho giao dịch mới
+          if (payload.new.user_id) {
+            supabase.from('profiles').select('full_name, email, avatar_url').eq('id', payload.new.user_id).single()
+              .then(({ data: profileData }) => {
+                 const newTx = { ...payload.new, profiles: profileData };
+                 setTransactions((prev) => [newTx, ...prev]);
+              });
+          } else {
+             setTransactions((prev) => [payload.new, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredTransactions = transactions.filter(t => 
     t.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.account_number?.includes(searchTerm) ||
-    t.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -78,7 +105,7 @@ export default function TransactionManagement() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <input
               type="text"
-              placeholder="Tìm theo nội dung, mã thanh toán, số TK..."
+              placeholder="Tìm theo nội dung, tên user, mã thanh toán..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-black/20 border border-white/10 rounded-xl text-sm text-white placeholder-white/40 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
@@ -92,17 +119,16 @@ export default function TransactionManagement() {
             <thead className="text-xs uppercase bg-white/5 text-white/50 sticky top-0 z-10 backdrop-blur-md">
               <tr>
                 <th className="px-4 py-3 font-medium">Thời gian</th>
-                <th className="px-4 py-3 font-medium">Mã GD / Ngân hàng</th>
-                <th className="px-4 py-3 font-medium">Tài khoản</th>
+                <th className="px-4 py-3 font-medium">Người gửi</th>
                 <th className="px-4 py-3 font-medium text-right">Số tiền</th>
                 <th className="px-4 py-3 font-medium">Nội dung</th>
-                <th className="px-4 py-3 font-medium">Mã nhận diện</th>
+                <th className="px-4 py-3 font-medium">Ngân hàng / Mã GD</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-white/40">
+                  <td colSpan="5" className="px-4 py-8 text-center text-white/40">
                     <div className="flex flex-col items-center gap-2">
                       <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
                       <span>Đang tải dữ liệu...</span>
@@ -111,7 +137,7 @@ export default function TransactionManagement() {
                 </tr>
               ) : filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-white/40">
+                  <td colSpan="5" className="px-4 py-8 text-center text-white/40">
                     Không tìm thấy giao dịch nào. Nếu bạn chưa chạy lệnh SQL tạo bảng, hãy chạy file tạo bảng trong thư mục migrations.
                   </td>
                 </tr>
@@ -125,12 +151,23 @@ export default function TransactionManagement() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-white/90">#{tx.id}</div>
-                      <div className="text-xs text-white/50">{tx.gateway}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-white/90">{tx.account_number}</div>
-                      <div className="text-xs text-white/50 max-w-[200px] truncate" title={tx.description}>{tx.description || '-'}</div>
+                      {tx.profiles ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden shrink-0">
+                            {tx.profiles.avatar_url ? (
+                              <img src={tx.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-indigo-400 font-bold text-xs">{tx.profiles.full_name?.charAt(0) || 'U'}</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-white/90">{tx.profiles.full_name}</div>
+                            <div className="text-[10px] text-white/40">{tx.profiles.email}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-white/40 italic flex items-center gap-1">Khách vãng lai</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className={`font-bold flex items-center justify-end gap-1 ${tx.transfer_type === 'in' ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -143,13 +180,8 @@ export default function TransactionManagement() {
                       {tx.content}
                     </td>
                     <td className="px-4 py-3">
-                      {tx.code ? (
-                        <span className="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 text-xs font-medium border border-indigo-500/20">
-                          {tx.code}
-                        </span>
-                      ) : (
-                        <span className="text-white/30 text-xs italic">-</span>
-                      )}
+                      <div className="font-medium text-white/70">{tx.gateway}</div>
+                      <div className="text-[10px] text-white/30 truncate max-w-[120px]">#{tx.id} {tx.code ? `- ${tx.code}` : ''}</div>
                     </td>
                   </tr>
                 ))
