@@ -305,7 +305,7 @@ export default function RegisterPage() {
               )}
 
               {/* OTP Inputs */}
-              <div className="flex justify-center gap-2 sm:gap-3 mb-6">
+              <div className="flex justify-center gap-1 sm:gap-2 mb-6 px-1">
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -318,14 +318,14 @@ export default function RegisterPage() {
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                     onPaste={index === 0 ? handleOtpPaste : undefined}
                     disabled={verifying}
-                    className="otp-input"
+                    className="otp-input flex-1 min-w-0"
                     style={{
-                      width: '48px',
-                      height: '56px',
+                      maxWidth: '48px',
+                      height: 'clamp(40px, 12vw, 56px)',
                       textAlign: 'center',
-                      fontSize: '22px',
+                      fontSize: 'clamp(16px, 5vw, 22px)',
                       fontWeight: '700',
-                      borderRadius: '12px',
+                      borderRadius: 'clamp(8px, 2vw, 12px)',
                       border: digit
                         ? '2px solid #6366f1'
                         : '2px solid #e5e7eb',
