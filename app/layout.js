@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "YeuHoc - Luyện thi trắc nghiệm online",
-  description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và hỗ trợ LaTeX",
+  title: "YeuHoc",
+  description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
   keywords: ["trắc nghiệm", "luyện thi", "THPT", "HSA", "TSA", "toán", "yeuhoc"],
 };
 
