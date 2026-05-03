@@ -23,7 +23,7 @@ export default function AdminSidebar({ activeTab, onTabChange }) {
       <div className="h-16 flex items-center justify-between px-5 border-b border-white/8">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-            <LogoIcon size={1000} color="white" />
+            <LogoIcon size={20} color="white" />
           </div>
           <div className="animate-fadeIn">
             <span className="font-extrabold text-base bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">

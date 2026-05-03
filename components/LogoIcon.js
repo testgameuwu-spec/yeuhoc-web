@@ -3,7 +3,7 @@
 export default function LogoIcon({ size = 32, color = 'currentColor', className = '' }) {
   return (
     <svg
-      viewBox="0 0 1254 836"
+      viewBox="395 164 464 466"
       xmlns="http://www.w3.org/2000/svg"
       width={size}
       height={size}

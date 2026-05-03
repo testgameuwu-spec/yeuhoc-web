@@ -63,7 +63,7 @@ export default function LoginPage() {
             {/* Header */}
             <div className="text-center mb-8">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white mx-auto mb-4 shadow-lg">
-                <LogoIcon size={1000} color="white" />
+                <LogoIcon size={20} color="white" />
               </div>
               <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
                 Đăng nhập
