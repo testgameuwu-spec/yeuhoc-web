@@ -50,7 +50,7 @@ export default function DonateWidget({ user }) {
         </div>
 
         <p className="text-xs sm:text-sm text-gray-600 mb-5 leading-relaxed">
-          Mỗi ly cà phê của bạn là nguồn động lực to lớn giúp <strong className="text-rose-600 font-bold">YeuHoc</strong> duy trì máy chủ và phát triển thêm nhiều tính năng mới!
+          Mỗi bát phở của bạn là nguồn động lực to lớn giúp <strong className="text-rose-600 font-bold">YeuHoc</strong> duy trì máy chủ và phát triển thêm nhiều tính năng mới!
         </p>
 
         {showQR ? (

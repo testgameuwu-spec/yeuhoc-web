@@ -38,7 +38,8 @@ export default function TransactionManagement() {
   const filteredTransactions = transactions.filter(t => 
     t.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.account_number?.includes(searchTerm)
+    t.account_number?.includes(searchTerm) ||
+    t.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -92,6 +93,7 @@ export default function TransactionManagement() {
               <tr>
                 <th className="px-4 py-3 font-medium">Thời gian</th>
                 <th className="px-4 py-3 font-medium">Mã GD / Ngân hàng</th>
+                <th className="px-4 py-3 font-medium">Tài khoản</th>
                 <th className="px-4 py-3 font-medium text-right">Số tiền</th>
                 <th className="px-4 py-3 font-medium">Nội dung</th>
                 <th className="px-4 py-3 font-medium">Mã nhận diện</th>
@@ -100,7 +102,7 @@ export default function TransactionManagement() {
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-white/40">
+                  <td colSpan="6" className="px-4 py-8 text-center text-white/40">
                     <div className="flex flex-col items-center gap-2">
                       <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
                       <span>Đang tải dữ liệu...</span>
@@ -109,7 +111,7 @@ export default function TransactionManagement() {
                 </tr>
               ) : filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-white/40">
+                  <td colSpan="6" className="px-4 py-8 text-center text-white/40">
                     Không tìm thấy giao dịch nào. Nếu bạn chưa chạy lệnh SQL tạo bảng, hãy chạy file tạo bảng trong thư mục migrations.
                   </td>
                 </tr>
@@ -124,7 +126,11 @@ export default function TransactionManagement() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-white/90">#{tx.id}</div>
-                      <div className="text-xs text-white/50">{tx.gateway} - {tx.account_number}</div>
+                      <div className="text-xs text-white/50">{tx.gateway}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-white/90">{tx.account_number}</div>
+                      <div className="text-xs text-white/50 max-w-[200px] truncate" title={tx.description}>{tx.description || '-'}</div>
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className={`font-bold flex items-center justify-end gap-1 ${tx.transfer_type === 'in' ? 'text-emerald-400' : 'text-red-400'}`}>
