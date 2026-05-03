@@ -15,10 +15,33 @@ export default function DonateWidget({ user }) {
     accountNumber: '10004005052',
   };
 
-  const memo = 'DONATE YEUHOC';
+  const getMemo = () => {
+    const prefix = 'TKPYH1';
+    if (!user) return `${prefix} UNGHO`;
+
+    let parts = [];
+    if (user.email) {
+      parts.push(user.email.split('@')[0]);
+    }
+
+    const name = user.user_metadata?.full_name;
+    if (name) {
+      const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
+      parts.push(normalized);
+    }
+
+    if (parts.length > 0) {
+      const suffix = parts.join(' ').toUpperCase().substring(0, 30);
+      return `${prefix} ${suffix}`;
+    }
+
+    return `${prefix} ${user.id.substring(0, 6).toUpperCase()}`;
+  };
+
+  const memo = getMemo();
 
   // Tạo mã QR bằng SePay API (QR động nhúng web/app)
-  const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}&des=${memo}`;
+  const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}&amount=20000&des=${encodeURIComponent(memo)}`;
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(BANK_INFO.accountNumber);
