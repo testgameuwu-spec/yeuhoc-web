@@ -10,9 +10,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-const NORMALIZE_MODEL = 'deepseek-v4-pro';
+const NORMALIZE_MODEL = process.env.DEEPSEEK_NORMALIZE_MODEL || 'deepseek-chat';
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
-const MAX_OUTPUT_TOKENS = 20000;
+const MAX_OUTPUT_TOKENS = 8192;
 const OCR_LOG_TABLE = 'ocr_import_logs';
 PDFParse.setWorker(pathToFileURL(path.join(
   process.cwd(),
@@ -483,6 +483,7 @@ async function normalizeToStructuredText(sourceText, tokenAccumulator) {
     prompt: `Dưới đây là nội dung đề thi đã được trích xuất từ file gốc. Hãy chuyển sang đúng định dạng .txt START/END:\n\n${sourceText}`,
     temperature: 0,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
+    abortSignal: AbortSignal.timeout(4 * 60 * 1000), // 4 minutes timeout
   });
 
   if (result.usage && tokenAccumulator) {
@@ -511,6 +512,7 @@ async function repairStructuredText(structuredText, parseNote, originalSourceTex
     prompt,
     temperature: 0,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
+    abortSignal: AbortSignal.timeout(3 * 60 * 1000), // 3 minutes timeout
   });
 
   if (result.usage && tokenAccumulator) {
