@@ -342,7 +342,18 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
         body: formData,
         signal: controller.signal,
       });
-      const data = await response.json();
+
+      let data = {};
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        if (response.status === 413) {
+          throw new Error('File tải lên quá lớn (Lỗi 413: Payload Too Large).');
+        }
+        throw new Error(`Lỗi máy chủ (${response.status}): Định dạng phản hồi không hợp lệ.`);
+      }
 
       if (!response.ok) {
         throw new Error(data?.error || 'Không thể quét đề bằng AI.');
