@@ -15,7 +15,7 @@ export default function DonateWidget({ user }) {
     accountNumber: '10004005052',
   };
 
-  const memo = 'TKPYH1';
+  const memo = 'DONATE YEUHOC';
 
   // Tạo mã QR bằng SePay API (QR động nhúng web/app)
   const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}&des=${memo}`;
