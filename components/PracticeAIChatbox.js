@@ -34,8 +34,9 @@ export default function PracticeAIChatbox({
   const cacheRef = useRef(new Map());
   // Track which questionKey we've already sent the initial hint for
   const requestedKeysRef = useRef(new Set());
-  // Track the previous questionKey to save messages before switching
-  const prevKeyRef = useRef('');
+  // Track the current questionKey to safely save messages
+  const currentKeyRef = useRef(questionKey);
+  const [timeoutError, setTimeoutError] = useState(null);
 
   const transport = useMemo(() => new DefaultChatTransport({ api: 'api/chat' }), []);
 
@@ -54,36 +55,55 @@ export default function PracticeAIChatbox({
 
   useEffect(() => () => stop(), [stop]);
 
-  // ── Save & restore messages when questionKey changes ──
+  // ── Sync cache with messages & handle question switching safely ──
   useEffect(() => {
-    const prev = prevKeyRef.current;
+    const prev = currentKeyRef.current;
     const next = questionKey;
 
-    // Same question — nothing to do
-    if (prev === next) return;
+    if (prev !== next) {
+      // Question changed
+      if (status === 'streaming' || status === 'submitted') {
+        stop();
+      }
 
-    // Save current messages to cache for the previous question
-    if (prev && messages.length > 0) {
-      cacheRef.current.set(prev, { messages: [...messages] });
-    }
+      // Save messages to old question's cache
+      if (prev && messages.length > 0) {
+        cacheRef.current.set(prev, { messages: [...messages] });
+      }
 
-    // Restore cached messages for the new question, or start fresh
-    const cached = cacheRef.current.get(next);
-    if (cached && cached.messages.length > 0) {
-      setMessages(cached.messages);
+      // Load new question's cache
+      const cached = cacheRef.current.get(next);
+      if (cached && cached.messages.length > 0) {
+        setMessages(cached.messages);
+      } else {
+        setMessages([]);
+      }
+
+      currentKeyRef.current = next;
     } else {
-      setMessages([]);
+      // Same question, messages streaming in
+      if (next && messages.length > 0) {
+        cacheRef.current.set(next, { messages: [...messages] });
+      }
     }
+  }, [questionKey, messages, status, stop, setMessages]);
 
-    prevKeyRef.current = next;
-  }, [questionKey]); // intentionally only depend on questionKey
-
-  // ── Keep cache up-to-date as messages stream in ──
+  // ── 60-Second Timeout Monitor ──
   useEffect(() => {
-    if (questionKey && messages.length > 0) {
-      cacheRef.current.set(questionKey, { messages: [...messages] });
+    let timeoutId;
+    
+    // Start or restart timeout only when AI is busy waiting for response or streaming
+    if (status === 'submitted' || status === 'streaming') {
+      timeoutId = setTimeout(() => {
+        stop();
+        setTimeoutError('Kết nối AI quá chậm. Vui lòng thử lại.');
+      }, 60000);
     }
-  }, [messages, questionKey]);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [messages, status, stop]);
 
   // ── Send initial hint for a new question (only once per questionKey) ──
   useEffect(() => {
@@ -132,6 +152,7 @@ export default function PracticeAIChatbox({
     setFollowUpCount(nextCount);
     setInput('');
     clearError();
+    setTimeoutError(null);
 
     sendMessage(
       {
@@ -152,6 +173,7 @@ export default function PracticeAIChatbox({
 
   const handleRetryInitialHint = () => {
     clearError();
+    setTimeoutError(null);
     // Remove from requested set so it can re-fire
     requestedKeysRef.current.delete(questionKey);
     cacheRef.current.delete(questionKey);
@@ -231,7 +253,7 @@ export default function PracticeAIChatbox({
             </div>
           )}
 
-          {error && (
+          {error && !timeoutError && (
             <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-3 text-sm text-red-700">
               Không thể tạo gợi ý lúc này.
               <button
@@ -240,6 +262,19 @@ export default function PracticeAIChatbox({
                 className="ml-2 font-bold underline decoration-red-300 underline-offset-2"
               >
                 Thử lại
+              </button>
+            </div>
+          )}
+
+          {timeoutError && (
+            <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-3 text-sm text-red-700">
+              {timeoutError}
+              <button
+                type="button"
+                onClick={handleRetryInitialHint}
+                className="ml-2 font-bold underline decoration-red-300 underline-offset-2"
+              >
+                Chạy lại AI
               </button>
             </div>
           )}
