@@ -17,6 +17,7 @@ import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
 import { supabase } from '@/lib/supabase';
 import DonateWidget from '@/components/DonateWidget';
+import { checkSAEquivalent } from '@/lib/mathUtils';
 
 // ── Topbar (exam-tool style) ──
 const Topbar = ({ activeExam, handleReset, children }) => (
@@ -807,7 +808,7 @@ export default function HomePage() {
              score += 1;
           }
         } else {
-          if (ua && (ua.toString().trim().toLowerCase() === (q.answer || '').toString().trim().toLowerCase())) {
+          if (checkSAEquivalent(ua, q.answer)) {
             correctCount++;
             score += config ? config.sa : 1;
           }

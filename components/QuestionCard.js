@@ -4,6 +4,7 @@ import { useState } from 'react';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
 import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
+import { checkSAEquivalent } from '@/lib/mathUtils';
 
 const TYPE_LABEL = { MCQ: 'Trắc nghiệm', TF: 'Đúng / Sai', SA: 'Trả lời ngắn' };
 
@@ -34,8 +35,7 @@ export default function QuestionCard({
     };
 
     // ── SA correctness ──
-    const isSACorrect = type === 'SA' && showResult &&
-        (selectedAnswer || '').trim().toLowerCase() === (answer || '').trim().toLowerCase();
+    const isSACorrect = type === 'SA' && showResult && checkSAEquivalent(selectedAnswer, answer);
 
     // border color of whole card when result shown
     const cardBorder = showResult
