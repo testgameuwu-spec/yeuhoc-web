@@ -19,22 +19,13 @@ export default function DonateWidget({ user }) {
     const prefix = 'TKPYH1';
     if (!user) return `${prefix} UNGHO`;
 
-    let parts = [];
+    // Ưu tiên dùng email prefix (phần trước @) — webhook sẽ dùng cái này để tra cứu user
     if (user.email) {
-      parts.push(user.email.split('@')[0]);
+      const emailPrefix = user.email.split('@')[0].toUpperCase().substring(0, 30);
+      return `${prefix} ${emailPrefix}`;
     }
 
-    const name = user.user_metadata?.full_name;
-    if (name) {
-      const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
-      parts.push(normalized);
-    }
-
-    if (parts.length > 0) {
-      const suffix = parts.join(' ').toUpperCase().substring(0, 30);
-      return `${prefix} ${suffix}`;
-    }
-
+    // Fallback: dùng 6 ký tự đầu của user ID
     return `${prefix} ${user.id.substring(0, 6).toUpperCase()}`;
   };
 

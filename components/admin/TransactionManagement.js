@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CreditCard, ArrowDownLeft, ArrowUpRight, Search, RefreshCw, Calendar } from 'lucide-react';
+import { CreditCard, ArrowDownLeft, ArrowUpRight, Search, RefreshCw, Calendar, CheckCircle2, AlertCircle, X, UserCheck } from 'lucide-react';
 
 export default function TransactionManagement() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [reidentifying, setReidentifying] = useState(false);
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message, details }
   const fetchTransactions = async () => {
     setLoading(true);
     try {
@@ -87,25 +88,89 @@ export default function TransactionManagement() {
             </p>
           </div>
           
-          <button
-            onClick={fetchTransactions}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white text-sm font-medium transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Làm mới
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                setReidentifying(true);
+                setToast(null);
+                try {
+                  const res = await fetch('/yeuhoc/api/admin/reidentify-transactions', { method: 'POST' });
+                  const result = await res.json();
+                  if (result.success) {
+                    setToast({
+                      type: 'success',
+                      message: result.updated > 0
+                        ? `Đã nhận diện thành công ${result.updated} giao dịch!`
+                        : 'Không có giao dịch nào cần nhận diện.',
+                      details: `${result.updated}/${result.total} giao dịch được cập nhật`
+                    });
+                    if (result.updated > 0) fetchTransactions();
+                  } else {
+                    setToast({ type: 'error', message: 'Lỗi nhận diện', details: result.message || 'Không rõ nguyên nhân' });
+                  }
+                } catch (e) {
+                  setToast({ type: 'error', message: 'Lỗi kết nối', details: e.message });
+                } finally {
+                  setReidentifying(false);
+                  setTimeout(() => setToast(null), 6000);
+                }
+              }}
+              disabled={reidentifying || loading}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-medium transition-colors"
+              title="Nhận diện lại user cho các giao dịch đang hiện 'Khách vãng lai'"
+            >
+              <UserCheck className={`w-4 h-4 ${reidentifying ? 'animate-pulse' : ''}`} />
+              {reidentifying ? 'Đang xử lý...' : 'Nhận diện lại'}
+            </button>
+            <button
+              onClick={fetchTransactions}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white text-sm font-medium transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Làm mới
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="glass rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[600px]">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`rounded-2xl border p-4 flex items-start gap-3 animate-fadeIn transition-all ${
+          toast.type === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/20'
+            : 'bg-red-500/10 border-red-500/20'
+        }`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            toast.type === 'success' ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          }`}>
+            {toast.type === 'success'
+              ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              : <AlertCircle className="w-5 h-5 text-red-400" />
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-bold ${toast.type === 'success' ? 'text-emerald-300' : 'text-red-300'}`}>
+              {toast.message}
+            </p>
+            {toast.details && (
+              <p className="text-xs text-white/50 mt-0.5">{toast.details}</p>
+            )}
+          </div>
+          <button onClick={() => setToast(null)} className="text-white/30 hover:text-white/60 transition-colors p-1 shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="glass rounded-2xl border border-white/10 overflow-hidden flex flex-col" style={{ maxHeight: '70vh', minHeight: 300 }}>
         {/* Toolbar */}
-        <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-white/5">
-          <div className="relative flex-1 max-w-md">
+        <div className="p-3 sm:p-4 border-b border-white/10 flex items-center gap-3 bg-white/5">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <input
               type="text"
-              placeholder="Tìm theo nội dung, tên user, mã thanh toán..."
+              placeholder="Tìm theo nội dung, tên user..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-black/20 border border-white/10 rounded-xl text-sm text-white placeholder-white/40 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
@@ -113,81 +178,132 @@ export default function TransactionManagement() {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Content */}
         <div className="flex-1 overflow-auto custom-scrollbar">
-          <table className="w-full text-left text-sm text-white/70">
-            <thead className="text-xs uppercase bg-white/5 text-white/50 sticky top-0 z-10 backdrop-blur-md">
-              <tr>
-                <th className="px-4 py-3 font-medium">Thời gian</th>
-                <th className="px-4 py-3 font-medium">Người gửi</th>
-                <th className="px-4 py-3 font-medium text-right">Số tiền</th>
-                <th className="px-4 py-3 font-medium">Nội dung</th>
-                <th className="px-4 py-3 font-medium">Ngân hàng / Mã GD</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-white/40">
-                    <div className="flex flex-col items-center gap-2">
-                      <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
-                      <span>Đang tải dữ liệu...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-white/40">
-                    Không tìm thấy giao dịch nào. Nếu bạn chưa chạy lệnh SQL tạo bảng, hãy chạy file tạo bảng trong thư mục migrations.
-                  </td>
-                </tr>
-              ) : (
-                filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-white/80">
-                        <Calendar className="w-4 h-4 text-white/40" />
-                        {new Date(tx.transaction_date).toLocaleString('vi-VN')}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-white/40">
+              <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
+              <span>Đang tải dữ liệu...</span>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="px-4 py-12 text-center text-white/40 text-sm">
+              Không tìm thấy giao dịch nào. Nếu bạn chưa chạy lệnh SQL tạo bảng, hãy chạy file tạo bảng trong thư mục migrations.
+            </div>
+          ) : (
+            <>
+              {/* ── MOBILE: Card Layout ── */}
+              <div className="sm:hidden divide-y divide-white/5">
+                {filteredTransactions.map((tx) => (
+                  <div key={tx.id} className="p-4 hover:bg-white/5 transition-colors space-y-3">
+                    {/* Row 1: User + Amount */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {tx.profiles ? (
+                          <>
+                            <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden shrink-0">
+                              {tx.profiles.avatar_url ? (
+                                <img src={tx.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-indigo-400 font-bold text-xs">{tx.profiles.full_name?.charAt(0) || 'U'}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-white/90 text-sm truncate">{tx.profiles.full_name}</div>
+                              <div className="text-[10px] text-white/40 truncate">{tx.profiles.email}</div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                              <span className="text-white/30 text-xs">?</span>
+                            </div>
+                            <span className="text-white/40 italic text-sm">Khách vãng lai</span>
+                          </>
+                        )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {tx.profiles ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden shrink-0">
-                            {tx.profiles.avatar_url ? (
-                              <img src={tx.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-indigo-400 font-bold text-xs">{tx.profiles.full_name?.charAt(0) || 'U'}</span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-white/90">{tx.profiles.full_name}</div>
-                            <div className="text-[10px] text-white/40">{tx.profiles.email}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-white/40 italic flex items-center gap-1">Khách vãng lai</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className={`font-bold flex items-center justify-end gap-1 ${tx.transfer_type === 'in' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <div className={`font-bold text-base flex items-center gap-1 shrink-0 ${tx.transfer_type === 'in' ? 'text-emerald-400' : 'text-red-400'}`}>
                         {tx.transfer_type === 'in' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                         {tx.transfer_type === 'in' ? '+' : '-'}
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tx.transfer_amount)}
+                        {new Intl.NumberFormat('vi-VN').format(tx.transfer_amount)}đ
                       </div>
-                    </td>
-                    <td className="px-4 py-3 max-w-xs truncate text-white/80" title={tx.content}>
-                      {tx.content}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-white/70">{tx.gateway}</div>
-                      <div className="text-[10px] text-white/30 truncate max-w-[120px]">#{tx.id} {tx.code ? `- ${tx.code}` : ''}</div>
-                    </td>
+                    </div>
+
+                    {/* Row 2: Content */}
+                    <div className="text-xs text-white/60 bg-white/5 rounded-lg px-3 py-2 break-all">
+                      {tx.content || '—'}
+                    </div>
+
+                    {/* Row 3: Time + Bank */}
+                    <div className="flex items-center justify-between text-[11px] text-white/40">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(tx.transaction_date).toLocaleString('vi-VN')}
+                      </span>
+                      <span>{tx.gateway} {tx.code ? `· ${tx.code}` : ''}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── DESKTOP: Table Layout ── */}
+              <table className="hidden sm:table w-full text-left text-sm text-white/70">
+                <thead className="text-xs uppercase bg-white/5 text-white/50 sticky top-0 z-10 backdrop-blur-md">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Thời gian</th>
+                    <th className="px-4 py-3 font-medium">Người gửi</th>
+                    <th className="px-4 py-3 font-medium text-right">Số tiền</th>
+                    <th className="px-4 py-3 font-medium">Nội dung</th>
+                    <th className="px-4 py-3 font-medium">Ngân hàng / Mã GD</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-white/5 transition-colors group">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-white/80">
+                          <Calendar className="w-4 h-4 text-white/40" />
+                          {new Date(tx.transaction_date).toLocaleString('vi-VN')}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {tx.profiles ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden shrink-0">
+                              {tx.profiles.avatar_url ? (
+                                <img src={tx.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-indigo-400 font-bold text-xs">{tx.profiles.full_name?.charAt(0) || 'U'}</span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-white/90">{tx.profiles.full_name}</div>
+                              <div className="text-[10px] text-white/40">{tx.profiles.email}</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-white/40 italic flex items-center gap-1">Khách vãng lai</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className={`font-bold flex items-center justify-end gap-1 ${tx.transfer_type === 'in' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {tx.transfer_type === 'in' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                          {tx.transfer_type === 'in' ? '+' : '-'}
+                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(tx.transfer_amount)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 max-w-xs truncate text-white/80" title={tx.content}>
+                        {tx.content}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-white/70">{tx.gateway}</div>
+                        <div className="text-[10px] text-white/30 truncate max-w-[120px]">#{tx.id} {tx.code ? `- ${tx.code}` : ''}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </div>
       </div>
     </div>

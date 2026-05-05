@@ -41,10 +41,15 @@ export async function POST(request) {
     // --- Tự động nhận diện user từ nội dung chuyển khoản ---
     let userId = null;
     if (content) {
-      // Tìm chữ YEUHOC [email/id] trong nội dung
-      const match = content.match(/YEUHOC\s+([A-Z0-9_.-]+)/i);
+      const upperContent = content.toUpperCase().replace(/\s+/g, ' ').trim();
+      
+      // Tìm pattern: YEUHOC <identifier> hoặc TKPYH1 <identifier> (legacy)
+      const match = upperContent.match(/(?:YEUHOC|TKPYH1)\s+([A-Z0-9_.@-]+)/i);
       if (match && match[1]) {
-        const identifier = match[1].toLowerCase();
+        let identifier = match[1].toLowerCase().trim();
+        
+        // Loại bỏ suffix không liên quan mà ngân hàng thêm vào (vd: "FT..." transaction codes)
+        identifier = identifier.replace(/\s+ft\d+.*$/i, '').trim();
         
         // 1. Tìm theo phần đầu của email (vd: identifier = 'buiki1777' -> email 'buiki1777@gmail.com')
         const { data: profiles } = await supabaseAdmin
@@ -54,8 +59,14 @@ export async function POST(request) {
           
         if (profiles && profiles.length === 1) {
           userId = profiles[0].id;
-        } else {
-          // 2. Nếu không tìm được email, thử tìm theo UUID (6 ký tự đầu)
+        } else if (profiles && profiles.length > 1) {
+          // Nếu có nhiều match, chọn exact match
+          const exact = profiles.find(p => p.email.split('@')[0].toLowerCase() === identifier);
+          if (exact) userId = exact.id;
+        }
+        
+        if (!userId) {
+          // 2. Thử tìm theo UUID prefix (6 ký tự đầu)
           const { data: idProfiles } = await supabaseAdmin
             .from('profiles')
             .select('id')
@@ -63,6 +74,23 @@ export async function POST(request) {
             
           if (idProfiles && idProfiles.length === 1) {
              userId = idProfiles[0].id;
+          }
+        }
+      }
+      
+      // 3. Fallback: nếu không match prefix, thử tìm email prefix bất kỳ trong nội dung
+      if (!userId) {
+        // Tách các từ trong nội dung, thử từng cái xem có match email nào không
+        const words = upperContent.split(/[\s.,-]+/).filter(w => w.length >= 4 && /^[A-Z0-9_]+$/i.test(w));
+        for (const word of words) {
+          if (['YEUHOC', 'TKPYH1', 'UNGHO', 'TPBANK', 'MBBANK', 'VIETCOMBANK', 'TECHCOMBANK'].includes(word)) continue;
+          const { data: fallbackProfiles } = await supabaseAdmin
+            .from('profiles')
+            .select('id, email')
+            .ilike('email', `${word.toLowerCase()}@%`);
+          if (fallbackProfiles && fallbackProfiles.length === 1) {
+            userId = fallbackProfiles[0].id;
+            break;
           }
         }
       }
