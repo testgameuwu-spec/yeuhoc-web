@@ -94,7 +94,7 @@ export default function TransactionManagement() {
                 setReidentifying(true);
                 setToast(null);
                 try {
-                  const res = await fetch('/yeuhoc/api/admin/reidentify-transactions', { method: 'POST' });
+                  const res = await fetch('/api/admin/reidentify-transactions', { method: 'POST' });
                   const result = await res.json();
                   if (result.success) {
                     setToast({

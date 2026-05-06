@@ -397,7 +397,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button 
-                onClick={() => window.location.href = '/yeuhoc/'} 
+                onClick={() => window.location.href = '/'} 
                 className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
                 title="Về trang chủ"
               >

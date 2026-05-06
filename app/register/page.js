@@ -105,7 +105,7 @@ export default function RegisterPage() {
 
     if (data && data.session) {
       // Auto logged in because email confirmation is disabled
-      window.location.href = '/yeuhoc/';
+      window.location.href = '/';
       return;
     }
 
@@ -196,7 +196,7 @@ export default function RegisterPage() {
 
     // Redirect after a short delay to show success animation
     setTimeout(() => {
-      window.location.href = '/yeuhoc/';
+      window.location.href = '/';
     }, 1500);
   };
 
@@ -581,7 +581,7 @@ export default function RegisterPage() {
               <p className="text-sm text-gray-500">
                 Đã có tài khoản?{' '}
                 <a
-                  href="/yeuhoc/login"
+                  href="/login"
                   className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors no-underline"
                 >
                   Đăng nhập <ArrowRight className="w-3.5 h-3.5 inline" />

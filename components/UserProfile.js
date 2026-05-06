@@ -39,7 +39,7 @@ export default function UserProfile() {
           if (profileData.is_banned) {
             alert('Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin để biết thêm chi tiết.');
             await supabase.auth.signOut();
-            window.location.href = '/yeuhoc/login';
+            window.location.href = '/login';
             return;
           }
           setProfile(profileData);
@@ -110,7 +110,7 @@ export default function UserProfile() {
     }
     setDropdownOpen(false);
     await supabase.auth.signOut();
-    window.location.href = '/yeuhoc/';
+    window.location.href = '/';
   };
 
   if (loading) {
@@ -121,13 +121,13 @@ export default function UserProfile() {
     return (
       <div className="flex items-center gap-2">
         <a
-          href="/yeuhoc/login"
+          href="/login"
           className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all no-underline border border-transparent hover:border-gray-200"
         >
           Đăng nhập
         </a>
         <a
-          href="/yeuhoc/register"
+          href="/register"
           className="px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all no-underline"
         >
           Đăng ký
@@ -174,11 +174,11 @@ export default function UserProfile() {
           </div>
 
           <div className="py-1">
-            <a href="/yeuhoc/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
+            <a href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
               <UserCircle className="w-4 h-4 text-gray-400" /> Hồ sơ
             </a>
             {isAdmin && (
-              <a href="/yeuhoc/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
+              <a href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
                 <Shield className="w-4 h-4 text-gray-400" /> Bảng điều khiển Admin
               </a>
             )}

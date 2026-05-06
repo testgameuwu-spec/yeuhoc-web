@@ -100,7 +100,7 @@ export default function OcrLogManagement({ showAlert, onTrackRequest }) {
     if (!requestId || cancellingRequestId) return;
     setCancellingRequestId(requestId);
     try {
-      const response = await fetch('/yeuhoc/api/admin/ai-exam/cancel', {
+      const response = await fetch('/api/admin/ai-exam/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId, cancelledBy: 'admin' }),
@@ -121,7 +121,7 @@ export default function OcrLogManagement({ showAlert, onTrackRequest }) {
     if (!requestId || deletingRequestId) return;
     setDeletingRequestId(requestId);
     try {
-      const response = await fetch('/yeuhoc/api/admin/ai-exam/logs/delete', {
+      const response = await fetch('/api/admin/ai-exam/logs/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId }),

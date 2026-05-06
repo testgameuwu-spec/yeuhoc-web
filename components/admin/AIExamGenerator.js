@@ -158,7 +158,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
         console.warn('[AIExamGenerator] OCR log success but structured_text is empty/null. question_count from log:', progressLog.question_count);
         // Try fetching structured_text via API fallback
         try {
-          const res = await fetch(`/yeuhoc/api/admin/ai-exam/logs/detail?requestId=${encodeURIComponent(progressLog.request_id)}`);
+          const res = await fetch(`/api/admin/ai-exam/logs/detail?requestId=${encodeURIComponent(progressLog.request_id)}`);
           if (res.ok) {
             const detail = await res.json();
             if (detail?.structured_text) {
@@ -337,7 +337,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
       const controller = new AbortController();
       scanAbortRef.current = controller;
 
-      const response = await fetch('/yeuhoc/api/admin/ai-exam/import', {
+      const response = await fetch('/api/admin/ai-exam/import', {
         method: 'POST',
         body: formData,
         signal: controller.signal,
@@ -409,7 +409,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
 
     try {
       scanAbortRef.current?.abort();
-      await fetch('/yeuhoc/api/admin/ai-exam/cancel', {
+      await fetch('/api/admin/ai-exam/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: scanRequestId, cancelledBy: 'user' }),
@@ -431,7 +431,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
   const handleDeleteCompletedProgress = async () => {
     if (!scanRequestId) return;
     try {
-      const response = await fetch('/yeuhoc/api/admin/ai-exam/logs/delete', {
+      const response = await fetch('/api/admin/ai-exam/logs/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId: scanRequestId }),

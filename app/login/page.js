@@ -49,7 +49,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = '/yeuhoc/';
+    window.location.href = '/';
   };
 
   return (
@@ -145,7 +145,7 @@ export default function LoginPage() {
               <p className="text-sm text-gray-500">
                 Chưa có tài khoản?{' '}
                 <a
-                  href="/yeuhoc/register"
+                  href="/register"
                   className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors no-underline"
                 >
                   Đăng ký ngay <ArrowRight className="w-3.5 h-3.5 inline" />

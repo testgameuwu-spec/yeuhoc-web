@@ -137,7 +137,7 @@ function ProfilePageInner() {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error || !session?.user) {
-          if (isMounted) window.location.href = '/yeuhoc/login';
+          if (isMounted) window.location.href = '/login';
           return;
         }
 
@@ -157,7 +157,7 @@ function ProfilePageInner() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
       if (event === 'SIGNED_OUT') {
-        window.location.href = '/yeuhoc/login';
+        window.location.href = '/login';
       } else if (event === 'SIGNED_IN' && session?.user) {
         // Dự phòng trường hợp getSession() bị miss
         // loadData sẽ tự kiểm tra dataLoadedRef để không fetch 2 lần
@@ -342,7 +342,7 @@ function ProfilePageInner() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/yeuhoc/login';
+    window.location.href = '/login';
   };
 
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
