@@ -72,17 +72,17 @@ export default function FilterBar({
         </div>
 
         {/* Row 2: Advanced toggle + Sort — always visible, never cut off */}
-        <div className="flex items-center justify-between gap-2 pt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
           <button
             onClick={() => setShowAdvanced(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap
+            className={`flex w-full sm:w-auto items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap
               ${showAdvanced ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-200 hover:text-indigo-600'}`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             Lọc nâng cao
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2">
             {hasFilter && (
               <span className="text-xs text-indigo-500 font-medium whitespace-nowrap">{resultCount} kết quả</span>
             )}
@@ -90,7 +90,7 @@ export default function FilterBar({
               <select
                 value={sortOrder || 'default'}
                 onChange={e => onSortOrder(e.target.value)}
-                className="pl-3 pr-8 py-1.5 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-600 focus:outline-none focus:border-indigo-400 cursor-pointer appearance-none min-w-[110px]"
+                className="min-w-0 flex-1 sm:flex-none pl-3 pr-8 py-1.5 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-600 focus:outline-none focus:border-indigo-400 cursor-pointer appearance-none sm:min-w-[110px]"
                 style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa3b2' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
               >
                 <option value="default">Mặc định</option>
@@ -153,14 +153,14 @@ export default function FilterBar({
 
       {/* Active filter indicators (inline, minimal) */}
       {hasFilter && !showAdvanced && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border-t border-indigo-100">
-          <span className="text-xs text-indigo-600 font-medium">Đang lọc:</span>
-          {selSubject && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selSubject}</span>}
-          {selType && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selType}</span>}
-          {selYear && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selYear}</span>}
-          {search && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{`"${search}"`}</span>}
-          <span className="text-xs text-indigo-500 ml-auto font-medium">{resultCount} kết quả</span>
-          <button onClick={onClear} className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-0.5 transition-colors">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-4 py-2 bg-indigo-50 border-t border-indigo-100">
+          <span className="shrink-0 text-xs text-indigo-600 font-medium">Đang lọc:</span>
+          {selSubject && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selSubject}</span>}
+          {selType && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selType}</span>}
+          {selYear && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selYear}</span>}
+          {search && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{`"${search}"`}</span>}
+          <span className="shrink-0 text-xs text-indigo-500 ml-auto font-medium">{resultCount} kết quả</span>
+          <button onClick={onClear} className="shrink-0 text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-0.5 transition-colors">
             <X className="w-3 h-3" /> Xóa
           </button>
         </div>

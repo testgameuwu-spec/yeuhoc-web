@@ -5,17 +5,27 @@ import { useState, useEffect, useRef } from 'react';
 export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true, compact = false }) {
     const [secondsLeft, setSecondsLeft] = useState(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
     const intervalRef = useRef(null);
+    const lastTickSentRef = useRef(secondsLeft);
+    const onTickRef = useRef(onTick);
 
     useEffect(() => {
+        onTickRef.current = onTick;
+    }, [onTick]);
+
+    useEffect(() => {
+        const nextSeconds = initialSeconds !== null ? initialSeconds : initialMinutes * 60;
+        if (lastTickSentRef.current === nextSeconds) return;
+
         const timer = setTimeout(() => {
-            setSecondsLeft(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
+            setSecondsLeft(prev => prev === nextSeconds ? prev : nextSeconds);
         }, 0);
         return () => clearTimeout(timer);
     }, [initialMinutes, initialSeconds]);
 
     useEffect(() => {
-        if (onTick) onTick(secondsLeft);
-    }, [onTick, secondsLeft]);
+        lastTickSentRef.current = secondsLeft;
+        if (onTickRef.current) onTickRef.current(secondsLeft);
+    }, [secondsLeft]);
 
     useEffect(() => {
         if (!isRunning) { clearInterval(intervalRef.current); return; }

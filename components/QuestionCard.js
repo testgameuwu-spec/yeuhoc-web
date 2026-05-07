@@ -157,7 +157,7 @@ export default function QuestionCard({
                                         style={{ display: 'none' }}
                                     />
                                     <span className={`et-mc-ltr`}>{letter}</span>
-                                    <span className="et-mc-text"><MathRenderer text={opt} /></span>
+                                    <div className="et-mc-text"><MathRenderer text={opt} /></div>
                                 </label>
                             );
                         })}
@@ -188,9 +188,10 @@ export default function QuestionCard({
                             className={`et-short-inp${showResult ? (isSACorrect ? ' correct' : ' wrong') : ''}`}
                         />
                         {showResult && !isSACorrect && answer && (
-                            <p style={{ marginTop: 6, fontSize: 13, color: 'var(--et-green)', fontWeight: 600 }}>
-                                Đáp án đúng: <MathRenderer text={answer} />
-                            </p>
+                            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--et-green)', fontWeight: 600 }}>
+                                <span>Đáp án đúng:</span>
+                                <MathRenderer text={answer} />
+                            </div>
                         )}
                     </div>
                 )}

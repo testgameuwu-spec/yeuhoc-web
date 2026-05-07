@@ -96,7 +96,7 @@ export default function Navbar() {
   }, [refreshReportBadge]);
 
   const linkClass = (active, extra = '') => (
-    `${extra} flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-all no-underline ${
+    `${extra} flex shrink-0 items-center gap-1.5 px-2 sm:px-3 py-1.5 min-h-9 rounded-lg text-sm font-medium transition-all no-underline ${
       active
         ? 'text-indigo-600 bg-indigo-50'
         : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
@@ -105,19 +105,19 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200" style={{ isolation: 'isolate' }}>
-      <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2 min-w-0">
         {/* ─── Left: Logo ─── */}
-        <Link href="/" className="flex items-center gap-2.5 no-underline group">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5 no-underline group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-shadow">
             <LogoIcon size={20} color="white" />
           </div>
-          <span className="font-extrabold text-[17px] text-gray-900 group-hover:text-indigo-600 transition-colors">
+          <span className="site-logo-text font-extrabold text-[17px] text-gray-900 group-hover:text-indigo-600 transition-colors">
             YeuHoc
           </span>
         </Link>
 
         {/* ─── Center: Nav Links ─── */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex min-w-0 items-center justify-center gap-0.5 sm:gap-1">
           <Link
             href="/"
             className={linkClass(normalizedPath === '/')}
@@ -126,14 +126,14 @@ export default function Navbar() {
             <span className="hidden sm:inline">Đề thi</span>
           </Link>
           <Link
-            href="/profile/phan-tich"
+            href="/profile/phan-tich/"
             className={linkClass(normalizedPath === '/profile/phan-tich')}
           >
             <BarChart2 className="w-4 h-4" />
             <span className="hidden sm:inline">Phân tích</span>
           </Link>
           <Link
-            href={unseenResolvedReports > 0 ? '/profile?tab=reports' : '/profile'}
+            href={unseenResolvedReports > 0 ? '/profile/?tab=reports' : '/profile/'}
             className={linkClass(normalizedPath === '/profile', 'relative')}
           >
             <User className="w-4 h-4" />
@@ -150,7 +150,7 @@ export default function Navbar() {
         </nav>
 
         {/* ─── Right: Auth State ─── */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <UserProfile />
         </div>
       </div>

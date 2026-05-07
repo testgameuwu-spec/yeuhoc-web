@@ -5,15 +5,20 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Mail, Camera, LogOut, Save, Shield, BookOpen, CalendarDays,
-  AlertCircle, CheckCircle2, Loader2, FileText, History, Activity, PauseCircle, PlayCircle, Flag
+  AlertCircle, CheckCircle2, Loader2, FileText, History, Activity, PauseCircle, PlayCircle, Flag,
+  ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
-import QuestionCard from '@/components/QuestionCard';
-import { ChevronRight, X } from 'lucide-react';
 import { markResolvedReportsAsSeen } from '@/lib/reportSeenStorage';
 import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
 import { formatTargetExamDate } from '@/lib/targetExamDisplay';
+
+const PROFILE_TABS = new Set(['overview', 'history', 'reports', 'info']);
+
+function getProfileTab(tab) {
+  return PROFILE_TABS.has(tab) ? tab : 'overview';
+}
 
 const REPORT_REASON_LABELS = {
   wrong_question: 'Sai đề / Đề bị lỗi',
@@ -27,16 +32,14 @@ const REPORT_REASON_LABELS = {
 function ProfilePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialActiveTab = searchParams.get('tab') === 'reports' ? 'reports' : 'overview';
+  const tabParam = searchParams.get('tab');
+  const initialActiveTab = getProfileTab(tabParam);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attempts, setAttempts] = useState([]);
-  const [selectedAttempt, setSelectedAttempt] = useState(null);
-  const [attemptDetails, setAttemptDetails] = useState(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Form fields
   const [fullName, setFullName] = useState('');
@@ -44,7 +47,7 @@ function ProfilePageInner() {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState(initialActiveTab); // overview | info | reports
+  const [activeTab, setActiveTab] = useState(initialActiveTab); // overview | history | reports | info
   const [pausedExams, setPausedExams] = useState([]);
   const [myReports, setMyReports] = useState([]);
   const [targetExams, setTargetExams] = useState([]);
@@ -229,53 +232,9 @@ function ProfilePageInner() {
     };
   }, [user?.id]);
 
-  const handleViewAttemptDetails = async (attempt) => {
-    setSelectedAttempt(attempt);
-    setLoadingDetails(true);
-    try {
-      const { data: examData } = await supabase
-        .from('exams')
-        .select('*, questions(*)')
-        .eq('id', attempt.exam_id)
-        .single();
-      
-      if (examData) {
-        // Map DB column names to JS property names for TF questions
-        const mappedExam = {
-          ...examData,
-          questions: (examData.questions || []).map(q => {
-            const tfSubs = q.tf_sub_questions || undefined;
-            const stmts = q.statements || undefined;
-            // Reconstruct TF answer object from tfSubQuestions
-            let answer = q.answer;
-            if (q.type === 'TF' && tfSubs && Array.isArray(tfSubs)) {
-              const obj = {};
-              tfSubs.forEach((sub, i) => {
-                const letter = String.fromCharCode(97 + i);
-                obj[letter] = sub.answer ? 'D' : 'S';
-              });
-              answer = obj;
-            }
-            return {
-              ...q,
-              answer,
-              tfSubQuestions: tfSubs,
-              statements: stmts,
-            };
-          })
-        };
-        setAttemptDetails({
-          exam: mappedExam,
-          answers: attempt.user_answers || {}
-        });
-      } else {
-        alert("Không tìm thấy chi tiết đề thi.");
-      }
-    } catch (e) {
-      alert("Lỗi khi tải chi tiết đề thi.");
-    } finally {
-      setLoadingDetails(false);
-    }
+  const handleViewAttemptDetails = (attempt) => {
+    if (!attempt?.id) return;
+    router.push(`/profile/history/${attempt.id}/`);
   };
 
   const handleAvatarUpload = async (e) => {
@@ -504,6 +463,14 @@ function ProfilePageInner() {
                 <Activity className="w-4 h-4" /> Tổng quan
               </button>
               <button
+                onClick={() => setActiveTab('history')}
+                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <History className="w-4 h-4" /> Lịch sử làm bài
+              </button>
+              <button
                 onClick={() => setActiveTab('reports')}
                 className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
                   activeTab === 'reports' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -579,9 +546,17 @@ function ProfilePageInner() {
                       {/* Recent Exams */}
                       {recentAttempts.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider flex items-center gap-2">
-                            <History className="w-4 h-4 text-indigo-500" /> 5 Đề thi gần nhất
-                          </h4>
+                          <div className="mb-3 flex items-center justify-between gap-3">
+                            <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
+                              <History className="w-4 h-4 text-indigo-500" /> 5 Đề thi gần nhất
+                            </h4>
+                            <button
+                              onClick={() => setActiveTab('history')}
+                              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                            >
+                              Xem tất cả
+                            </button>
+                          </div>
                           <div className="space-y-3">
                             {recentAttempts.map((attempt, index) => (
                                 <div key={attempt.id || index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4">
@@ -625,6 +600,57 @@ function ProfilePageInner() {
                     </div>
                   );
                 })()}
+              </div>
+            ) : activeTab === 'history' ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
+                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+                  <History className="w-5 h-5 text-indigo-500" />
+                  Lịch sử làm bài
+                </h3>
+                <p className="text-xs text-gray-400 mb-6">Xem lại các bài thi đã nộp và chi tiết từng câu trả lời</p>
+
+                {attempts.length > 0 ? (
+                  <div className="space-y-3">
+                    {attempts.map((attempt, index) => (
+                      <div
+                        key={attempt.id || index}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-gray-500 mt-1">
+                            <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                          </div>
+                        </div>
+                        <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-4 text-sm flex-shrink-0">
+                          <div className="text-center">
+                            <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
+                            <p className="font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</p>
+                          </div>
+                          <div className="w-px h-8 bg-gray-200"></div>
+                          <div className="text-center">
+                            <p className="text-xs text-gray-400 mb-0.5">Đúng</p>
+                            <p className="font-bold text-gray-900">{attempt.correct_answers}/{attempt.total_questions}</p>
+                          </div>
+                          <button
+                            onClick={() => handleViewAttemptDetails(attempt)}
+                            className="ml-0 sm:ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
+                          >
+                            Chi tiết <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                    <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500 font-medium">Bạn chưa có lịch sử làm bài</p>
+                    <p className="text-xs text-gray-400 mt-1">Sau khi nộp bài, kết quả sẽ xuất hiện tại đây.</p>
+                  </div>
+                )}
               </div>
             ) : activeTab === 'reports' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
@@ -836,9 +862,6 @@ function ProfilePageInner() {
                           </label>
                         );
                       })}
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        Kỳ thi đã tắt active vẫn được giữ ở đây để bạn có thể bỏ chọn.
-                      </p>
                     </div>
                   ) : (
                     <div className="mt-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
@@ -910,60 +933,6 @@ function ProfilePageInner() {
           </div>
         </div>
       </div>
-
-      {/* Attempt Details Modal */}
-      {selectedAttempt && (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-[#f8f9fb] animate-fadeIn">
-          {/* Header */}
-          <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                Chi tiết bài làm: {selectedAttempt.exams?.title}
-              </h2>
-              <div className="text-sm text-gray-500 flex items-center gap-4 mt-1">
-                <span>Điểm: <span className="font-bold text-indigo-600">{selectedAttempt.score?.toFixed(1)}</span></span>
-                <span>Số câu đúng: <span className="font-bold text-green-600">{selectedAttempt.correct_answers}/{selectedAttempt.total_questions}</span></span>
-                <span>Thời gian: {Math.floor(selectedAttempt.time_spent / 60)}p {selectedAttempt.time_spent % 60}s</span>
-              </div>
-            </div>
-            <button
-              onClick={() => { setSelectedAttempt(null); setAttemptDetails(null); }}
-              className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
-            <div className="max-w-4xl mx-auto">
-              {loadingDetails ? (
-                <div className="py-20 flex justify-center">
-                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                </div>
-              ) : attemptDetails?.exam?.questions ? (
-                <div className="space-y-6">
-                  {attemptDetails.exam.questions.map((q, i) => (
-                    <QuestionCard
-                      key={q.id || i}
-                      question={q}
-                      index={i}
-                      selectedAnswer={attemptDetails.answers[q.id] || (q.type === 'TF' ? {} : '')}
-                      onAnswerChange={() => {}}
-                      showResult
-                      disabled
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20 text-gray-500">
-                  Không có dữ liệu chi tiết cho đề thi này.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

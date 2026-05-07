@@ -66,8 +66,8 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
   const content = (
     <>
       {/* Badges */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap gap-1.5">
           <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${sm.bg} ${sm.color}`}>
             {exam.subject}
           </span>
@@ -79,7 +79,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
       </div>
 
       {/* Title */}
-      <p className="text-sm font-bold text-gray-900 leading-snug m-0">
+      <p className="text-sm font-bold text-gray-900 leading-snug m-0 break-words">
         {exam.title}
       </p>
 
@@ -89,7 +89,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
           <Clock className="w-3.5 h-3.5" /> {exam.duration} phút
         </span>
         <span className="text-xs text-gray-500">{totalQ} câu</span>
-        <div className="flex gap-1.5 ml-auto">
+        <div className="flex flex-wrap gap-1.5 sm:ml-auto">
           {mcqCount > 0 && <QBadge label={`${mcqCount} MCQ`} className="bg-indigo-100 text-indigo-700" />}
           {tfCount  > 0 && <QBadge label={`${tfCount} TF`}   className="bg-violet-100 text-violet-700" />}
           {saCount  > 0 && <QBadge label={`${saCount} SA`}   className="bg-cyan-100 text-cyan-700" />}

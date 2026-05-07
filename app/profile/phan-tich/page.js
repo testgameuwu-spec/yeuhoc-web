@@ -1146,7 +1146,12 @@ export default function PersonalAnalysisPage() {
             {stats.recentAttempts.length > 0 && (
               <div className="grid gap-3 border-t border-slate-100 px-6 py-6 lg:grid-cols-2 sm:px-8">
                 {stats.recentAttempts.map((attempt) => (
-                  <div key={attempt.id} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
+                  <button
+                    key={attempt.id}
+                    type="button"
+                    onClick={() => router.push(`/profile/history/${attempt.id}/`)}
+                    className="flex w-full flex-col gap-3 rounded-xl bg-slate-50 px-4 py-3 text-left transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                  >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-extrabold text-slate-900">{attempt.title}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
@@ -1155,11 +1160,14 @@ export default function PersonalAnalysisPage() {
                         <span>{formatDateTime(attempt.createdAt)}</span>
                       </div>
                     </div>
-                    <div className="shrink-0 text-right">
+                    <div className="w-full shrink-0 text-left sm:w-auto sm:text-right">
                       <div className="text-lg font-extrabold text-blue-600">{formatAttemptResult(attempt, activeExamKey)}</div>
-                      <div className="text-xs font-semibold text-slate-400">{formatMinutes(attempt.timeSpent)}</div>
+                      <div className="flex items-center justify-start gap-1 text-xs font-semibold text-slate-400 sm:justify-end">
+                        {formatMinutes(attempt.timeSpent)}
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

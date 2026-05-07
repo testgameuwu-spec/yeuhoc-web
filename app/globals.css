@@ -30,11 +30,34 @@
   --font-sans: var(--font-be-vietnam), system-ui, sans-serif;
 }
 
+html {
+  min-width: 0;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-be-vietnam), system-ui, sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 /* ─── Glassmorphism (browse page) ─── */
@@ -416,6 +439,8 @@ body {
   font-size: 13.5px;
   flex: 1;
   color: var(--et-gray-800);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* TF table */
@@ -466,6 +491,7 @@ body {
   font-size: 14px;
   font-family: inherit;
   width: 260px;
+  max-width: 100%;
   outline: none;
   transition: border-color .2s;
   color: var(--et-gray-800);
@@ -741,8 +767,8 @@ body {
 /* ─── Mobile FAB & Drawer ─── */
 .et-fab {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  right: max(24px, env(safe-area-inset-right));
   width: 56px;
   height: 56px;
   border-radius: 28px;
@@ -786,7 +812,7 @@ body {
   background: #fff;
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
-  padding: 24px;
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
   z-index: 1000;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
@@ -1130,6 +1156,131 @@ body {
 
 /* Practice Mode - Mobile overrides */
 @media (max-width: 640px) {
+  .site-logo-text {
+    display: none;
+  }
+
+  .et-topbar {
+    height: 52px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .et-topbar > div:first-child svg {
+    width: 44px;
+    height: 44px;
+  }
+
+  .et-main {
+    max-height: calc(100dvh - 52px);
+    padding: 14px 12px 88px;
+  }
+
+  .et-exam-hd {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .et-section-hd {
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .et-section-hd-badge {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .et-q-card {
+    border-radius: 12px;
+    scroll-margin-top: 64px;
+  }
+
+  .et-q-card-hd {
+    gap: 8px;
+    padding: 9px 12px;
+  }
+
+  .et-q-badge {
+    min-width: 0;
+  }
+
+  .et-q-type-badge {
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .et-q-card-body {
+    padding: 13px 12px;
+  }
+
+  .et-q-text {
+    font-size: 14px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+
+  .et-mc-opt {
+    align-items: flex-start;
+    gap: 9px;
+    padding: 10px 11px;
+  }
+
+  .et-ds-tbl {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .et-ds-tbl td {
+    min-width: 72px;
+  }
+
+  .et-ds-tbl td:first-child {
+    min-width: 180px;
+  }
+
+  .et-short-inp {
+    width: 100%;
+  }
+
+  .et-btn-outline {
+    min-height: 40px;
+  }
+
+  .et-fab {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .et-drawer {
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .et-nav-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .et-nav-btn {
+    min-height: 38px;
+  }
+
+  .auth-card {
+    padding: 24px 18px;
+  }
+
+  .auth-input-wrap {
+    min-width: 0;
+  }
+
   .practice-card-wrap {
     font-size: 1em !important;
   }
@@ -1180,10 +1331,17 @@ body {
   }
 }
 
+@media (max-width: 380px) {
+  .et-nav-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 /* ─── Markdown Content Styles ─── */
 .markdown-content {
   display: inline-block;
   width: 100%;
+  overflow-wrap: anywhere;
 }
 .markdown-content p {
   margin-bottom: 0.5em;

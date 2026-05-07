@@ -58,7 +58,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, vari
   const infoStyle = isDark ? 'text-white/30' : 'text-gray-400';
 
   return (
-    <div className="flex items-center justify-center gap-1.5">
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
       {/* Previous */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
@@ -95,7 +95,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, vari
       </button>
 
       {/* Page info */}
-      <span className={`text-xs ml-3 ${infoStyle}`}>
+      <span className={`w-full sm:w-auto text-center text-xs sm:ml-3 ${infoStyle}`}>
         Trang {currentPage}/{totalPages}
       </span>
     </div>

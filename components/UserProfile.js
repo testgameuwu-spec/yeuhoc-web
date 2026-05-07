@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Shield,
   UserCircle,
+  History,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -120,16 +121,16 @@ export default function UserProfile() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <a
-          href="/login"
-          className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all no-underline border border-transparent hover:border-gray-200"
+          href="/login/"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all no-underline border border-transparent hover:border-gray-200"
         >
           Đăng nhập
         </a>
         <a
-          href="/register"
-          className="px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all no-underline"
+          href="/register/"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all no-underline"
         >
           Đăng ký
         </a>
@@ -146,7 +147,7 @@ export default function UserProfile() {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setDropdownOpen(!dropdownOpen); }}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-xl text-sm font-medium bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all cursor-pointer relative z-[60]"
+        className="flex min-w-0 items-center gap-2 px-1.5 sm:px-2 py-1.5 rounded-xl text-sm font-medium bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all cursor-pointer relative z-[60]"
       >
         {avatarUrl ? (
           <Image src={avatarUrl} alt={displayName} width={28} height={28} className="w-7 h-7 rounded-full object-cover ring-2 ring-white" />
@@ -161,7 +162,7 @@ export default function UserProfile() {
 
       {dropdownOpen && (
         <div
-          className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-gray-200 shadow-2xl py-1.5 z-[9999]"
+          className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-1rem)] rounded-xl bg-white border border-gray-200 shadow-2xl py-1.5 z-[9999]"
           style={{ animation: 'fadeIn 0.15s ease-out, slideUp 0.2s ease-out' }}
         >
           <div className="px-4 py-3 border-b border-gray-100">
@@ -177,6 +178,9 @@ export default function UserProfile() {
           <div className="py-1">
             <a href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
               <UserCircle className="w-4 h-4 text-gray-400" /> Hồ sơ
+            </a>
+            <a href="/profile/?tab=history" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
+              <History className="w-4 h-4 text-gray-400" /> Lịch sử làm bài
             </a>
             {isAdmin && (
               <a href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">

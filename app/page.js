@@ -11,7 +11,7 @@ import Pagination from '@/components/Pagination';
 import DonateWidget from '@/components/DonateWidget';
 import { getAllFolders, getPublishedExams } from '@/lib/examStore';
 import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
-import { findNearestTargetExam, formatTargetExamDate, getCountdownSentence, getStableWish } from '@/lib/targetExamDisplay';
+import { findNearestTargetExam, formatTargetExamDate, getCountdownSentence, getRandomWish } from '@/lib/targetExamDisplay';
 import { supabase } from '@/lib/supabase';
 
 const ITEMS_PER_PAGE = 9;
@@ -125,6 +125,7 @@ export default function HomePage() {
   const [targetModalOpen, setTargetModalOpen] = useState(false);
   const [targetSaving, setTargetSaving] = useState(false);
   const [targetError, setTargetError] = useState('');
+  const [wish, setWish] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selYear, setSelYear] = useState(null);
@@ -200,12 +201,14 @@ export default function HomePage() {
         setSelectedTargetExams([]);
         setTargetDraftIds([]);
         setTargetModalOpen(false);
+        setWish('');
         setTargetDataLoaded(true);
         setAuthLoaded(true);
         router.push('/login');
         return;
       }
 
+      setWish(getRandomWish());
       await loadTargetData(sessionUser);
       if (isMounted) setAuthLoaded(true);
     };
@@ -393,25 +396,25 @@ export default function HomePage() {
             <div key={folder.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
               <div
                 onClick={() => setExpandedFolders((prev) => ({ ...prev, [folder.id]: !prev[folder.id] }))}
-                className="flex items-center justify-between p-4 sm:p-5 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100"
+                className="flex items-center justify-between gap-3 p-4 sm:p-5 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100"
               >
-                <div className="flex items-center gap-3">
-                  <button className="p-1 rounded-md text-gray-400 hover:bg-gray-200">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
+                  <button className="shrink-0 p-1 rounded-md text-gray-400 hover:bg-gray-200">
                     {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                   </button>
                   {folder.isRoot ? (
-                    <Folder className="w-5 h-5 text-gray-400" />
+                    <Folder className="w-5 h-5 shrink-0 text-gray-400" />
                   ) : isLocked ? (
-                    <Lock className="w-5 h-5 text-gray-400" />
+                    <Lock className="w-5 h-5 shrink-0 text-gray-400" />
                   ) : (
-                    <Folder className="w-5 h-5 text-indigo-500" fill="currentColor" fillOpacity={0.2} />
+                    <Folder className="w-5 h-5 shrink-0 text-indigo-500" fill="currentColor" fillOpacity={0.2} />
                   )}
-                  <h2 className="text-lg font-bold text-gray-800">{folder.name}</h2>
-                  <span className="text-xs font-semibold text-gray-500 bg-gray-200 px-2.5 py-1 rounded-full">
+                  <h2 className="min-w-0 max-w-full truncate text-base sm:text-lg font-bold text-gray-800">{folder.name}</h2>
+                  <span className="shrink-0 text-xs font-semibold text-gray-500 bg-gray-200 px-2.5 py-1 rounded-full">
                     {folder.exams.length} đề
                   </span>
                   {isLocked && (
-                    <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-md ml-2 flex items-center gap-1">
+                    <span className="shrink-0 text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-md flex items-center gap-1">
                       <Lock className="w-3 h-3" /> Đã khoá
                     </span>
                   )}
@@ -439,7 +442,6 @@ export default function HomePage() {
   const content = renderContent();
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'bạn';
   const nearestTargetExam = findNearestTargetExam(selectedTargetExams);
-  const wish = getStableWish(user?.id || displayName);
 
   if (!authLoaded || !user || !targetDataLoaded) {
     return (
@@ -533,7 +535,7 @@ function ContinueExamsPanel({ items, loading }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-black text-gray-950">Tiếp tục làm bài</h2>
-          <p className="text-xs font-medium text-gray-500 mt-1">Các đề đang làm dở của bạn</p>
+          <p className="text-xs font-medium text-gray-500 mt-1">Các đề bạn chưa làm xong:</p>
         </div>
         {items.length > 0 && (
           <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
