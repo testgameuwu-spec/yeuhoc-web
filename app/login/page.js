@@ -34,17 +34,39 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
+    const response = await fetch('/api/auth/login/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      setError(
+        response.status === 429
+          ? 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau 15 phút.'
+          : result.error || 'Không thể đăng nhập. Vui lòng thử lại.'
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (!result.session?.access_token || !result.session?.refresh_token) {
+      setError('Không thể tạo phiên đăng nhập. Vui lòng thử lại.');
+      setLoading(false);
+      return;
+    }
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: result.session.access_token,
+      refresh_token: result.session.refresh_token,
     });
 
-    if (authError) {
-      setError(
-        authError.message === 'Invalid login credentials'
-          ? 'Email hoặc mật khẩu không đúng.'
-          : authError.message
-      );
+    if (sessionError) {
+      setError(sessionError.message);
       setLoading(false);
       return;
     }
