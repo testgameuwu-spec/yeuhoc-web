@@ -361,7 +361,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <main className="min-h-screen flex" style={{ background: '#0a0a1e' }}>
+    <main className="min-h-screen overflow-x-hidden" style={{ background: '#0a0a1e' }}>
       {/* Mobile overlay backdrop */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setMobileMenuOpen(false)} />
@@ -371,15 +371,16 @@ export default function AdminDashboard() {
       <div className={`md:block ${mobileMenuOpen ? 'block' : 'hidden'}`}>
         <AdminSidebar
           activeTab={activeTab}
+          onClose={() => setMobileMenuOpen(false)}
           onTabChange={(tab) => { setActiveTab(tab); setMobileMenuOpen(false); }}
         />
       </div>
 
-      <div className={`flex-1 transition-all duration-300 md:ml-64 ml-0`}>
+      <div className="min-w-0 w-full transition-all duration-300 md:ml-64">
         {/* Top bar */}
         <header className="sticky top-0 z-30 glass border-b border-white/8" style={{ isolation: 'isolate' }}>
-          <div className="px-4 sm:px-6 md:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="px-3 sm:px-6 md:px-8 min-h-14 sm:min-h-16 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               {/* Mobile menu button */}
               <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-colors md:hidden">
                 <Menu className="w-5 h-5" />
@@ -389,7 +390,7 @@ export default function AdminDashboard() {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               )}
-              <h1 className="text-sm sm:text-lg font-bold text-white truncate">
+              <h1 className="text-sm sm:text-lg font-bold text-white truncate min-w-0">
                 {activeTab === 'overview' ? 'Tổng quan hệ thống' :
                  activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
@@ -400,10 +401,10 @@ export default function AdminDashboard() {
                  'Quản lý người dùng'}
               </h1>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
               <button 
                 onClick={() => window.location.href = '/'} 
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
                 title="Về trang chủ"
               >
                 <BookOpen className="w-4 h-4" />
@@ -415,7 +416,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* Main content */}
-        <div className="p-3 sm:p-5 md:p-8 animate-fadeIn">
+        <div className="w-full max-w-full p-3 sm:p-5 md:p-8 animate-fadeIn">
           {renderContent()}
         </div>
       </div>

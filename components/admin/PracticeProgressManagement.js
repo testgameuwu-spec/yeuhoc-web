@@ -185,14 +185,14 @@ export default function PracticeProgressManagement() {
   const refreshActiveMode = mode === 'practice' ? fetchProgress : fetchExamAttempts;
 
   return (
-    <div className="space-y-6">
-      <div className="glass rounded-2xl border border-white/10 p-5 sm:p-6 relative overflow-hidden">
+    <div className="space-y-4 sm:space-y-6 min-w-0">
+      <div className="glass rounded-2xl border border-white/10 p-4 sm:p-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5">
           {mode === 'practice' ? <Activity className="w-48 h-48" /> : <Trophy className="w-48 h-48" />}
         </div>
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
               {mode === 'practice'
                 ? <Activity className="w-5 h-5 text-emerald-400" />
@@ -207,13 +207,13 @@ export default function PracticeProgressManagement() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="inline-flex p-1 rounded-xl bg-black/20 border border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-black/20 border border-white/10 w-full sm:w-auto">
               {MODES.map(item => (
                 <button
                   key={item.key}
                   onClick={() => setMode(item.key)}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
                     mode === item.key
                       ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
                       : 'text-white/50 hover:text-white hover:bg-white/5'
@@ -226,7 +226,7 @@ export default function PracticeProgressManagement() {
             <button
               onClick={refreshActiveMode}
               disabled={loading}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white text-sm font-medium transition-colors w-full sm:w-auto"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Làm mới
@@ -251,7 +251,7 @@ export default function PracticeProgressManagement() {
       )}
 
       {mode === 'practice' ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="glass rounded-2xl border border-white/10 p-4">
             <p className="text-xs text-white/40 mb-1">Tổng tiến trình</p>
             <p className="text-2xl font-black text-white">{totalRows}</p>
@@ -270,7 +270,7 @@ export default function PracticeProgressManagement() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="glass rounded-2xl border border-white/10 p-4">
             <p className="text-xs text-white/40 mb-1">Tổng lượt thi</p>
             <p className="text-2xl font-black text-white">{totalAttempts}</p>
@@ -290,7 +290,7 @@ export default function PracticeProgressManagement() {
         </div>
       )}
 
-      <div className="glass rounded-2xl border border-white/10 overflow-hidden flex flex-col" style={{ maxHeight: '72vh', minHeight: 360 }}>
+      <div className="glass rounded-2xl border border-white/10 overflow-hidden flex flex-col min-w-0 md:max-h-[72vh]" style={{ minHeight: 360 }}>
         <div className="p-3 sm:p-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center gap-3 bg-white/5">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -306,7 +306,7 @@ export default function PracticeProgressManagement() {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="px-3 py-2 bg-black/20 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500/50"
+              className="px-3 py-2 bg-black/20 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500/50 w-full sm:w-auto"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="in_progress">Đang ôn luyện</option>
@@ -315,7 +315,7 @@ export default function PracticeProgressManagement() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           {loading ? (
             <div className="py-16 text-center">
               <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -334,12 +334,12 @@ export default function PracticeProgressManagement() {
                   const currentQuestion = totalQuestions > 0 ? Math.min((row.current_question || 0) + 1, totalQuestions) : 0;
 
                   return (
-                    <div key={row.id} className="p-4 hover:bg-white/[0.03] transition-colors">
-                      <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+                    <div key={row.id} className="p-4 hover:bg-white/[0.03] transition-colors min-w-0">
+                      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,520px)] 2xl:items-center">
                         <StudentCell row={row} />
                         <ExamCell row={row} />
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 xl:w-[520px]">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 min-w-0">
                           <Metric label="Đã xem" value={`${revealedCount}/${totalQuestions}`} className="text-emerald-400 font-black" />
                           <Metric label="Đã trả lời" value={`${answeredCount}/${totalQuestions}`} />
                           <Metric label="Câu hiện tại" value={`${currentQuestion}/${totalQuestions}`} />
@@ -377,12 +377,12 @@ export default function PracticeProgressManagement() {
                 const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
 
                 return (
-                  <div key={row.id} className="p-4 hover:bg-white/[0.03] transition-colors">
-                    <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+                  <div key={row.id} className="p-4 hover:bg-white/[0.03] transition-colors min-w-0">
+                    <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,620px)] 2xl:items-center">
                       <StudentCell row={row} />
                       <ExamCell row={row} />
 
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 xl:w-[620px]">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 min-w-0">
                         <Metric label="Điểm" value={score.toFixed(1)} className="text-emerald-400 font-black" />
                         <Metric label="Đúng" value={`${correct}/${total}`} />
                         <Metric label="Tỉ lệ" value={`${accuracy}%`} />
@@ -418,7 +418,7 @@ export default function PracticeProgressManagement() {
 }
 
 const StudentCell = ({ row }) => (
-  <div className="flex items-center gap-3 min-w-0 xl:w-72">
+  <div className="flex items-center gap-3 min-w-0">
     {row.profile?.avatar_url ? (
       <Image
         src={row.profile.avatar_url}
@@ -452,9 +452,9 @@ const ExamCell = ({ row }) => (
 );
 
 const Metric = ({ label, value, className = 'text-white/90 font-bold', compact = false }) => (
-  <div>
+  <div className="min-w-0">
     <p className="text-xs text-white/30 mb-0.5">{label}</p>
-    <p className={`${compact ? 'text-xs' : 'text-sm'} ${className}`}>{value}</p>
+    <p className={`${compact ? 'text-xs leading-tight' : 'text-sm'} ${className} break-words`}>{value}</p>
   </div>
 );
 

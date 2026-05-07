@@ -2,7 +2,7 @@
 
 import {
   BookOpen, FileText, Settings, Users,
-  LayoutDashboard, Trophy, AlertTriangle, ScanText, CreditCard
+  LayoutDashboard, Trophy, AlertTriangle, ScanText, CreditCard, X
 } from 'lucide-react';
 import LogoIcon from '../LogoIcon';
 
@@ -17,9 +17,9 @@ const NAV_ITEMS = [
   { key: 'transactions', label: 'Giao dịch', icon: CreditCard },
 ];
 
-export default function AdminSidebar({ activeTab, onTabChange }) {
+export default function AdminSidebar({ activeTab, onTabChange, onClose }) {
   return (
-    <aside className="fixed top-0 left-0 h-screen z-40 flex flex-col transition-all duration-300 border-r border-white/8 w-64"
+    <aside className="fixed top-0 left-0 h-dvh z-40 flex w-64 max-w-[84vw] flex-col overflow-hidden border-r border-white/8 transition-all duration-300"
       style={{ background: 'rgba(10, 10, 30, 0.95)', backdropFilter: 'blur(20px)' }}>
 
       {/* Logo */}
@@ -35,10 +35,17 @@ export default function AdminSidebar({ activeTab, onTabChange }) {
             <span className="block text-[10px] text-white/30 font-medium -mt-0.5">Admin Panel</span>
           </div>
         </div>
+        <button
+          onClick={onClose}
+          className="md:hidden p-2 rounded-xl hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+          aria-label="Đóng menu admin"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {NAV_ITEMS.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.key;
