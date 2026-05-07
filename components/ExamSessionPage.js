@@ -106,6 +106,7 @@ const createQuizProgressSnapshot = ({ answers, bookmarks, secondsLeft, currentQ,
   secondsLeft,
   currentQ: Number(currentQ) || 0,
   violationCount: Number(violationCount) || 0,
+  savedAt: new Date().toISOString(),
 });
 
 // ── Report Modal Component ──
@@ -290,7 +291,7 @@ const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert,
   );
 };
 
-export default function ExamSessionPage({ examId, shouldResume = false }) {
+export default function ExamSessionPage({ examId, shouldResume = false, shouldResumePractice = false }) {
 
   const router = useRouter();
 
@@ -325,6 +326,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
   const MAX_VIOLATIONS = 5;
   const isSubmittingRef = useRef(false);
   const resumeHandledRef = useRef(false);
+  const practiceResumeHandledRef = useRef(false);
   const exitViolationRecordedRef = useRef(false);
 
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
@@ -403,6 +405,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     let cancelled = false;
     async function init() {
       resumeHandledRef.current = false;
+      practiceResumeHandledRef.current = false;
       setLoadingExam(true);
       setExamLoadError('');
       const ex = await getExamById(examId);
@@ -670,6 +673,71 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
       return localProgress;
     }
   };
+
+  useEffect(() => {
+    if (!shouldResumePractice || practiceResumeHandledRef.current || !user || !activeExam || typeof window === 'undefined') return;
+    practiceResumeHandledRef.current = true;
+    const examId = activeExam.id;
+    const userId = user.id;
+    const questionCount = realQuestions.length;
+
+    const resumeTimer = setTimeout(async () => {
+      let localProgress = null;
+      const localSaved = localStorage.getItem(getPracticeProgressKey(examId));
+      if (localSaved) {
+        try {
+          localProgress = JSON.parse(localSaved);
+        } catch {
+          localProgress = null;
+        }
+      }
+
+      let saved = localProgress;
+      try {
+        const { data, error } = await supabase
+          .from('practice_progress')
+          .select('answers, bookmarks, current_question, revealed_map, saved_at, updated_at')
+          .eq('user_id', userId)
+          .eq('exam_id', examId)
+          .maybeSingle();
+
+        if (error) {
+          console.warn('Practice progress table is not available:', error.message);
+        } else if (data) {
+          const remoteProgress = {
+            answers: data.answers || {},
+            bookmarks: data.bookmarks || [],
+            currentQ: data.current_question || 0,
+            practiceRevealed: data.revealed_map || {},
+            savedAt: data.updated_at || data.saved_at,
+          };
+
+          saved = !localProgress || new Date(remoteProgress.savedAt || 0) > new Date(localProgress.savedAt || 0)
+            ? remoteProgress
+            : localProgress;
+        }
+      } catch (error) {
+        console.warn('Practice progress load failed:', error);
+      }
+
+      const hasSavedProgress = saved && (
+        Object.keys(saved.answers || {}).length > 0 ||
+        Object.keys(saved.practiceRevealed || {}).length > 0 ||
+        (saved.currentQ || 0) > 0
+      );
+
+      if (!hasSavedProgress) return;
+      setAnswers(saved?.answers || {});
+      setBookmarks(new Set(saved?.bookmarks || []));
+      setCurrentQ(Math.min(Math.max(Number(saved?.currentQ) || 0, 0), Math.max(questionCount - 1, 0)));
+      setPracticeRevealed(saved?.practiceRevealed || {});
+      setIsAIChatOpen(false);
+      setQuizPhase('practice');
+      window.history.replaceState({}, '', window.location.pathname);
+    }, 0);
+
+    return () => clearTimeout(resumeTimer);
+  }, [activeExam, getPracticeProgressKey, realQuestions.length, shouldResumePractice, user]);
 
   const handleStartPractice = async () => {
     if (realQuestions.length === 0) {

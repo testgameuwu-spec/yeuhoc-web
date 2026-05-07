@@ -8,6 +8,7 @@ export default async function ExamDetailPage({ params, searchParams }) {
     <ExamSessionPage
       examId={id}
       shouldResume={query?.resume === '1'}
+      shouldResumePractice={query?.practiceResume === '1'}
     />
   );
 }
