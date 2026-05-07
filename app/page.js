@@ -932,7 +932,7 @@ export default function HomePage() {
         const s = typeof a === 'object' ? a : {};
         return Object.keys(qItem.answer).every(k => s[k] === qItem.answer[k]);
       }
-      return (a || '').toString().trim().toLowerCase() === (qItem.answer || '').toString().trim().toLowerCase();
+      return checkSAEquivalent(a, qItem.answer);
     };
 
     let isCorrect = checkCorrect(q, currentQ);
@@ -1827,7 +1827,7 @@ export default function HomePage() {
       else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
         const s = typeof ua === 'object' ? ua : {};
         ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-      } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+      } else ok = checkSAEquivalent(ua, q.answer);
       if (ok) correctCount++;
     });
     const pct = realQuestions.length > 0 ? Math.round((correctCount / realQuestions.length) * 100) : 0;
@@ -1998,7 +1998,7 @@ export default function HomePage() {
                 else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
                   const s = typeof ua === 'object' ? ua : {};
                   ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-                } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+                } else ok = checkSAEquivalent(ua, q.answer);
                 return (
                   <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
                     {i + 1}
@@ -2037,7 +2037,7 @@ export default function HomePage() {
                 else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
                   const s = typeof ua === 'object' ? ua : {};
                   ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-                } else ok = (ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase();
+                } else ok = checkSAEquivalent(ua, q.answer);
                 return (
                   <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => scrollToQ(i)}>
                     {i + 1}

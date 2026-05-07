@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle2, XCircle, RotateCcw, Star } from 'lucide-react';
+import { checkSAEquivalent } from '@/lib/mathUtils';
 
 // Score ring component
 function ScoreRing({ score, maxScore }) {
@@ -67,7 +68,7 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
             }
         } else {
             maxScore += scoringConfig ? scoringConfig.sa : 1;
-            if ((ua || '').trim().toLowerCase() === (q.answer || '').trim().toLowerCase()) {
+            if (checkSAEquivalent(ua, q.answer)) {
                 correct++;
                 score += scoringConfig ? scoringConfig.sa : 1;
             }
