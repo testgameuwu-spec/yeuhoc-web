@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { countUnseenResolvedReports } from '@/lib/reportSeenStorage';
 import LogoIcon from './LogoIcon';
 
+const SHOW_ANALYSIS_NAV_LINK = false;
+
 export default function Navbar() {
   const pathname = usePathname();
   const normalizedPath = pathname === '/' ? '/' : pathname?.replace(/\/$/, '');
@@ -125,13 +127,15 @@ export default function Navbar() {
             <Home className="w-4 h-4" />
             <span className="hidden sm:inline">Đề thi</span>
           </Link>
-          <Link
-            href="/profile/phan-tich"
-            className={linkClass(normalizedPath === '/profile/phan-tich')}
-          >
-            <BarChart2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Phân tích</span>
-          </Link>
+          {SHOW_ANALYSIS_NAV_LINK && (
+            <Link
+              href="/profile/phan-tich"
+              className={linkClass(normalizedPath === '/profile/phan-tich')}
+            >
+              <BarChart2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Phân tích</span>
+            </Link>
+          )}
           <Link
             href={unseenResolvedReports > 0 ? '/profile?tab=reports' : '/profile'}
             className={linkClass(normalizedPath === '/profile', 'relative')}

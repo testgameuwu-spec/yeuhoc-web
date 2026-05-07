@@ -31,6 +31,7 @@ import { supabase } from '@/lib/supabase';
 const SCORE_MAX = 10;
 const THPT_SUBJECT_ORDER = ['Toán', 'Lý', 'Hóa', 'Sinh', 'Anh'];
 const APTITUDE_EXAM_ORDER = ['HSA', 'TSA'];
+const ANALYSIS_PAGE_VISIBLE = false;
 
 function normalizeText(value) {
   return String(value || '')
@@ -657,7 +658,24 @@ function SuggestionsCard({
   );
 }
 
-export default function PersonalAnalysisPage() {
+function AnalysisPageDisabled() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/profile');
+  }, [router]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+        Đang chuyển về hồ sơ...
+      </div>
+    </div>
+  );
+}
+
+function AnalysisPageContent() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -972,4 +990,12 @@ export default function PersonalAnalysisPage() {
       </main>
     </div>
   );
+}
+
+export default function PersonalAnalysisPage() {
+  if (!ANALYSIS_PAGE_VISIBLE) {
+    return <AnalysisPageDisabled />;
+  }
+
+  return <AnalysisPageContent />;
 }
