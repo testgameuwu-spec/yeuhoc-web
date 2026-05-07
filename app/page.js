@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, ChevronRight, Folder, Lock } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Folder, Loader2, Lock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FilterBar from '@/components/FilterBar';
 import ExamCard from '@/components/ExamCard';
 import Pagination from '@/components/Pagination';
 import DonateWidget from '@/components/DonateWidget';
 import { getAllFolders, getPublishedExams } from '@/lib/examStore';
+import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
+import { findNearestTargetExam, formatTargetExamDate, getCountdownSentence, getStableWish } from '@/lib/targetExamDisplay';
 import { supabase } from '@/lib/supabase';
 
 const ITEMS_PER_PAGE = 9;
@@ -34,7 +36,15 @@ export default function HomePage() {
   const [expandedFolders, setExpandedFolders] = useState({ root: true });
   const [savedExams, setSavedExams] = useState(new Set());
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
+  const [targetDataLoaded, setTargetDataLoaded] = useState(false);
+  const [targetExams, setTargetExams] = useState([]);
+  const [selectedTargetExams, setSelectedTargetExams] = useState([]);
+  const [targetDraftIds, setTargetDraftIds] = useState([]);
+  const [targetModalOpen, setTargetModalOpen] = useState(false);
+  const [targetSaving, setTargetSaving] = useState(false);
+  const [targetError, setTargetError] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selYear, setSelYear] = useState(null);
@@ -62,20 +72,74 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadTargetData = async (sessionUser) => {
+      if (!sessionUser) return;
+      setTargetDataLoaded(false);
+      try {
+        const profilePromise = supabase
+          .from('profiles')
+          .select('full_name, username')
+          .eq('id', sessionUser.id)
+          .single();
+
+        const [profileRes, activeTargetsRes, selectedTargetsRes] = await Promise.allSettled([
+          profilePromise,
+          getTargetExams(),
+          getUserTargetExams(sessionUser.id),
+        ]);
+
+        if (!isMounted) return;
+
+        const activeTargets = activeTargetsRes.status === 'fulfilled' ? activeTargetsRes.value : [];
+        const selectedTargets = selectedTargetsRes.status === 'fulfilled' ? selectedTargetsRes.value : [];
+
+        if (activeTargetsRes.status === 'rejected') console.warn('Target exams fetch failed:', activeTargetsRes.reason);
+        if (selectedTargetsRes.status === 'rejected') console.warn('User target exams fetch failed:', selectedTargetsRes.reason);
+
+        setProfile(profileRes.status === 'fulfilled' ? profileRes.value.data : null);
+        setTargetExams(activeTargets);
+        setSelectedTargetExams(selectedTargets);
+        setTargetDraftIds(selectedTargets.map((exam) => exam.id));
+        setTargetModalOpen(selectedTargets.length === 0 && activeTargets.length > 0);
+      } finally {
+        if (isMounted) setTargetDataLoaded(true);
+      }
+    };
+
+    const applySession = async (session) => {
+      if (!isMounted) return;
+      const sessionUser = session?.user || null;
+      setUser(sessionUser);
+      setSavedExams(sessionUser ? readSavedExams(sessionUser.id) : new Set());
+
+      if (!sessionUser) {
+        setProfile(null);
+        setTargetExams([]);
+        setSelectedTargetExams([]);
+        setTargetDraftIds([]);
+        setTargetModalOpen(false);
+        setTargetDataLoaded(true);
+        setAuthLoaded(true);
+        router.push('/login');
+        return;
+      }
+
+      await loadTargetData(sessionUser);
+      if (isMounted) setAuthLoaded(true);
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-      setSavedExams(session?.user ? readSavedExams(session.user.id) : new Set());
-      setAuthLoaded(true);
-      if (!session?.user) router.push('/login');
+      applySession(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-      setSavedExams(session?.user ? readSavedExams(session.user.id) : new Set());
-      if (!session?.user) router.push('/login');
+      applySession(session);
     });
 
     return () => {
+      isMounted = false;
       if (subscription) subscription.unsubscribe();
     };
   }, [router]);
@@ -113,6 +177,36 @@ export default function HomePage() {
     setSelType(null);
     setSelSubject(null);
     resetBrowsePage();
+  };
+
+  const handleToggleTargetDraft = (targetId) => {
+    setTargetError('');
+    setTargetDraftIds((prev) => (
+      prev.includes(targetId)
+        ? prev.filter((id) => id !== targetId)
+        : [...prev, targetId]
+    ));
+  };
+
+  const handleSaveFirstTargets = async () => {
+    if (targetDraftIds.length === 0) {
+      setTargetError('Vui lòng chọn ít nhất một kỳ thi.');
+      return;
+    }
+
+    setTargetSaving(true);
+    setTargetError('');
+    try {
+      await syncUserTargetExams(user.id, targetDraftIds);
+      const nextTargets = await getUserTargetExams(user.id);
+      setSelectedTargetExams(nextTargets);
+      setTargetDraftIds(nextTargets.map((exam) => exam.id));
+      setTargetModalOpen(false);
+    } catch (error) {
+      setTargetError(error.message || 'Không thể lưu kỳ thi mục tiêu.');
+    } finally {
+      setTargetSaving(false);
+    }
   };
 
   const renderExamCard = (exam, isLocked) => (
@@ -195,8 +289,11 @@ export default function HomePage() {
   };
 
   const content = renderContent();
+  const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'bạn';
+  const nearestTargetExam = findNearestTargetExam(selectedTargetExams);
+  const wish = getStableWish(user?.id || displayName);
 
-  if (!authLoaded || !user) {
+  if (!authLoaded || !user || !targetDataLoaded) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-gray-500 text-base font-medium">Đang tải...</div>
@@ -210,20 +307,13 @@ export default function HomePage() {
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 flex flex-col xl:flex-row justify-center gap-6 xl:gap-8">
         <div className="w-full max-w-5xl flex flex-col gap-6 min-w-0">
-          <div className="relative bg-gradient-to-r from-indigo-50 to-white border border-indigo-100 rounded-3xl p-6 sm:p-8 overflow-hidden shadow-sm">
-            <div className="relative z-10 max-w-xl">
-              <h1 className="text-2xl sm:text-3xl font-black text-indigo-950 mb-2 flex items-center gap-2">
-                Kho đề thi luyện tập <span className="text-2xl">📚</span>
-              </h1>
-              <p className="text-sm sm:text-base text-indigo-800/80 mb-3 font-medium">
-                {allExams.length} đề — THPT Quốc gia · HSA · TSA
-              </p>
-              <p className="text-sm text-indigo-900/60 leading-relaxed max-w-md">
-                Luyện tập với kho đề đa dạng, bám sát cấu trúc đề thi thật, giúp bạn nâng cao kỹ năng và tự tin chinh phục kỳ thi.
-              </p>
-            </div>
-            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-indigo-50/50 to-transparent z-0 pointer-events-none" />
-          </div>
+          <HomeGreeting
+            displayName={displayName}
+            nearestTargetExam={nearestTargetExam}
+            selectedCount={selectedTargetExams.length}
+            activeTargetCount={targetExams.length}
+            wish={wish}
+          />
 
           <FilterBar
             search={searchQuery} onSearch={handleSearch}
@@ -267,7 +357,122 @@ export default function HomePage() {
           <DonateWidget user={user} />
         </div>
       </div>
+
+      {targetModalOpen && (
+        <TargetExamSetupModal
+          targetExams={targetExams}
+          selectedIds={targetDraftIds}
+          onToggle={handleToggleTargetDraft}
+          onSave={handleSaveFirstTargets}
+          saving={targetSaving}
+          error={targetError}
+        />
+      )}
     </main>
+  );
+}
+
+function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTargetCount, wish }) {
+  return (
+    <div className="relative bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 overflow-hidden shadow-sm">
+      <div className="relative z-10">
+        <p className="text-sm font-bold uppercase tracking-wider text-indigo-500 mb-2">Trang chủ</p>
+        <h1 className="text-2xl sm:text-3xl font-black text-gray-950 mb-3">
+          Xin chào, {displayName}
+        </h1>
+
+        {nearestTargetExam ? (
+          <>
+            <p className="text-base sm:text-lg font-bold text-gray-800">
+              {getCountdownSentence(nearestTargetExam)}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 font-semibold text-indigo-700">
+                <CalendarDays className="w-4 h-4" />
+                {formatTargetExamDate(nearestTargetExam.examDate)}
+              </span>
+              {selectedCount > 1 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                  {selectedCount} kỳ thi mục tiêu
+                </span>
+              )}
+            </div>
+          </>
+        ) : activeTargetCount > 0 ? (
+          <p className="text-base font-semibold text-gray-700">
+            Hãy chọn kỳ thi mục tiêu để bắt đầu theo dõi ngày thi.
+          </p>
+        ) : (
+          <p className="text-base font-semibold text-gray-700">
+            Admin chưa cấu hình kỳ thi mục tiêu.
+          </p>
+        )}
+
+        <p className="mt-4 text-sm sm:text-base text-gray-500 font-medium">{wish}</p>
+      </div>
+      <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-emerald-50 to-transparent z-0 pointer-events-none" />
+    </div>
+  );
+}
+
+function TargetExamSetupModal({ targetExams, selectedIds, onToggle, onSave, saving, error }) {
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white border border-gray-200 shadow-2xl overflow-hidden">
+        <div className="p-5 sm:p-6 border-b border-gray-100">
+          <h2 className="text-xl font-black text-gray-950">Chọn kỳ thi mục tiêu</h2>
+          <p className="text-sm text-gray-500 mt-1">Bạn có thể chọn nhiều kỳ thi. Trang chủ sẽ ưu tiên kỳ thi gần nhất.</p>
+        </div>
+
+        <div className="max-h-[52vh] overflow-y-auto p-4 sm:p-5 space-y-3">
+          {targetExams.map((exam) => {
+            const checked = selectedIds.includes(exam.id);
+            return (
+              <label
+                key={exam.id}
+                className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
+                  checked
+                    ? 'border-indigo-200 bg-indigo-50'
+                    : 'border-gray-200 bg-white hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(exam.id)}
+                  className="mt-1 w-4 h-4 accent-indigo-600"
+                />
+                <span className="min-w-0">
+                  <span className="block font-bold text-gray-900">{exam.name}</span>
+                  <span className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                    <CalendarDays className="w-4 h-4" />
+                    {formatTargetExamDate(exam.examDate)}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+
+        {error && (
+          <div className="mx-5 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="p-5 sm:p-6 border-t border-gray-100 flex justify-end">
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+          >
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Lưu lựa chọn
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

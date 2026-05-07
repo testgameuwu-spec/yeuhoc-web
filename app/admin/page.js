@@ -14,6 +14,7 @@ import OcrLogManagement from '@/components/admin/OcrLogManagement';
 import TransactionManagement from '@/components/admin/TransactionManagement';
 import PracticeProgressManagement from '@/components/admin/PracticeProgressManagement';
 import AdminOverview from '@/components/admin/AdminOverview';
+import TargetExamManagement from '@/components/admin/TargetExamManagement';
 import {
   BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
@@ -342,6 +343,9 @@ export default function AdminDashboard() {
     if (activeTab === 'scoring') {
       return <ScoringConfig />;
     }
+    if (activeTab === 'targetExams') {
+      return <TargetExamManagement showAlert={showAlert} showConfirm={showConfirm} />;
+    }
     if (activeTab === 'reports') {
       return <ReportManagement onEditExam={handleEditExamById} showAlert={showAlert} showConfirm={showConfirm} />;
     }
@@ -393,6 +397,7 @@ export default function AdminDashboard() {
               <h1 className="text-sm sm:text-lg font-bold text-white truncate min-w-0">
                 {activeTab === 'overview' ? 'Tổng quan hệ thống' :
                  activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
+                 activeTab === 'targetExams' ? 'Quản lý kỳ thi mục tiêu' :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :
                  activeTab === 'ocrLogs' ? 'Theo dõi OCR Logs' :

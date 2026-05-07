@@ -2,13 +2,14 @@
 
 import {
   BookOpen, FileText, Settings, Users,
-  LayoutDashboard, Trophy, AlertTriangle, ScanText, CreditCard, X
+  LayoutDashboard, Trophy, AlertTriangle, ScanText, CreditCard, X, CalendarDays
 } from 'lucide-react';
 import LogoIcon from '../LogoIcon';
 
 const NAV_ITEMS = [
   { key: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
   { key: 'exams', label: 'Đề thi', icon: FileText },
+  { key: 'targetExams', label: 'Kỳ thi', icon: CalendarDays },
   { key: 'scoring', label: 'Điểm số', icon: Trophy },
   { key: 'reports', label: 'Báo cáo', icon: AlertTriangle },
   { key: 'ocrLogs', label: 'OCR Logs', icon: ScanText },

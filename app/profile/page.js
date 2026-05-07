@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  User, Mail, Camera, LogOut, Save, Shield, BookOpen,
+  User, Mail, Camera, LogOut, Save, Shield, BookOpen, CalendarDays,
   AlertCircle, CheckCircle2, Loader2, FileText, History, Activity, PauseCircle, PlayCircle, Flag
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,8 @@ import Navbar from '@/components/Navbar';
 import QuestionCard from '@/components/QuestionCard';
 import { ChevronRight, X } from 'lucide-react';
 import { markResolvedReportsAsSeen } from '@/lib/reportSeenStorage';
+import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
+import { formatTargetExamDate } from '@/lib/targetExamDisplay';
 
 const REPORT_REASON_LABELS = {
   wrong_question: 'Sai đề / Đề bị lỗi',
@@ -45,6 +47,9 @@ function ProfilePageInner() {
   const [activeTab, setActiveTab] = useState(initialActiveTab); // overview | info | reports
   const [pausedExams, setPausedExams] = useState([]);
   const [myReports, setMyReports] = useState([]);
+  const [targetExams, setTargetExams] = useState([]);
+  const [selectedTargetExams, setSelectedTargetExams] = useState([]);
+  const [selectedTargetExamIds, setSelectedTargetExamIds] = useState([]);
 
   const dataLoadedRef = useRef(false);
   const avatarFileInputRef = useRef(null);
@@ -83,7 +88,16 @@ function ProfilePageInner() {
           .eq('user_id', sessionUser.id)
           .order('created_at', { ascending: false });
 
-        const [profileRes, historyRes, reportsRes] = await Promise.allSettled([profilePromise, historyPromise, reportsPromise]);
+        const targetExamsPromise = getTargetExams();
+        const selectedTargetExamsPromise = getUserTargetExams(sessionUser.id);
+
+        const [profileRes, historyRes, reportsRes, targetExamsRes, selectedTargetExamsRes] = await Promise.allSettled([
+          profilePromise,
+          historyPromise,
+          reportsPromise,
+          targetExamsPromise,
+          selectedTargetExamsPromise,
+        ]);
 
         const keys = Object.keys(localStorage);
         const prefix = `yeuhoc_progress_${sessionUser.id}_`;
@@ -115,6 +129,20 @@ function ProfilePageInner() {
 
           if (reportsRes.status === 'fulfilled' && reportsRes.value.data) {
             setMyReports(reportsRes.value.data);
+          }
+
+          if (targetExamsRes.status === 'fulfilled') {
+            setTargetExams(targetExamsRes.value);
+          } else {
+            console.warn('Target exams fetch failed:', targetExamsRes.reason);
+          }
+
+          if (selectedTargetExamsRes.status === 'fulfilled') {
+            const selectedTargets = selectedTargetExamsRes.value;
+            setSelectedTargetExams(selectedTargets);
+            setSelectedTargetExamIds(selectedTargets.map((exam) => exam.id));
+          } else {
+            console.warn('Selected target exams fetch failed:', selectedTargetExamsRes.reason);
           }
         }
       } catch (error) {
@@ -317,6 +345,10 @@ function ProfilePageInner() {
       if (error) {
         setMessage({ type: 'error', text: 'Lưu thất bại: ' + error.message });
       } else {
+        await syncUserTargetExams(user.id, selectedTargetExamIds);
+        const nextTargets = await getUserTargetExams(user.id);
+        setSelectedTargetExams(nextTargets);
+        setSelectedTargetExamIds(nextTargets.map((exam) => exam.id));
         setMessage({ type: 'success', text: 'Đã lưu thay đổi!' });
         // Cập nhật lại state nội bộ
         setProfile(prev => ({
@@ -335,6 +367,14 @@ function ProfilePageInner() {
     }
   };
 
+  const handleTargetExamToggle = (targetExamId) => {
+    setSelectedTargetExamIds((prev) => (
+      prev.includes(targetExamId)
+        ? prev.filter((id) => id !== targetExamId)
+        : [...prev, targetExamId]
+    ));
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
@@ -342,6 +382,9 @@ function ProfilePageInner() {
 
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
   const isAdmin = profile?.role === 'admin';
+  const targetExamOptions = [...selectedTargetExams, ...targetExams]
+    .filter((exam, index, exams) => exams.findIndex((item) => item.id === exam.id) === index)
+    .sort((a, b) => new Date(`${a.examDate}T00:00:00`) - new Date(`${b.examDate}T00:00:00`) || a.name.localeCompare(b.name));
 
 
   // ── Loading State ──
@@ -752,6 +795,56 @@ function ProfilePageInner() {
                     style={{ fontFamily: 'inherit' }}
                   />
                   <p className="text-[11px] text-gray-400 mt-1 text-right">{bio.length}/200</p>
+                </div>
+
+                {/* Target Exams */}
+                <div>
+                  <label className="auth-label">Kỳ thi mục tiêu</label>
+                  {targetExamOptions.length > 0 ? (
+                    <div className="space-y-2 mt-2">
+                      {targetExamOptions.map((exam) => {
+                        const checked = selectedTargetExamIds.includes(exam.id);
+                        return (
+                          <label
+                            key={exam.id}
+                            className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
+                              checked
+                                ? 'border-indigo-200 bg-indigo-50'
+                                : 'border-gray-200 bg-white hover:bg-gray-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => handleTargetExamToggle(exam.id)}
+                              className="mt-1 w-4 h-4 accent-indigo-600"
+                            />
+                            <span className="flex-1 min-w-0">
+                              <span className="flex flex-wrap items-center gap-2">
+                                <span className="font-bold text-gray-900">{exam.name}</span>
+                                {!exam.isActive && (
+                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-[10px] font-bold uppercase tracking-wider text-gray-500 border border-gray-200">
+                                    Inactive
+                                  </span>
+                                )}
+                              </span>
+                              <span className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                                <CalendarDays className="w-3.5 h-3.5" />
+                                {formatTargetExamDate(exam.examDate)}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Kỳ thi đã tắt active vẫn được giữ ở đây để bạn có thể bỏ chọn.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                      Admin chưa cấu hình kỳ thi mục tiêu.
+                    </div>
+                  )}
                 </div>
 
                 {/* Avatar Upload */}
