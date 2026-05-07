@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 
 export default function ImageModal({ isOpen, onClose, src, alt }) {
@@ -36,9 +37,11 @@ export default function ImageModal({ isOpen, onClose, src, alt }) {
                 >
                     <X className="w-5 h-5" />
                 </button>
-                <img
+                <Image
                     src={src}
                     alt={alt}
+                    width={1200}
+                    height={800}
                     className="max-h-[85vh] w-auto rounded-xl object-contain"
                 />
             </div>

@@ -7,12 +7,15 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
     const intervalRef = useRef(null);
 
     useEffect(() => {
-        setSecondsLeft(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
+        const timer = setTimeout(() => {
+            setSecondsLeft(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
+        }, 0);
+        return () => clearTimeout(timer);
     }, [initialMinutes, initialSeconds]);
 
     useEffect(() => {
         if (onTick) onTick(secondsLeft);
-    }, [secondsLeft]);
+    }, [onTick, secondsLeft]);
 
     useEffect(() => {
         if (!isRunning) { clearInterval(intervalRef.current); return; }

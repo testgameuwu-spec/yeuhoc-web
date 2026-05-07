@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Mail, Camera, LogOut, Save, Shield, BookOpen,
@@ -24,14 +25,13 @@ const REPORT_REASON_LABELS = {
 function ProfilePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialActiveTab = searchParams.get('tab') === 'reports' ? 'reports' : 'overview';
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attempts, setAttempts] = useState([]);
-  const [loadingAttempts, setLoadingAttempts] = useState(false);
-  const [historyError, setHistoryError] = useState('');
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [attemptDetails, setAttemptDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -42,17 +42,12 @@ function ProfilePageInner() {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // overview | info | history | reports
+  const [activeTab, setActiveTab] = useState(initialActiveTab); // overview | info | reports
   const [pausedExams, setPausedExams] = useState([]);
   const [myReports, setMyReports] = useState([]);
 
   const dataLoadedRef = useRef(false);
   const avatarFileInputRef = useRef(null);
-
-  useEffect(() => {
-    const t = searchParams.get('tab');
-    if (t === 'reports') setActiveTab('reports');
-  }, [searchParams]);
 
   useEffect(() => {
     if (activeTab !== 'reports') return;
@@ -388,9 +383,11 @@ function ProfilePageInner() {
                   disabled={uploadingAvatar || !user}
                 />
                 {avatarUrl ? (
-                  <img
+                  <Image
                     src={avatarUrl}
                     alt={displayName}
+                    width={112}
+                    height={112}
                     className="w-28 h-28 rounded-full object-cover ring-4 ring-indigo-100 shadow-lg"
                   />
                 ) : (
@@ -462,14 +459,6 @@ function ProfilePageInner() {
                 }`}
               >
                 <Activity className="w-4 h-4" /> Tổng quan
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
-                  activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <History className="w-4 h-4" /> Lịch sử làm bài
               </button>
               <button
                 onClick={() => setActiveTab('reports')}
@@ -771,9 +760,11 @@ function ProfilePageInner() {
                   <div className="flex items-center gap-4 mt-2">
                     <div className="relative flex-shrink-0">
                       {avatarUrl ? (
-                        <img
+                        <Image
                           src={avatarUrl}
                           alt="Preview"
+                          width={64}
+                          height={64}
                           className="w-16 h-16 rounded-full object-cover border border-gray-200 shadow-sm"
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
@@ -822,75 +813,7 @@ function ProfilePageInner() {
                 </button>
               </form>
             </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
-                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <History className="w-5 h-5 text-indigo-500" />
-                  Lịch sử làm bài
-                </h3>
-                <p className="text-xs text-gray-400 mb-6">Danh sách các đề thi bạn đã hoàn thành</p>
-
-                {loadingAttempts ? (
-                  <div className="py-16 flex justify-center">
-                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                  </div>
-                ) : historyError ? (
-                  <div className="py-12 text-center border-2 border-dashed border-red-200 rounded-2xl bg-red-50">
-                    <AlertCircle className="w-10 h-10 text-red-300 mx-auto mb-3" />
-                    <p className="text-sm text-red-600 font-medium">{historyError}</p>
-                    <button
-                      onClick={() => setActiveTab('info')}
-                      className="mt-3 text-xs text-red-500 underline hover:text-red-700"
-                    >
-                      Quay lại thông tin cá nhân
-                    </button>
-                  </div>
-                ) : attempts.length > 0 ? (
-                  <div className="space-y-4">
-                    {attempts.map((attempt, index) => (
-                      <div key={attempt.id || index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4">
-                        <div className="flex-1">
-                          <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                            <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
-                            <span>•</span>
-                            <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm flex-shrink-0">
-                          <div className="text-center">
-                            <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
-                            <p className="font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</p>
-                          </div>
-                          <div className="w-px h-8 bg-gray-200"></div>
-                          <div className="text-center">
-                            <p className="text-xs text-gray-400 mb-0.5">Đúng</p>
-                            <p className="font-bold text-gray-900">{attempt.correct_answers}/{attempt.total_questions}</p>
-                          </div>
-                          <div className="w-px h-8 bg-gray-200"></div>
-                          <div className="text-center">
-                            <p className="text-xs text-gray-400 mb-0.5">Thời gian</p>
-                            <p className="font-bold text-gray-900">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</p>
-                          </div>
-                          <button
-                            onClick={() => handleViewAttemptDetails(attempt)}
-                            className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
-                          >
-                            Chi tiết <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
-                    <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500 font-medium">Bạn chưa làm bài thi nào</p>
-                    <p className="text-xs text-gray-400 mt-1">Hãy ra trang chủ và thử sức với một đề thi nhé!</p>
-                  </div>
-                )}
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

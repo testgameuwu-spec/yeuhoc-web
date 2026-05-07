@@ -158,7 +158,7 @@ export default function FilterBar({
           {selSubject && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selSubject}</span>}
           {selType && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selType}</span>}
           {selYear && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selYear}</span>}
-          {search && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">"{search}"</span>}
+          {search && <span className="text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{`"${search}"`}</span>}
           <span className="text-xs text-indigo-500 ml-auto font-medium">{resultCount} kết quả</span>
           <button onClick={onClear} className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-0.5 transition-colors">
             <X className="w-3 h-3" /> Xóa

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CreditCard, ArrowDownLeft, ArrowUpRight, Search, RefreshCw, Calendar, CheckCircle2, AlertCircle, X, UserCheck } from 'lucide-react';
 
@@ -33,7 +34,7 @@ export default function TransactionManagement() {
   };
 
   useEffect(() => {
-    fetchTransactions();
+    const initialFetchTimer = setTimeout(fetchTransactions, 0);
 
     const channel = supabase
       .channel('sepay_transactions_changes')
@@ -57,6 +58,7 @@ export default function TransactionManagement() {
       .subscribe();
 
     return () => {
+      clearTimeout(initialFetchTimer);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -202,7 +204,7 @@ export default function TransactionManagement() {
                           <>
                             <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden shrink-0">
                               {tx.profiles.avatar_url ? (
-                                <img src={tx.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                                <Image src={tx.profiles.avatar_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
                               ) : (
                                 <span className="text-indigo-400 font-bold text-xs">{tx.profiles.full_name?.charAt(0) || 'U'}</span>
                               )}
@@ -270,7 +272,7 @@ export default function TransactionManagement() {
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden shrink-0">
                               {tx.profiles.avatar_url ? (
-                                <img src={tx.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                                <Image src={tx.profiles.avatar_url} alt="" width={28} height={28} className="w-full h-full object-cover" />
                               ) : (
                                 <span className="text-indigo-400 font-bold text-xs">{tx.profiles.full_name?.charAt(0) || 'U'}</span>
                               )}

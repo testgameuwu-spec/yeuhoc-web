@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import {
   User,
   LogOut,
@@ -148,7 +149,7 @@ export default function UserProfile() {
         className="flex items-center gap-2 px-2 py-1.5 rounded-xl text-sm font-medium bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all cursor-pointer relative z-[60]"
       >
         {avatarUrl ? (
-          <img src={avatarUrl} alt={displayName} className="w-7 h-7 rounded-full object-cover ring-2 ring-white" />
+          <Image src={avatarUrl} alt={displayName} width={28} height={28} className="w-7 h-7 rounded-full object-cover ring-2 ring-white" />
         ) : (
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white">
             {displayName.charAt(0).toUpperCase()}

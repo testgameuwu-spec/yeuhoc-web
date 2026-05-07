@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import {
   Users, Search, MoreVertical, Trash2, Shield, ShieldCheck,
@@ -46,6 +47,11 @@ const CustomModal = ({ isOpen, type, title, message, onConfirm, onClose }) => {
   );
 };
 
+const fetchWithTimeout = (promise, ms = 8000) => {
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Request Timeout')), ms));
+  return Promise.race([promise, timeout]);
+};
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,36 +76,7 @@ export default function UserManagement() {
   const showConfirm = (title, message, onConfirm) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm });
   const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
 
-  useEffect(() => {
-    fetchUsers();
-
-    // Lắng nghe thay đổi real-time từ Supabase
-    const profilesChannel = supabase
-      .channel('realtime_profiles')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        fetchUsers(false); // Không cần hiện loading spinner khi update ngầm
-      })
-      .subscribe();
-
-    const attemptsChannel = supabase
-      .channel('realtime_attempts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'exam_attempts' }, () => {
-        fetchUsers(false);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(attemptsChannel);
-    };
-  }, []);
-
-  const fetchWithTimeout = (promise, ms = 8000) => {
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Request Timeout')), ms));
-    return Promise.race([promise, timeout]);
-  };
-
-  const fetchUsers = async (showLoading = true) => {
+  const fetchUsers = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
       const { data: profiles, error } = await fetchWithTimeout(
@@ -136,7 +113,32 @@ export default function UserManagement() {
     } finally {
       if (showLoading) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const initialFetchTimer = setTimeout(fetchUsers, 0);
+
+    // Lắng nghe thay đổi real-time từ Supabase
+    const profilesChannel = supabase
+      .channel('realtime_profiles')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        fetchUsers(false); // Không cần hiện loading spinner khi update ngầm
+      })
+      .subscribe();
+
+    const attemptsChannel = supabase
+      .channel('realtime_attempts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'exam_attempts' }, () => {
+        fetchUsers(false);
+      })
+      .subscribe();
+
+    return () => {
+      clearTimeout(initialFetchTimer);
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(attemptsChannel);
+    };
+  }, [fetchUsers]);
 
   const handleToggleRole = async (userId, currentRole) => {
     const newRole = currentRole === 'admin' ? 'student' : 'admin';
@@ -188,6 +190,7 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
     if (historyUser) {
       const fetchAttempts = async () => {
         setLoadingAttempts(true);
@@ -214,6 +217,8 @@ export default function UserManagement() {
       setSelectedAttempt(null);
       setAttemptDetails(null);
     }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [historyUser]);
 
   const handleViewAttemptDetails = async (attempt) => {
@@ -281,7 +286,8 @@ export default function UserManagement() {
   const visibleUsers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   useEffect(() => {
-    setCurrentPage(1);
+    const timer = setTimeout(() => setCurrentPage(1), 0);
+    return () => clearTimeout(timer);
   }, [search, filterRole, sortBy]);
 
   const totalAttempts = users.reduce((s, u) => s + (u.attempts || 0), 0);
@@ -379,7 +385,7 @@ export default function UserManagement() {
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                   {user.avatar ? (
-                    <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                    <Image src={user.avatar} alt="" width={56} height={56} className="w-full h-full rounded-full object-cover" />
                   ) : initials}
                 </div>
                 <div className="flex-1 min-w-0">

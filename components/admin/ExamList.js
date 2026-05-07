@@ -51,9 +51,13 @@ export default function ExamList({
 
   useEffect(() => {
     if (!isEditingOrder) {
-      setLocalFolders(folders);
-      setLocalExams(exams);
+      const timer = setTimeout(() => {
+        setLocalFolders(folders);
+        setLocalExams(exams);
+      }, 0);
+      return () => clearTimeout(timer);
     }
+    return undefined;
   }, [exams, folders, isEditingOrder]);
 
   // Pagination (only applies to filtered exams in a flat view, or we can disable pagination when using folders. Let's keep it simple: no pagination when folders are used, or we paginate the root list).

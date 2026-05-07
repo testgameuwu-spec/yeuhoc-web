@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { Activity, BookOpen, CheckCircle, Clock, Users, Trophy, ChevronRight, Edit3 } from 'lucide-react';
 
@@ -10,6 +11,7 @@ export default function AdminOverview({ onNavigate }) {
   const [recentExams, setRecentExams] = useState([]);
   const [recentResolved, setRecentResolved] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   const fetchData = async () => {
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
@@ -87,7 +89,8 @@ export default function AdminOverview({ onNavigate }) {
   };
 
   useEffect(() => {
-    fetchData();
+    const initialFetchTimer = setTimeout(fetchData, 0);
+    const clockTimer = setInterval(() => setNow(Date.now()), 60000);
 
     // Bật Realtime cho trang Tổng quan
     const channel = supabase.channel('admin_overview_realtime')
@@ -97,7 +100,11 @@ export default function AdminOverview({ onNavigate }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, fetchData)
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      clearTimeout(initialFetchTimer);
+      clearInterval(clockTimer);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
@@ -112,7 +119,7 @@ export default function AdminOverview({ onNavigate }) {
   // Format time relative
   const timeAgo = (dateStr) => {
     if (!dateStr) return '';
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = now - new Date(dateStr).getTime();
     const minutes = Math.floor(diff / 60000);
     if (minutes < 60) return `${Math.max(1, minutes)} phút trước`;
     const hours = Math.floor(minutes / 60);
@@ -177,7 +184,7 @@ export default function AdminOverview({ onNavigate }) {
                       <li key={`attempt-${attempt.id}-${index}`} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors cursor-default">
                         <div className="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 overflow-hidden font-bold text-sm">
                           {attempt.profiles?.avatar_url ? (
-                            <img src={attempt.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                            <Image src={attempt.profiles.avatar_url} alt="" width={36} height={36} className="w-full h-full object-cover" />
                           ) : (
                             (attempt.profiles?.full_name || 'U').charAt(0).toUpperCase()
                           )}
@@ -203,7 +210,7 @@ export default function AdminOverview({ onNavigate }) {
                       <li key={`tx-${tx.id}-${index}`} onClick={() => onNavigate('transactions')} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group">
                         <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 overflow-hidden font-bold text-sm">
                           {tx.profiles?.avatar_url ? (
-                            <img src={tx.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                            <Image src={tx.profiles.avatar_url} alt="" width={36} height={36} className="w-full h-full object-cover" />
                           ) : (
                             tx.profiles?.full_name ? tx.profiles.full_name.charAt(0).toUpperCase() : '💰'
                           )}
@@ -239,7 +246,7 @@ export default function AdminOverview({ onNavigate }) {
                           </p>
                           <div className="flex items-center gap-3 mt-1 text-xs text-white/40">
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {timeAgo(rep.created_at)}</span>
-                            <span className="truncate max-w-[150px] italic">"{rep.question_content}"</span>
+                            <span className="truncate max-w-[150px] italic">{`"${rep.question_content}"`}</span>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/60" />

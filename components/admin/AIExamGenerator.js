@@ -109,19 +109,22 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
 
   useEffect(() => {
     if (!trackedRequestId) return;
-    setScanRequestId(trackedRequestId);
-    setProgressLog((prev) => (
-      prev?.request_id === trackedRequestId
-        ? prev
-        : {
-            request_id: trackedRequestId,
-            status: 'processing',
-            stage: 'received',
-            duration_ms: 0,
-          }
-    ));
-    setLastLogAt(Date.now());
-    setBackendLogWarning('');
+    const timer = setTimeout(() => {
+      setScanRequestId(trackedRequestId);
+      setProgressLog((prev) => (
+        prev?.request_id === trackedRequestId
+          ? prev
+          : {
+              request_id: trackedRequestId,
+              status: 'processing',
+              stage: 'received',
+              duration_ms: 0,
+            }
+      ));
+      setLastLogAt(Date.now());
+      setBackendLogWarning('');
+    }, 0);
+    return () => clearTimeout(timer);
   }, [trackedRequestId]);
 
   useEffect(() => {
@@ -220,8 +223,8 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
 
   useEffect(() => {
     if (!isLoading || !scanRequestId) {
-      setBackendLogWarning('');
-      return undefined;
+      const resetTimer = setTimeout(() => setBackendLogWarning(''), 0);
+      return () => clearTimeout(resetTimer);
     }
 
     const timer = setInterval(() => {

@@ -57,7 +57,8 @@ export default function OcrLogManagement({ showAlert, onTrackRequest }) {
   }, [showAlert, statusFilter]);
 
   useEffect(() => {
-    fetchLogs();
+    const timer = setTimeout(fetchLogs, 0);
+    return () => clearTimeout(timer);
   }, [fetchLogs]);
 
   useEffect(() => {

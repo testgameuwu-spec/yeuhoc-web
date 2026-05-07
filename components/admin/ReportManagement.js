@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import {
   AlertTriangle, CheckCircle2, Trash2, Search, Filter,
@@ -75,7 +76,8 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
   }, [filterStatus]);
 
   useEffect(() => {
-    fetchReports();
+    const timer = setTimeout(fetchReports, 0);
+    return () => clearTimeout(timer);
   }, [fetchReports]);
 
   useEffect(() => {
@@ -96,7 +98,10 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
   }, [fetchReports]);
 
   useEffect(() => {
-    setAdminReplyDraft(selectedReport?.admin_reply || '');
+    const timer = setTimeout(() => {
+      setAdminReplyDraft(selectedReport?.admin_reply || '');
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedReport]);
 
   const handleResolve = async (reportId) => {
@@ -234,8 +239,12 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
     if (!selectedReport?.id) return;
     const latest = reports.find((r) => r.id === selectedReport.id);
     if (latest) {
-      setSelectedReport((prev) => ({ ...(prev || {}), ...latest }));
+      const timer = setTimeout(() => {
+        setSelectedReport((prev) => ({ ...(prev || {}), ...latest }));
+      }, 0);
+      return () => clearTimeout(timer);
     }
+    return undefined;
   }, [reports, selectedReport?.id]);
 
   return (
@@ -360,7 +369,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                   {/* Avatar */}
                   <div className="shrink-0">
                     {report.profiles?.avatar_url ? (
-                      <img src={report.profiles.avatar_url} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10" />
+                      <Image src={report.profiles.avatar_url} alt="" width={40} height={40} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10" />
                     ) : (
                       <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm">
                         {(report.profiles?.full_name || 'U').charAt(0).toUpperCase()}
@@ -394,7 +403,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                     </p>
                     {report.note && (
                       <p className="text-xs text-white/40 mt-1 italic">
-                        💬 "{report.note}"
+                        💬 {`"${report.note}"`}
                       </p>
                     )}
                     {report.admin_reply && (
@@ -464,7 +473,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
               <div className="bg-white/5 rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   {selectedReport.profiles?.avatar_url ? (
-                    <img src={selectedReport.profiles.avatar_url} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                    <Image src={selectedReport.profiles.avatar_url} alt="" width={40} height={40} className="w-10 h-10 rounded-xl object-cover" />
                   ) : (
                     <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
                       {(selectedReport.profiles?.full_name || 'U').charAt(0).toUpperCase()}

@@ -27,7 +27,7 @@ export default function Page() {
           <li key={todo.id}>{todo.name}</li>
         ))}
       </ul>
-      {todos.length === 0 && <p>No todos found. Ensure your Supabase 'todos' table has data.</p>}
+      {todos.length === 0 && <p>No todos found. Ensure your Supabase &apos;todos&apos; table has data.</p>}
     </div>
   )
 }

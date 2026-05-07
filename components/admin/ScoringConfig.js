@@ -167,7 +167,7 @@ export default function ScoringConfig() {
         {isCustom && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
             <Info className="w-3.5 h-3.5 flex-shrink-0" />
-            Bạn đang tuỳ chỉnh — cấu hình đã thay đổi so với preset "{selectedPreset.name}"
+            Bạn đang tuỳ chỉnh — cấu hình đã thay đổi so với preset {`"${selectedPreset.name}"`}
           </div>
         )}
       </div>

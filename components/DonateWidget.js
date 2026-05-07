@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Heart, Copy, CheckCircle2, QrCode } from 'lucide-react';
 
 export default function DonateWidget({ user }) {
@@ -69,7 +70,7 @@ export default function DonateWidget({ user }) {
 
         {showQR ? (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 animate-fadeIn flex flex-col items-center text-center">
-            <img src={qrUrl} alt="QR Code thanh toán SePay" className="w-48 h-48 object-contain mb-3 rounded-lg" />
+            <Image src={qrUrl} alt="QR Code thanh toán SePay" width={192} height={192} className="w-48 h-48 object-contain mb-3 rounded-lg" />
             <p className="text-xs text-gray-500 mb-1">Quét mã qua ứng dụng ngân hàng</p>
             <div className="flex items-center justify-center gap-2 mb-3">
               <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">

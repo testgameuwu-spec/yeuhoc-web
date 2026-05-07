@@ -67,43 +67,51 @@ export default function ExamEditor({
   // Sync local state when parent passes new exam data (e.g. after file upload)
   useEffect(() => {
     if (exam) {
-      setTitle(exam.title || '');
-      setSubject(exam.subject || 'Toán');
-      setExamType(exam.examType || 'THPT');
-      setYear(exam.year || 2024);
-      setDuration(exam.duration || 90);
-      setPublished(exam.published || false);
-      setNote(exam.note || '');
-      setFolderId(exam.folderId || 'root');
-      setAntiCheatEnabled(exam.antiCheatEnabled !== false);
-      if (exam.questions && exam.questions.length > 0) {
-        setQuestions(exam.questions);
-      }
-      
-      // Load saved scoring config
-      if (exam.scoringConfig) {
-        setScoringConfig(exam.scoringConfig);
-        // Attempt to match preset
-        let matchedPreset = 'Tuỳ chỉnh';
-        for (const [key, preset] of Object.entries(SCORING_PRESETS)) {
-          if (preset && JSON.stringify(preset) === JSON.stringify(exam.scoringConfig)) {
-            matchedPreset = key;
-            break;
-          }
+      const timer = setTimeout(() => {
+        setTitle(exam.title || '');
+        setSubject(exam.subject || 'Toán');
+        setExamType(exam.examType || 'THPT');
+        setYear(exam.year || 2024);
+        setDuration(exam.duration || 90);
+        setPublished(exam.published || false);
+        setNote(exam.note || '');
+        setFolderId(exam.folderId || 'root');
+        setAntiCheatEnabled(exam.antiCheatEnabled !== false);
+        if (exam.questions && exam.questions.length > 0) {
+          setQuestions(exam.questions);
         }
-        setScoringPreset(matchedPreset);
-      } else {
-        updatePreset(exam.subject || 'Toán', exam.examType || 'THPT');
-      }
+
+        // Load saved scoring config
+        if (exam.scoringConfig) {
+          setScoringConfig(exam.scoringConfig);
+          // Attempt to match preset
+          let matchedPreset = 'Tuỳ chỉnh';
+          for (const [key, preset] of Object.entries(SCORING_PRESETS)) {
+            if (preset && JSON.stringify(preset) === JSON.stringify(exam.scoringConfig)) {
+              matchedPreset = key;
+              break;
+            }
+          }
+          setScoringPreset(matchedPreset);
+        } else {
+          updatePreset(exam.subject || 'Toán', exam.examType || 'THPT');
+        }
+      }, 0);
+      return () => clearTimeout(timer);
     }
+    return undefined;
   }, [exam, updatePreset]);
 
   // Sync questions when initialQuestions prop changes (file upload result)
   useEffect(() => {
     if (initialQuestions && initialQuestions.length > 0) {
-      setQuestions(initialQuestions);
-      setHasUnsavedChanges(true);
+      const timer = setTimeout(() => {
+        setQuestions(initialQuestions);
+        setHasUnsavedChanges(true);
+      }, 0);
+      return () => clearTimeout(timer);
     }
+    return undefined;
   }, [initialQuestions]);
 
   // Handle beforeunload to warn user about unsaved changes

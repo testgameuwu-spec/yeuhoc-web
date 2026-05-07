@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
 import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
@@ -119,9 +120,11 @@ export default function QuestionCard({
                                 display: 'block',
                             }}
                         >
-                            <img
+                            <Image
                                 src={image}
                                 alt={`Hình minh họa câu ${index + 1}`}
+                                width={700}
+                                height={400}
                                 style={{ maxHeight: 220, maxWidth: '100%', objectFit: 'contain', display: 'block' }}
                                 onError={e => { e.target.style.display = 'none'; }}
                             />

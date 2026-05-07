@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Image from 'next/image';
 import {
   Trash2, ChevronDown, ChevronUp, GripVertical, Plus, X,
   Image as ImageIcon, FileText, CheckCircle2, XCircle, Type,
@@ -461,7 +462,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
             
             {q.image && (
               <div className="relative w-fit">
-                <img src={q.image} alt="Preview" className="max-w-xs max-h-48 rounded-xl border border-white/10 object-contain bg-white/5" />
+                <Image src={q.image} alt="Preview" width={320} height={192} className="max-w-xs max-h-48 rounded-xl border border-white/10 object-contain bg-white/5" />
                 <button onClick={() => { updateMultiple({ imageFile: null, image: null }); }}
                   className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
                   title="Xoá ảnh">
