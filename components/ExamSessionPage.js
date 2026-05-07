@@ -946,6 +946,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
 
   // Auto-save progress
   useEffect(() => {
+    if (exitViolationRecordedRef.current) return;
     if (quizPhase === 'quiz' && activeExam && user && !isPaused && savedSecondsLeft !== null) {
       const data = createQuizProgressSnapshot({
         answers,
@@ -1693,7 +1694,11 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
           showConfirm(
             'Xác nhận thoát',
             isAntiCheatEnabled
-              ? 'Thoát khỏi bài thi nghiêm túc sẽ được tính là 1 lần phạm quy. Tiến trình làm bài vẫn được lưu lại tự động. Bạn có chắc chắn muốn thoát?'
+              ? (
+                <>
+                  Thoát khỏi bài thi nghiêm túc sẽ được tính là 1 lần <strong className="font-black text-red-600">vi phạm</strong>. Tiến trình làm bài vẫn được lưu lại tự động. Bạn có chắc chắn muốn thoát?
+                </>
+              )
               : 'Tiến trình làm bài của bạn sẽ được lưu lại tự động. Bạn có chắc chắn muốn thoát?',
             () => handleExitQuiz()
           );
