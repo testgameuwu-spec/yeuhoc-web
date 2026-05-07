@@ -100,6 +100,14 @@ const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed
   };
 };
 
+const createQuizProgressSnapshot = ({ answers, bookmarks, secondsLeft, currentQ, violationCount }) => ({
+  answers: answers || {},
+  bookmarks: bookmarks instanceof Set ? Array.from(bookmarks) : (Array.isArray(bookmarks) ? bookmarks : []),
+  secondsLeft,
+  currentQ: Number(currentQ) || 0,
+  violationCount: Number(violationCount) || 0,
+});
+
 // ── Report Modal Component ──
 const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert, REPORT_REASONS }) => {
   const [reportReason, setReportReason] = useState('');
@@ -317,6 +325,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
   const MAX_VIOLATIONS = 5;
   const isSubmittingRef = useRef(false);
   const resumeHandledRef = useRef(false);
+  const exitViolationRecordedRef = useRef(false);
 
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
@@ -431,12 +440,13 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
         setCurrentQ(data.currentQ || 0);
         setSavedSecondsLeft(data.secondsLeft);
         setIsPaused(false);
-        setViolationCount(0);
+        setViolationCount(data.violationCount || 0);
         setShowViolationWarning(false);
         isSubmittingRef.current = false;
+        exitViolationRecordedRef.current = false;
         setQuizPhase('quiz');
         setTimerRunning(true);
-        setStartTime(Date.now());
+        setStartTime(() => Date.now());
         window.history.replaceState({}, '', window.location.pathname);
 
         // Try fullscreen if enabled
@@ -744,6 +754,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     setViolationCount(0);
     setShowViolationWarning(false);
     isSubmittingRef.current = false;
+    exitViolationRecordedRef.current = false;
     setQuizPhase('quiz');
     setTimerRunning(true);
     setStartTime(() => Date.now());
@@ -772,12 +783,13 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
             setCurrentQ(data.currentQ || 0);
             setSavedSecondsLeft(data.secondsLeft);
             setIsPaused(false);
-            setViolationCount(0);
+            setViolationCount(data.violationCount || 0);
             setShowViolationWarning(false);
             isSubmittingRef.current = false;
+            exitViolationRecordedRef.current = false;
             setQuizPhase('quiz');
             setTimerRunning(true);
-            setStartTime(Date.now());
+            setStartTime(() => Date.now());
             if (isAntiCheatEnabled) requestFullscreen();
           } catch (e) {
             startFreshQuiz();
@@ -797,10 +809,11 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     }
   };
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async ({ violationCountOverride = null } = {}) => {
     // Guard against double-submit
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
+    const finalViolationCount = violationCountOverride ?? violationCount;
 
     setTimerRunning(false);
     setShowViolationWarning(false);
@@ -858,7 +871,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
         total_questions: realQs.length,
         time_spent: timeSpentSecs,
         user_answers: answers,
-        violation_count: violationCount,
+        violation_count: finalViolationCount,
       });
 
       if (error) {
@@ -878,7 +891,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
         const next = prev + 1;
         if (next >= MAX_VIOLATIONS) {
           showAlert('⛔ Tự động nộp bài', `Bạn đã vi phạm ${MAX_VIOLATIONS} lần. Hệ thống tự động nộp bài của bạn.`);
-          setTimeout(() => handleSubmit(), 100);
+          setTimeout(() => handleSubmit({ violationCountOverride: next }), 100);
           return next;
         }
         setShowViolationWarning(true);
@@ -934,15 +947,42 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
   // Auto-save progress
   useEffect(() => {
     if (quizPhase === 'quiz' && activeExam && user && !isPaused && savedSecondsLeft !== null) {
-      const data = {
+      const data = createQuizProgressSnapshot({
         answers,
-        bookmarks: Array.from(bookmarks),
+        bookmarks,
         secondsLeft: savedSecondsLeft,
         currentQ,
-      };
+        violationCount,
+      });
       localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(data));
     }
-  }, [answers, bookmarks, savedSecondsLeft, currentQ, quizPhase, activeExam, user, isPaused, getProgressKey]);
+  }, [answers, bookmarks, savedSecondsLeft, currentQ, violationCount, quizPhase, activeExam, user, isPaused, getProgressKey]);
+
+  useEffect(() => {
+    if (quizPhase !== 'quiz' || !activeExam?.id || !user?.id || !isAntiCheatEnabled) return;
+
+    const recordExitViolation = () => {
+      if (isSubmittingRef.current || exitViolationRecordedRef.current) return;
+      exitViolationRecordedRef.current = true;
+      const nextViolationCount = Math.min(violationCount + 1, MAX_VIOLATIONS);
+      const data = createQuizProgressSnapshot({
+        answers,
+        bookmarks,
+        secondsLeft: savedSecondsLeft ?? ((activeExam.duration || 0) * 60),
+        currentQ,
+        violationCount: nextViolationCount,
+      });
+      localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(data));
+    };
+
+    window.addEventListener('pagehide', recordExitViolation);
+    window.addEventListener('beforeunload', recordExitViolation);
+
+    return () => {
+      window.removeEventListener('pagehide', recordExitViolation);
+      window.removeEventListener('beforeunload', recordExitViolation);
+    };
+  }, [activeExam, answers, bookmarks, currentQ, getProgressKey, isAntiCheatEnabled, quizPhase, savedSecondsLeft, user, violationCount]);
 
   useEffect(() => {
     if (quizPhase !== 'practice' || !activeExam?.id || !user?.id) return;
@@ -1010,6 +1050,31 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     // Reset ref after fullscreenchange event has fired
     setTimeout(() => { isSubmittingRef.current = false; }, 300);
     router.push('/');
+  };
+  const handleExitQuiz = () => {
+    if (!isAntiCheatEnabled || !activeExam || !user) {
+      handleReset();
+      return;
+    }
+
+    const nextViolationCount = Math.min(violationCount + 1, MAX_VIOLATIONS);
+    exitViolationRecordedRef.current = true;
+    setViolationCount(nextViolationCount);
+    localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(createQuizProgressSnapshot({
+      answers,
+      bookmarks,
+      secondsLeft: savedSecondsLeft ?? ((activeExam.duration || 0) * 60),
+      currentQ,
+      violationCount: nextViolationCount,
+    })));
+
+    if (nextViolationCount >= MAX_VIOLATIONS) {
+      showAlert('⛔ Tự động nộp bài', `Thoát khỏi bài thi được tính là phạm quy. Bạn đã vi phạm ${MAX_VIOLATIONS} lần nên hệ thống tự động nộp bài.`);
+      setTimeout(() => handleSubmit({ violationCountOverride: nextViolationCount }), 100);
+      return;
+    }
+
+    handleReset();
   };
   const handleRetry = () => {
     if (activeExam && user) localStorage.removeItem(getProgressKey(activeExam.id));
@@ -1625,7 +1690,13 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={() => {
-          showConfirm('Xác nhận thoát', 'Tiến trình làm bài của bạn sẽ được lưu lại tự động. Bạn có chắc chắn muốn thoát?', () => handleReset());
+          showConfirm(
+            'Xác nhận thoát',
+            isAntiCheatEnabled
+              ? 'Thoát khỏi bài thi nghiêm túc sẽ được tính là 1 lần phạm quy. Tiến trình làm bài vẫn được lưu lại tự động. Bạn có chắc chắn muốn thoát?'
+              : 'Tiến trình làm bài của bạn sẽ được lưu lại tự động. Bạn có chắc chắn muốn thoát?',
+            () => handleExitQuiz()
+          );
         }}>
           <div className="mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
             <Clock className="w-4 h-4 text-indigo-600" />
