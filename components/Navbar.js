@@ -1,13 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { BookOpen, Home, User } from 'lucide-react';
+import { BarChart2, Home, User } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import UserProfile from './UserProfile';
 import { supabase } from '@/lib/supabase';
 import { countUnseenResolvedReports } from '@/lib/reportSeenStorage';
 import LogoIcon from './LogoIcon';
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const normalizedPath = pathname === '/' ? '/' : pathname?.replace(/\/$/, '');
   const [unseenResolvedReports, setUnseenResolvedReports] = useState(0);
 
   const refreshReportBadge = useCallback(async () => {
@@ -28,12 +32,15 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    refreshReportBadge();
+    const refreshTimer = setTimeout(() => {
+      refreshReportBadge();
+    }, 0);
     const onSeen = () => refreshReportBadge();
     const onFocus = () => refreshReportBadge();
     window.addEventListener('yeuhoc-reports-seen', onSeen);
     window.addEventListener('focus', onFocus);
     return () => {
+      clearTimeout(refreshTimer);
       window.removeEventListener('yeuhoc-reports-seen', onSeen);
       window.removeEventListener('focus', onFocus);
     };
@@ -88,34 +95,49 @@ export default function Navbar() {
     };
   }, [refreshReportBadge]);
 
+  const linkClass = (active, extra = '') => (
+    `${extra} flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-all no-underline ${
+      active
+        ? 'text-indigo-600 bg-indigo-50'
+        : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
+    }`
+  );
+
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200" style={{ isolation: 'isolate' }}>
       <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
         {/* ─── Left: Logo ─── */}
-        <a href="/" className="flex items-center gap-2.5 no-underline group">
+        <Link href="/" className="flex items-center gap-2.5 no-underline group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-shadow">
             <LogoIcon size={20} color="white" />
           </div>
           <span className="font-extrabold text-[17px] text-gray-900 group-hover:text-indigo-600 transition-colors">
             YeuHoc
           </span>
-        </a>
+        </Link>
 
         {/* ─── Center: Nav Links ─── */}
         <nav className="flex items-center gap-1">
-          <a
+          <Link
             href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all no-underline"
+            className={linkClass(normalizedPath === '/')}
           >
             <Home className="w-4 h-4" />
-            Đề thi
-          </a>
-          <a
+            <span className="hidden sm:inline">Đề thi</span>
+          </Link>
+          <Link
+            href="/profile/phan-tich"
+            className={linkClass(normalizedPath === '/profile/phan-tich')}
+          >
+            <BarChart2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Phân tích</span>
+          </Link>
+          <Link
             href={unseenResolvedReports > 0 ? '/profile?tab=reports' : '/profile'}
-            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all no-underline"
+            className={linkClass(normalizedPath === '/profile', 'relative')}
           >
             <User className="w-4 h-4" />
-            Hồ sơ
+            <span className="hidden sm:inline">Hồ sơ</span>
             {unseenResolvedReports > 0 && (
               <span
                 className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm"
@@ -124,7 +146,7 @@ export default function Navbar() {
                 {unseenResolvedReports > 9 ? '9+' : unseenResolvedReports}
               </span>
             )}
-          </a>
+          </Link>
         </nav>
 
         {/* ─── Right: Auth State ─── */}
