@@ -270,7 +270,7 @@ export default function ExamList({
         {/* Actions - desktop */}
         {!isEditingOrder && (
         <div className="hidden md:flex items-center gap-1 relative">
-          <button onClick={() => window.open(`/?preview_exam_id=${exam.id}`, '_blank')}
+          <button onClick={() => window.open(`/de-thi/${exam.id}`, '_blank')}
             className="p-2 rounded-lg hover:bg-white/10 text-indigo-400 hover:text-indigo-300 transition-colors" title="Xem trước">
             <Eye className="w-4 h-4" />
           </button>

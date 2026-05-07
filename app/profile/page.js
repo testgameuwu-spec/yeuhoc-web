@@ -535,7 +535,7 @@ function ProfilePageInner() {
                                   <h4 className="font-bold text-gray-900">{exam.title}</h4>
                                   <p className="text-xs text-gray-600 mt-1 flex items-center gap-1"><BookOpen className="w-3 h-3"/> {exam.subject}</p>
                                 </div>
-                                <button onClick={() => router.push('/?resume_exam=' + exam.id)} className="px-4 py-2 rounded-lg font-bold text-xs bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                                <button onClick={() => router.push(`/de-thi/${exam.id}?resume=1`)} className="px-4 py-2 rounded-lg font-bold text-xs bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
                                   <PlayCircle className="w-4 h-4" /> Tiếp tục làm
                                 </button>
                               </div>

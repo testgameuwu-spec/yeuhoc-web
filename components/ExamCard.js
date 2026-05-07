@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Clock, Play, Lock } from 'lucide-react';
 
 const SUBJECT_META = {
@@ -28,7 +29,7 @@ function QBadge({ label, className }) {
   );
 }
 
-export default function ExamCard({ exam, onStart, isSaved, isLocked }) {
+export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
   const [hov, setHov] = useState(false);
   const sm = SUBJECT_META[exam.subject] || SUBJECT_META['Khác'];
   const tm = TYPE_META[exam.examType]   || TYPE_META['Other'];
@@ -39,19 +40,31 @@ export default function ExamCard({ exam, onStart, isSaved, isLocked }) {
   const saCount = exam.sa ?? (exam.questions || []).filter(q => q.type === 'SA').length;
   const totalQ = exam.totalQ || (exam.questions || []).length || 0;
 
-  return (
-    <div
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      className={`
-        bg-white rounded-2xl border flex flex-col gap-3.5 p-5
-        transition-all duration-200 cursor-pointer
-        ${hov
-          ? 'border-indigo-300 shadow-lg shadow-indigo-100 -translate-y-0.5'
-          : 'border-gray-200 shadow-sm'
-        }
-      `}
-    >
+  const cardClassName = `
+    bg-white rounded-2xl border flex flex-col gap-3.5 p-5
+    transition-all duration-200 no-underline
+    ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
+    ${hov && !isLocked
+      ? 'border-indigo-300 shadow-lg shadow-indigo-100 -translate-y-0.5'
+      : 'border-gray-200 shadow-sm'
+    }
+  `;
+
+  const ctaClassName = `
+    flex items-center justify-center gap-2 py-2.5 rounded-xl
+    text-sm font-semibold transition-all duration-200 border-0
+    ${isLocked
+      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+      : isSaved
+        ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer'
+        : hov
+          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 cursor-pointer'
+          : 'bg-indigo-50 text-indigo-600 cursor-pointer'
+    }
+  `;
+
+  const content = (
+    <>
       {/* Badges */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5">
@@ -84,31 +97,36 @@ export default function ExamCard({ exam, onStart, isSaved, isLocked }) {
       </div>
 
       {/* CTA */}
-      <button
-        onClick={(e) => {
-          if (isLocked) {
-            e.preventDefault();
-            return;
-          }
-          onStart?.(exam);
-        }}
-        disabled={isLocked}
-        className={`
-          flex items-center justify-center gap-2 py-2.5 rounded-xl
-          text-sm font-semibold transition-all duration-200 border-0
-          ${isLocked
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : isSaved 
-              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer'
-              : hov
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 cursor-pointer'
-                : 'bg-indigo-50 text-indigo-600 cursor-pointer'
-          }
-        `}
-      >
+      <span className={ctaClassName}>
         {isLocked ? <Lock className="w-3.5 h-3.5" /> : isSaved ? <Clock className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
         {isLocked ? 'Đã khoá' : isSaved ? 'Tiếp tục làm bài' : 'Làm bài ngay'}
-      </button>
+      </span>
+    </>
+  );
+
+  if (href && !isLocked) {
+    return (
+      <Link
+        href={href}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        className={cardClassName}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={() => {
+        if (!isLocked) onStart?.(exam);
+      }}
+      className={cardClassName}
+    >
+      {content}
     </div>
   );
 }
