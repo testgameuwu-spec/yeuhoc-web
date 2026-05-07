@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Eye, AlertTriangle, Send, Bot } from 'lucide-react';
+import { BookOpen, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Eye, AlertTriangle, Send, Bot, Save } from 'lucide-react';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
@@ -72,6 +72,33 @@ const CustomModal = ({ isOpen, type, title, message, onConfirm, onCancel, confir
 // SVG Icons for Pause and Play
 const PauseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
 const PlayIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
+
+const hasPracticeAnswer = (answer) => {
+  if (!answer) return false;
+  if (typeof answer === 'object') return Object.keys(answer).length > 0;
+  return answer !== '';
+};
+
+const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, realQuestions }) => {
+  const nextAnswers = answers || {};
+  const nextRevealed = practiceRevealed || {};
+  const bookmarkList = bookmarks instanceof Set ? Array.from(bookmarks) : (Array.isArray(bookmarks) ? bookmarks : []);
+  const revealedCount = Object.values(nextRevealed).filter(Boolean).length;
+  const totalQuestions = realQuestions.length;
+  const savedAt = new Date().toISOString();
+
+  return {
+    answers: nextAnswers,
+    bookmarks: bookmarkList,
+    currentQ: Math.min(Math.max(Number(currentQ) || 0, 0), Math.max(totalQuestions - 1, 0)),
+    practiceRevealed: nextRevealed,
+    answeredCount: realQuestions.filter(question => hasPracticeAnswer(nextAnswers[question.id])).length,
+    revealedCount,
+    totalQuestions,
+    completed: totalQuestions > 0 && revealedCount >= totalQuestions,
+    savedAt,
+  };
+};
 
 // ── Report Modal Component ──
 const ReportModal = ({ reportModal, setReportModal, user, activeExam, showAlert, REPORT_REASONS }) => {
@@ -316,6 +343,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
   const mainRef = useRef(null);
 
   const getProgressKey = useCallback((examId) => `yeuhoc_progress_${user?.id}_${examId}`, [user?.id]);
+  const getPracticeProgressKey = useCallback((examId) => `yeuhoc_practice_progress_${user?.id}_${examId}`, [user?.id]);
 
   // Fetch preview stats
   useEffect(() => {
@@ -522,22 +550,170 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
 
   // ── Practice mode (ôn luyện) ──
   const [practiceRevealed, setPracticeRevealed] = useState({});
+  const [practiceSaving, setPracticeSaving] = useState(false);
+  const practiceSaveTimerRef = useRef(null);
 
-  const handleStartPractice = () => {
-    if (realQuestions.length === 0) {
-      showAlert('Thông báo', 'Đề thi này chưa có câu hỏi.');
-      return;
+  const savePracticeProgress = async ({ notify = false, showSpinner = false, overrides = {} } = {}) => {
+    if (!activeExam?.id || !user?.id) return false;
+
+    const snapshot = createPracticeSnapshot({
+      answers: overrides.answers ?? answers,
+      bookmarks: overrides.bookmarks ?? bookmarks,
+      currentQ: overrides.currentQ ?? currentQ,
+      practiceRevealed: overrides.practiceRevealed ?? practiceRevealed,
+      realQuestions,
+    });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(getPracticeProgressKey(activeExam.id), JSON.stringify(snapshot));
     }
 
+    if (showSpinner) setPracticeSaving(true);
+    try {
+      const { error } = await supabase
+        .from('practice_progress')
+        .upsert({
+          user_id: user.id,
+          exam_id: activeExam.id,
+          current_question: snapshot.currentQ,
+          answered_count: snapshot.answeredCount,
+          revealed_count: snapshot.revealedCount,
+          total_questions: snapshot.totalQuestions,
+          answers: snapshot.answers,
+          bookmarks: snapshot.bookmarks,
+          revealed_map: snapshot.practiceRevealed,
+          completed: snapshot.completed,
+          saved_at: snapshot.savedAt,
+          updated_at: snapshot.savedAt,
+        }, { onConflict: 'user_id,exam_id' });
+
+      if (error) {
+        console.error('Error saving practice progress:', error);
+        if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + error.message);
+        return false;
+      }
+
+      if (notify) showAlert('Đã lưu', 'Tiến trình ôn luyện đã được lưu.');
+      return true;
+    } finally {
+      if (showSpinner) setPracticeSaving(false);
+    }
+  };
+
+  const applyPracticeSnapshot = (snapshot) => {
+    setAnswers(snapshot?.answers || {});
+    setBookmarks(new Set(snapshot?.bookmarks || []));
+    setCurrentQ(Math.min(Math.max(Number(snapshot?.currentQ) || 0, 0), Math.max(realQuestions.length - 1, 0)));
+    setPracticeRevealed(snapshot?.practiceRevealed || {});
+    setIsAIChatOpen(false);
+    setQuizPhase('practice');
+  };
+
+  const startFreshPractice = () => {
     setAnswers({});
+    setBookmarks(new Set());
     setCurrentQ(0);
     setPracticeRevealed({});
     setIsAIChatOpen(false);
     setQuizPhase('practice');
   };
 
+  const loadPracticeProgress = async () => {
+    if (!activeExam?.id || !user?.id || typeof window === 'undefined') return null;
+
+    let localProgress = null;
+    const localSaved = localStorage.getItem(getPracticeProgressKey(activeExam.id));
+    if (localSaved) {
+      try {
+        localProgress = JSON.parse(localSaved);
+      } catch {
+        localProgress = null;
+      }
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('practice_progress')
+        .select('answers, bookmarks, current_question, revealed_map, saved_at, updated_at')
+        .eq('user_id', user.id)
+        .eq('exam_id', activeExam.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Practice progress table is not available:', error.message);
+        return localProgress;
+      }
+
+      if (!data) return localProgress;
+
+      const remoteProgress = {
+        answers: data.answers || {},
+        bookmarks: data.bookmarks || [],
+        currentQ: data.current_question || 0,
+        practiceRevealed: data.revealed_map || {},
+        savedAt: data.updated_at || data.saved_at,
+      };
+
+      if (!localProgress) return remoteProgress;
+      return new Date(remoteProgress.savedAt || 0) > new Date(localProgress.savedAt || 0) ? remoteProgress : localProgress;
+    } catch (error) {
+      console.warn('Practice progress load failed:', error);
+      return localProgress;
+    }
+  };
+
+  const handleStartPractice = async () => {
+    if (realQuestions.length === 0) {
+      showAlert('Thông báo', 'Đề thi này chưa có câu hỏi.');
+      return;
+    }
+
+    const saved = await loadPracticeProgress();
+    const hasSavedProgress = saved && (
+      Object.keys(saved.answers || {}).length > 0 ||
+      Object.keys(saved.practiceRevealed || {}).length > 0 ||
+      (saved.currentQ || 0) > 0
+    );
+
+    if (hasSavedProgress) {
+      showConfirm(
+        'Tiếp tục ôn luyện',
+        'Bạn đang có tiến trình ôn luyện đã lưu. Bạn muốn làm tiếp hay làm lại toàn bộ đề?',
+        () => applyPracticeSnapshot(saved),
+        () => startFreshPractice(),
+        'Làm tiếp',
+        'Làm lại'
+      );
+      return;
+    }
+
+    startFreshPractice();
+  };
+
   const handlePracticeReveal = () => {
     setPracticeRevealed(prev => ({ ...prev, [currentQ]: true }));
+  };
+
+  const handleSavePracticeProgress = () => {
+    savePracticeProgress({ notify: true, showSpinner: true });
+  };
+
+  const handleRetryPractice = () => {
+    showConfirm('Làm lại ôn luyện', 'Toàn bộ đáp án và tiến trình ôn luyện hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => {
+      const resetBookmarks = new Set();
+      setAnswers({});
+      setBookmarks(resetBookmarks);
+      setCurrentQ(0);
+      setPracticeRevealed({});
+      setIsAIChatOpen(false);
+      savePracticeProgress({
+        overrides: {
+          answers: {},
+          bookmarks: resetBookmarks,
+          currentQ: 0,
+          practiceRevealed: {},
+        },
+      });
+    });
   };
 
   // ── Fullscreen helpers ──
@@ -570,7 +746,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     isSubmittingRef.current = false;
     setQuizPhase('quiz');
     setTimerRunning(true);
-    setStartTime(Date.now());
+    setStartTime(() => Date.now());
     if (isAntiCheatEnabled) requestFullscreen();
   };
 
@@ -768,12 +944,58 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     }
   }, [answers, bookmarks, savedSecondsLeft, currentQ, quizPhase, activeExam, user, isPaused, getProgressKey]);
 
+  useEffect(() => {
+    if (quizPhase !== 'practice' || !activeExam?.id || !user?.id) return;
+
+    if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
+    practiceSaveTimerRef.current = setTimeout(() => {
+      const practiceQuestions = (activeExam.questions || []).filter(question => question.type !== 'TEXT');
+      const snapshot = createPracticeSnapshot({
+        answers,
+        bookmarks,
+        currentQ,
+        practiceRevealed,
+        realQuestions: practiceQuestions,
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(getPracticeProgressKey(activeExam.id), JSON.stringify(snapshot));
+      }
+
+      supabase
+        .from('practice_progress')
+        .upsert({
+          user_id: user.id,
+          exam_id: activeExam.id,
+          current_question: snapshot.currentQ,
+          answered_count: snapshot.answeredCount,
+          revealed_count: snapshot.revealedCount,
+          total_questions: snapshot.totalQuestions,
+          answers: snapshot.answers,
+          bookmarks: snapshot.bookmarks,
+          revealed_map: snapshot.practiceRevealed,
+          completed: snapshot.completed,
+          saved_at: snapshot.savedAt,
+          updated_at: snapshot.savedAt,
+        }, { onConflict: 'user_id,exam_id' })
+        .then(({ error }) => {
+          if (error) console.warn('Practice progress autosave failed:', error.message);
+        });
+    }, 900);
+
+    return () => {
+      if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
+    };
+  }, [activeExam, answers, bookmarks, currentQ, getPracticeProgressKey, practiceRevealed, quizPhase, user]);
+
   const handleAnswerChange = (questionId, answer) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
   const handleTimeUp = () => { handleSubmit(); };
   const handleReset = () => {
+    if (quizPhase === 'practice') {
+      savePracticeProgress();
+    }
     // Suppress anti-cheat listener before exiting fullscreen
     isSubmittingRef.current = true;
     exitFullscreen();
@@ -906,6 +1128,23 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs font-bold">
             📖 Chế độ ôn luyện
           </div>
+          <button
+            className="et-btn-outline"
+            style={{ fontSize: 12, padding: '5px 11px' }}
+            onClick={handleSavePracticeProgress}
+            disabled={practiceSaving}
+            title="Lưu tiến trình ôn luyện"
+          >
+            <Save style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">{practiceSaving ? 'Đang lưu...' : 'Lưu'}</span>
+          </button>
+          <button
+            className="et-btn-outline"
+            style={{ fontSize: 12, padding: '5px 11px' }}
+            onClick={handleRetryPractice}
+            title="Làm lại toàn bộ đề"
+          >
+            <RotateCcw style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">Làm lại</span>
+          </button>
         </Topbar>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" id="practice-scroll-container">
@@ -1165,7 +1404,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Hoàn thành ôn luyện!</h3>
                 <p className="text-sm text-gray-500 mb-4">Bạn đã xem hết {realQuestions.length} câu hỏi.</p>
                 <div className="flex justify-center gap-3 flex-wrap">
-                  <button onClick={() => { setAnswers({}); setCurrentQ(0); setIsAIChatOpen(false); setPracticeRevealed({}); setBookmarks(new Set()); }} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
+                  <button onClick={handleRetryPractice} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
                     <RotateCcw className="w-4 h-4" /> Ôn lại từ đầu
                   </button>
                   <button onClick={handleReset} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-2">

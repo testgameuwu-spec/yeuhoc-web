@@ -61,6 +61,7 @@ export default function UserManagement() {
   const [filterRole, setFilterRole] = useState('all'); // all | admin | user
   const [historyUser, setHistoryUser] = useState(null); // Trạng thái cho modal lịch sử
   const [userAttempts, setUserAttempts] = useState([]);
+  const [practiceProgress, setPracticeProgress] = useState([]);
   const [loadingAttempts, setLoadingAttempts] = useState(false);
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [attemptDetails, setAttemptDetails] = useState(null);
@@ -194,26 +195,49 @@ export default function UserManagement() {
     if (historyUser) {
       const fetchAttempts = async () => {
         setLoadingAttempts(true);
-        const { data, error } = await supabase
-          .from('exam_attempts')
-          .select(`
-            *,
-            exams (
-              title,
-              subject
-            )
-          `)
-          .eq('user_id', historyUser.id)
-          .order('created_at', { ascending: false });
-        
-        if (!error && data) {
-          setUserAttempts(data);
+        const [attemptsResult, progressResult] = await Promise.all([
+          supabase
+            .from('exam_attempts')
+            .select(`
+              *,
+              exams (
+                title,
+                subject
+              )
+            `)
+            .eq('user_id', historyUser.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('practice_progress')
+            .select(`
+              *,
+              exams (
+                title,
+                subject
+              )
+            `)
+            .eq('user_id', historyUser.id)
+            .order('updated_at', { ascending: false }),
+        ]);
+
+        if (!attemptsResult.error && attemptsResult.data) {
+          setUserAttempts(attemptsResult.data);
+        } else {
+          setUserAttempts([]);
+        }
+
+        if (!progressResult.error && progressResult.data) {
+          setPracticeProgress(progressResult.data);
+        } else if (progressResult.error) {
+          console.warn('Fetch practice progress error:', progressResult.error.message);
+          setPracticeProgress([]);
         }
         setLoadingAttempts(false);
       };
       fetchAttempts();
     } else {
       setUserAttempts([]);
+      setPracticeProgress([]);
       setSelectedAttempt(null);
       setAttemptDetails(null);
     }
@@ -586,65 +610,132 @@ export default function UserManagement() {
                   <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <p className="text-sm text-white/60">Đang tải lịch sử làm bài...</p>
                 </div>
-              ) : userAttempts.length > 0 ? (
-                <div className="space-y-4">
-                  {userAttempts.map(attempt => (
-                    <div key={attempt.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-colors gap-4">
-                      <div className="flex-1">
-                        <h4 className="font-bold text-white">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
-                        <div className="flex items-center gap-3 text-xs text-white/40 mt-1">
-                          <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
-                          <span>•</span>
-                          <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
-                        </div>
+              ) : (userAttempts.length > 0 || practiceProgress.length > 0) ? (
+                <div className="space-y-6">
+                  {practiceProgress.length > 0 && (
+                    <section>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-emerald-400" /> Tiến trình ôn luyện
+                        </h4>
+                        <span className="text-xs text-white/30">{practiceProgress.length} đề</span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm flex-shrink-0">
-                        <div className="text-center">
-                          <p className="text-xs text-white/30 mb-0.5">Số điểm</p>
-                          <p className="font-black text-emerald-400">{attempt.score?.toFixed(1) || 0}</p>
-                        </div>
-                        <div className="w-px h-8 bg-white/10"></div>
-                        <div className="text-center">
-                          <p className="text-xs text-white/30 mb-0.5">Đúng</p>
-                          <p className="font-bold text-white/90">{attempt.correct_answers}/{attempt.total_questions}</p>
-                        </div>
-                        <div className="w-px h-8 bg-white/10"></div>
-                        <div className="text-center">
-                          <p className="text-xs text-white/30 mb-0.5">Thời gian</p>
-                          <p className="font-bold text-white/90">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</p>
-                        </div>
-                        {(attempt.violation_count > 0) && (
-                          <>
-                            <div className="w-px h-8 bg-white/10"></div>
-                            <div className="text-center" title={`${attempt.violation_count} lần vi phạm (thoát fullscreen/chuyển tab)`}>
-                              <p className="text-xs text-white/30 mb-0.5">Vi phạm</p>
-                              <p className={`font-bold ${attempt.violation_count >= 5 ? 'text-red-400' : attempt.violation_count >= 3 ? 'text-amber-400' : 'text-yellow-400'}`}>
-                                ⚠ {attempt.violation_count}
-                              </p>
+                      <div className="space-y-3">
+                        {practiceProgress.map(progress => {
+                          const totalQuestions = progress.total_questions || 0;
+                          const revealedCount = progress.revealed_count || 0;
+                          const answeredCount = progress.answered_count || 0;
+                          const percent = totalQuestions > 0 ? Math.round((revealedCount / totalQuestions) * 100) : 0;
+                          const currentQuestion = totalQuestions > 0 ? Math.min((progress.current_question || 0) + 1, totalQuestions) : 0;
+                          return (
+                            <div key={progress.id} className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04]">
+                              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <h5 className="font-bold text-white truncate">{progress.exams?.title || 'Đề thi đã bị xóa'}</h5>
+                                  <div className="flex items-center gap-3 text-xs text-white/40 mt-1 flex-wrap">
+                                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {progress.exams?.subject || 'Không rõ'}</span>
+                                    <span>Câu hiện tại: {currentQuestion}/{totalQuestions}</span>
+                                    <span>{new Date(progress.updated_at || progress.saved_at).toLocaleDateString('vi-VN')} {new Date(progress.updated_at || progress.saved_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm flex-shrink-0">
+                                  <div className="text-center">
+                                    <p className="text-xs text-white/30 mb-0.5">Đã xem</p>
+                                    <p className="font-black text-emerald-400">{revealedCount}/{totalQuestions}</p>
+                                  </div>
+                                  <div className="w-px h-8 bg-white/10"></div>
+                                  <div className="text-center">
+                                    <p className="text-xs text-white/30 mb-0.5">Đã trả lời</p>
+                                    <p className="font-bold text-white/90">{answeredCount}/{totalQuestions}</p>
+                                  </div>
+                                  <div className="w-px h-8 bg-white/10"></div>
+                                  <div className="text-center">
+                                    <p className="text-xs text-white/30 mb-0.5">Trạng thái</p>
+                                    <p className={`font-bold ${progress.completed ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                      {progress.completed ? 'Hoàn thành' : `${percent}%`}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+                                <div className="h-full rounded-full bg-emerald-400" style={{ width: `${percent}%` }} />
+                              </div>
                             </div>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleViewAttemptDetails(attempt)}
-                          className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors flex items-center gap-1"
-                        >
-                          Chi tiết <ChevronRight className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteAttempt(attempt.id)}
-                          title="Xóa lượt thi này"
-                          className="ml-1 p-1.5 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          );
+                        })}
                       </div>
-                    </div>
-                  ))}
+                    </section>
+                  )}
+
+                  {userAttempts.length > 0 && (
+                    <section>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          <History className="w-4 h-4 text-indigo-400" /> Lượt thi đã nộp
+                        </h4>
+                        <span className="text-xs text-white/30">{userAttempts.length} lượt</span>
+                      </div>
+                      <div className="space-y-4">
+                        {userAttempts.map(attempt => (
+                          <div key={attempt.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-colors gap-4">
+                            <div className="flex-1">
+                              <h4 className="font-bold text-white">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
+                              <div className="flex items-center gap-3 text-xs text-white/40 mt-1">
+                                <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
+                                <span>•</span>
+                                <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm flex-shrink-0">
+                              <div className="text-center">
+                                <p className="text-xs text-white/30 mb-0.5">Số điểm</p>
+                                <p className="font-black text-emerald-400">{attempt.score?.toFixed(1) || 0}</p>
+                              </div>
+                              <div className="w-px h-8 bg-white/10"></div>
+                              <div className="text-center">
+                                <p className="text-xs text-white/30 mb-0.5">Đúng</p>
+                                <p className="font-bold text-white/90">{attempt.correct_answers}/{attempt.total_questions}</p>
+                              </div>
+                              <div className="w-px h-8 bg-white/10"></div>
+                              <div className="text-center">
+                                <p className="text-xs text-white/30 mb-0.5">Thời gian</p>
+                                <p className="font-bold text-white/90">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</p>
+                              </div>
+                              {(attempt.violation_count > 0) && (
+                                <>
+                                  <div className="w-px h-8 bg-white/10"></div>
+                                  <div className="text-center" title={`${attempt.violation_count} lần vi phạm (thoát fullscreen/chuyển tab)`}>
+                                    <p className="text-xs text-white/30 mb-0.5">Vi phạm</p>
+                                    <p className={`font-bold ${attempt.violation_count >= 5 ? 'text-red-400' : attempt.violation_count >= 3 ? 'text-amber-400' : 'text-yellow-400'}`}>
+                                      ⚠ {attempt.violation_count}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleViewAttemptDetails(attempt)}
+                                className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors flex items-center gap-1"
+                              >
+                                Chi tiết <ChevronRight className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAttempt(attempt.id)}
+                                title="Xóa lượt thi này"
+                                className="ml-1 p-1.5 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
                 </div>
               ) : (
                 <div className="py-16 text-center border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02]">
                   <Activity className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                  <p className="text-sm text-white/60 font-medium">Học sinh chưa có lịch sử làm bài</p>
+                  <p className="text-sm text-white/60 font-medium">Học sinh chưa có lịch sử làm bài hoặc ôn luyện</p>
                 </div>
               )}
             </div>
