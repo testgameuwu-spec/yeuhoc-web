@@ -283,6 +283,12 @@ select {
   color: var(--et-red);
 }
 
+.et-nav-btn.unanswered {
+  background: var(--et-amber-lt);
+  border-color: var(--et-amber);
+  color: var(--et-amber);
+}
+
 .et-nav-legend {
   margin-top: 13px;
   display: flex;
@@ -405,6 +411,58 @@ select {
   background: var(--et-red-lt);
 }
 
+.et-q-card.unanswered {
+  background: linear-gradient(0deg, rgba(254, 243, 199, .24), rgba(254, 243, 199, .24)), #fff;
+}
+
+.et-result-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+.et-result-pill.correct {
+  color: var(--et-green);
+  background: var(--et-green-lt);
+  border-color: rgba(23, 168, 106, .28);
+}
+
+.et-result-pill.wrong {
+  color: var(--et-red);
+  background: var(--et-red-lt);
+  border-color: rgba(229, 83, 75, .28);
+}
+
+.et-result-pill.unanswered {
+  color: var(--et-amber);
+  background: var(--et-amber-lt);
+  border-color: rgba(217, 119, 6, .32);
+}
+
+.et-result-note {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.et-result-note.unanswered {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+}
+
 .et-mc-ltr {
   width: 26px;
   height: 26px;
@@ -483,6 +541,10 @@ select {
   background: var(--et-red-lt);
 }
 
+.et-ds-tbl tr.unanswered td {
+  background: #fffbeb;
+}
+
 /* Short answer */
 .et-short-inp {
   border: 1.5px solid var(--et-gray-200);
@@ -511,6 +573,11 @@ select {
 .et-short-inp.wrong {
   border-color: var(--et-red);
   background: var(--et-red-lt);
+}
+
+.et-short-inp.unanswered {
+  border-color: var(--et-amber);
+  background: #fffbeb;
 }
 
 /* Submit button */

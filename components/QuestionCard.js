@@ -5,7 +5,7 @@ import Image from 'next/image';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
 import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
-import { checkSAEquivalent } from '@/lib/mathUtils';
+import { getQuestionResultState } from '@/lib/questionResult';
 
 const TYPE_LABEL = { MCQ: 'Trắc nghiệm', TF: 'Đúng / Sai', SA: 'Trả lời ngắn' };
 
@@ -24,9 +24,6 @@ export default function QuestionCard({
     const [showSolution, setShowSolution] = useState(false);
     const { id, type, content, options, answer, solution, image } = question;
 
-    // ── MCQ correctness ──
-    const isMCQCorrect = type === 'MCQ' && showResult && selectedAnswer === answer;
-
     // ── TF answer stored as object { a: 'D', b: 'S', ... } ──
     const tfAnswer = (type === 'TF' && answer && typeof answer === 'object') ? answer : {};
     const tfSelected = (type === 'TF' && selectedAnswer && typeof selectedAnswer === 'object') ? selectedAnswer : {};
@@ -35,22 +32,26 @@ export default function QuestionCard({
         onAnswerChange({ ...tfSelected, [stmtKey]: val });
     };
 
-    // ── SA correctness ──
-    const isSACorrect = type === 'SA' && showResult && checkSAEquivalent(selectedAnswer, answer);
+    const resultState = showResult ? getQuestionResultState(question, selectedAnswer) : '';
+    const isCorrect = resultState === 'correct';
+    const isWrong = resultState === 'wrong';
+    const isUnanswered = resultState === 'unanswered';
 
     // border color of whole card when result shown
-    const cardBorder = showResult
-        ? (type === 'MCQ' ? (isMCQCorrect ? 'correct' : 'wrong')
-            : type === 'SA' ? (isSACorrect ? 'correct' : 'wrong')
-                : '')
-        : '';
+    const cardBorder = showResult ? resultState : '';
 
     return (
         <div
-            className="et-q-card"
+            className={`et-q-card ${resultState}`}
             style={
                 showResult && cardBorder
-                    ? { borderColor: cardBorder === 'correct' ? 'var(--et-green)' : 'var(--et-red)' }
+                    ? {
+                        borderColor: cardBorder === 'correct'
+                            ? 'var(--et-green)'
+                            : cardBorder === 'unanswered'
+                                ? 'var(--et-amber)'
+                                : 'var(--et-red)'
+                    }
                     : {}
             }
         >
@@ -89,15 +90,14 @@ export default function QuestionCard({
                             <Flag width={18} height={18} fill={isBookmarked ? 'currentColor' : 'none'} />
                         </button>
                     )}
-                    {showResult && type === 'MCQ' && (
-                        isMCQCorrect
-                            ? <CheckCircle2 style={{ color: 'var(--et-green)', width: 18, height: 18 }} />
-                            : <XCircle style={{ color: 'var(--et-red)', width: 18, height: 18 }} />
-                    )}
-                    {showResult && type === 'SA' && (
-                        isSACorrect
-                            ? <CheckCircle2 style={{ color: 'var(--et-green)', width: 18, height: 18 }} />
-                            : <XCircle style={{ color: 'var(--et-red)', width: 18, height: 18 }} />
+                    {showResult && (
+                        <>
+                            <span className={`et-result-pill ${resultState}`}>
+                                {isUnanswered ? 'Chưa làm' : isCorrect ? 'Đúng' : 'Sai'}
+                            </span>
+                            {isCorrect && <CheckCircle2 style={{ color: 'var(--et-green)', width: 18, height: 18 }} />}
+                            {isWrong && <XCircle style={{ color: 'var(--et-red)', width: 18, height: 18 }} />}
+                        </>
                     )}
                 </div>
             </div>
@@ -108,6 +108,15 @@ export default function QuestionCard({
                 <div className="et-q-text">
                     <MathRenderer text={content} />
                 </div>
+
+                {isUnanswered && (
+                    <div className="et-result-note unanswered">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <div>
+                            <div className="font-bold">Bạn chưa trả lời câu này.</div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Image */}
                 {image && (
@@ -181,13 +190,13 @@ export default function QuestionCard({
                     <div style={{ marginTop: 8 }}>
                         <input
                             type="text"
-                            value={selectedAnswer || ''}
+                            value={selectedAnswer ?? ''}
                             onChange={e => onAnswerChange(e.target.value)}
                             disabled={disabled}
                             placeholder="Nhập đáp án của bạn..."
-                            className={`et-short-inp${showResult ? (isSACorrect ? ' correct' : ' wrong') : ''}`}
+                            className={`et-short-inp${showResult ? (isCorrect ? ' correct' : isUnanswered ? ' unanswered' : ' wrong') : ''}`}
                         />
-                        {showResult && !isSACorrect && answer && (
+                        {showResult && !isCorrect && answer && (
                             <div style={{ marginTop: 6, fontSize: 13, color: 'var(--et-green)', fontWeight: 600 }}>
                                 <span>Đáp án đúng:</span>
                                 <MathRenderer text={answer} />
@@ -253,8 +262,9 @@ function TFTable({ statements, tfAnswer, tfSelected, showResult, disabled, onCha
                     const correctVal = tfAnswer[key]; // 'D' or 'S'
                     const selectedVal = tfSelected[key];
                     const isOk = showResult && selectedVal === correctVal;
+                    const isUnanswered = showResult && selectedVal !== 'D' && selectedVal !== 'S';
                     return (
-                        <tr key={i} className={showResult ? (isOk ? 'ok' : 'fail') : ''}>
+                        <tr key={i} className={showResult ? (isUnanswered ? 'unanswered' : isOk ? 'ok' : 'fail') : ''}>
                             <td>
                                 <span style={{
                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

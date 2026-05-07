@@ -14,6 +14,7 @@ import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
 import { supabase } from '@/lib/supabase';
 import { checkSAEquivalent } from '@/lib/mathUtils';
+import { getQuestionResultState } from '@/lib/questionResult';
 
 // ── Topbar (exam-tool style) ──
 const Topbar = ({ activeExam, handleReset, children }) => (
@@ -1161,7 +1162,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         <QuestionCard
                           question={gq}
                           index={rqIndex}
-                          selectedAnswer={answers[gq.id] || (gq.type === 'TF' ? {} : '')}
+                          selectedAnswer={answers[gq.id] ?? (gq.type === 'TF' ? {} : '')}
                           onAnswerChange={(val) => !isRev && handleAnswerChange(gq.id, val)}
                           showResult={isRev}
                           disabled={isRev}
@@ -1225,7 +1226,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   <QuestionCard
                     question={q}
                     index={currentQ}
-                    selectedAnswer={answers[q.id] || (q.type === 'TF' ? {} : '')}
+                    selectedAnswer={answers[q.id] ?? (q.type === 'TF' ? {} : '')}
                     onAnswerChange={(val) => !isRevealed && handleAnswerChange(q.id, val)}
                     showResult={isRevealed}
                     disabled={isRevealed}
@@ -1755,7 +1756,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                   <QuestionCard
                                     question={childQ}
                                     index={currentI}
-                                    selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
+                                    selectedAnswer={answers[childQ.id] ?? (childQ.type === 'TF' ? {} : '')}
                                     onAnswerChange={(val) => handleAnswerChange(childQ.id, val)}
                                     isBookmarked={bookmarks.has(childQ.id)}
                                     onToggleBookmark={() => {
@@ -1792,7 +1793,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <QuestionCard
                         question={firstChild}
                         index={currentI}
-                        selectedAnswer={answers[firstChild.id] || (firstChild.type === 'TF' ? {} : '')}
+                        selectedAnswer={answers[firstChild.id] ?? (firstChild.type === 'TF' ? {} : '')}
                         onAnswerChange={(val) => handleAnswerChange(firstChild.id, val)}
                         isBookmarked={bookmarks.has(firstChild.id)}
                         onToggleBookmark={() => {
@@ -1969,15 +1970,11 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // ── RESULTS DETAIL (2-column layout) ──
   if (quizPhase === 'results-detail' && activeExam) {
     let correctCount = 0;
+    let unansweredCount = 0;
     realQuestions.forEach(q => {
-      const ua = answers[q.id] || '';
-      let ok = false;
-      if (q.type === 'MCQ') ok = ua === q.answer;
-      else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-        const s = typeof ua === 'object' ? ua : {};
-        ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-      } else ok = checkSAEquivalent(ua, q.answer);
-      if (ok) correctCount++;
+      const resultState = getQuestionResultState(q, answers[q.id] ?? (q.type === 'TF' ? {} : ''));
+      if (resultState === 'correct') correctCount++;
+      if (resultState === 'unanswered') unansweredCount++;
     });
     const pct = realQuestions.length > 0 ? Math.round((correctCount / realQuestions.length) * 100) : 0;
 
@@ -2068,7 +2065,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                   <QuestionCard
                                     question={childQ}
                                     index={currentI}
-                                    selectedAnswer={answers[childQ.id] || (childQ.type === 'TF' ? {} : '')}
+                                    selectedAnswer={answers[childQ.id] ?? (childQ.type === 'TF' ? {} : '')}
                                     onAnswerChange={() => { }}
                                     showResult
                                     disabled
@@ -2100,7 +2097,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <QuestionCard
                         question={firstChild}
                         index={currentI}
-                        selectedAnswer={answers[firstChild.id] || (firstChild.type === 'TF' ? {} : '')}
+                        selectedAnswer={answers[firstChild.id] ?? (firstChild.type === 'TF' ? {} : '')}
                         onAnswerChange={() => { }}
                         showResult
                         disabled
@@ -2135,10 +2132,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </div>
 
             {/* Score Summary */}
-            <div className="flex items-center justify-between bg-indigo-50 rounded-xl p-4 mb-5">
+            <div className="grid grid-cols-3 gap-3 bg-indigo-50 rounded-xl p-4 mb-5">
               <div>
                 <div className="text-2xl font-black text-indigo-600">{correctCount}/{realQuestions.length}</div>
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-black text-amber-600">{unansweredCount}</div>
+                <div className="text-xs text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-black text-indigo-600">{(realQuestions.length > 0 ? (correctCount / realQuestions.length * 10) : 0).toFixed(1)}</div>
@@ -2148,15 +2149,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
             <div className="mb-4">
               {renderNavButtons((q, i) => {
-                const ua = answers[q.id] || '';
-                let ok = false;
-                if (q.type === 'MCQ') ok = ua === q.answer;
-                else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-                  const s = typeof ua === 'object' ? ua : {};
-                  ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-                } else ok = checkSAEquivalent(ua, q.answer);
+                const resultState = getQuestionResultState(q, answers[q.id] ?? (q.type === 'TF' ? {} : ''));
                 return (
-                  <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
+                  <button key={i} className={`et-nav-btn ${resultState}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
                     {i + 1}
                   </button>
                 );
@@ -2165,6 +2160,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             <div className="et-nav-legend flex-row justify-center gap-6 mt-0">
               <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
               <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
+              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-amber-lt)', border: '1.5px solid var(--et-amber)' }} />Chưa làm</div>
             </div>
           </div>
 
@@ -2187,15 +2183,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
               {renderNavButtons((q, i) => {
-                const ua = answers[q.id] || '';
-                let ok = false;
-                if (q.type === 'MCQ') ok = ua === q.answer;
-                else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-                  const s = typeof ua === 'object' ? ua : {};
-                  ok = Object.keys(q.answer).every(k => s[k] === q.answer[k]);
-                } else ok = checkSAEquivalent(ua, q.answer);
+                const resultState = getQuestionResultState(q, answers[q.id] ?? (q.type === 'TF' ? {} : ''));
                 return (
-                  <button key={i} className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`} onClick={() => scrollToQ(i)}>
+                  <button key={i} className={`et-nav-btn ${resultState}`} onClick={() => scrollToQ(i)}>
                     {i + 1}
                   </button>
                 );
@@ -2203,6 +2193,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               <div className="et-nav-legend mt-4">
                 <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
                 <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
+                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-amber-lt)', border: '1.5px solid var(--et-amber)' }} />Chưa làm</div>
               </div>
             </div>
           </div>

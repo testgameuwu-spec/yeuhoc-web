@@ -17,7 +17,7 @@ import Navbar from '@/components/Navbar';
 import QuestionCard from '@/components/QuestionCard';
 import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
 import { supabase } from '@/lib/supabase';
-import { checkSAEquivalent } from '@/lib/mathUtils';
+import { getQuestionResultState } from '@/lib/questionResult';
 
 function mapExamQuestions(examData) {
   return {
@@ -50,13 +50,8 @@ function formatDuration(seconds) {
 }
 
 function isAnswerCorrect(question, answers) {
-  const userAnswer = answers?.[question.id] || '';
-  if (question.type === 'MCQ') return userAnswer === question.answer;
-  if (question.type === 'TF' && question.answer && typeof question.answer === 'object') {
-    const selected = userAnswer && typeof userAnswer === 'object' ? userAnswer : {};
-    return Object.keys(question.answer).every((key) => selected[key] === question.answer[key]);
-  }
-  return checkSAEquivalent(userAnswer, question.answer);
+  const fallbackAnswer = question.type === 'TF' ? {} : '';
+  return getQuestionResultState(question, answers?.[question.id] ?? fallbackAnswer) === 'correct';
 }
 
 export default function AttemptHistoryDetailPage() {
@@ -150,6 +145,12 @@ export default function AttemptHistoryDetailPage() {
   ), [exam?.questions]);
   const correctCount = useMemo(() => (
     realQuestions.reduce((count, question) => count + (isAnswerCorrect(question, answers) ? 1 : 0), 0)
+  ), [answers, realQuestions]);
+  const unansweredCount = useMemo(() => (
+    realQuestions.reduce((count, question) => {
+      const resultState = getQuestionResultState(question, answers?.[question.id] ?? (question.type === 'TF' ? {} : ''));
+      return count + (resultState === 'unanswered' ? 1 : 0);
+    }, 0)
   ), [answers, realQuestions]);
 
   const scrollToQuestion = useCallback((index) => {
@@ -279,7 +280,7 @@ export default function AttemptHistoryDetailPage() {
                     <QuestionCard
                       question={question}
                       index={index}
-                      selectedAnswer={answers[question.id] || (question.type === 'TF' ? {} : '')}
+                      selectedAnswer={answers[question.id] ?? (question.type === 'TF' ? {} : '')}
                       onAnswerChange={() => {}}
                       onReport={handleOpenReport}
                       showResult
@@ -312,10 +313,14 @@ export default function AttemptHistoryDetailPage() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between bg-indigo-50 rounded-xl p-4 mb-5">
+            <div className="grid grid-cols-3 gap-3 bg-indigo-50 rounded-xl p-4 mb-5">
               <div>
                 <div className="text-2xl font-black text-indigo-600">{correctCount}/{realQuestions.length}</div>
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-black text-amber-600">{unansweredCount}</div>
+                <div className="text-xs text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</div>
@@ -325,11 +330,11 @@ export default function AttemptHistoryDetailPage() {
 
             <div className="mb-4">
               {renderNavButtons((question, index) => {
-                const ok = isAnswerCorrect(question, answers);
+                const resultState = getQuestionResultState(question, answers?.[question.id] ?? (question.type === 'TF' ? {} : ''));
                 return (
                   <button
                     key={question.id || index}
-                    className={`et-nav-btn ${ok ? 'correct' : 'wrong'}`}
+                    className={`et-nav-btn ${resultState}`}
                     onClick={() => {
                       setIsDrawerOpen(false);
                       scrollToQuestion(index);
@@ -343,6 +348,7 @@ export default function AttemptHistoryDetailPage() {
             <div className="et-nav-legend flex-row justify-center gap-6 mt-0">
               <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
               <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
+              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-amber-lt)', border: '1.5px solid var(--et-amber)' }} />Chưa làm</div>
             </div>
           </div>
         </>

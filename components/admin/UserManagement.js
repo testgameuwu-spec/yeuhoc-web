@@ -593,7 +593,7 @@ export default function UserManagement() {
                           <QuestionCard
                             question={q}
                             index={i}
-                            selectedAnswer={attemptDetails.answers[q.id] || (q.type === 'TF' ? {} : '')}
+                            selectedAnswer={attemptDetails.answers[q.id] ?? (q.type === 'TF' ? {} : '')}
                             onAnswerChange={() => {}}
                             showResult
                             disabled

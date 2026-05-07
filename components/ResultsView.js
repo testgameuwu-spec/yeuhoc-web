@@ -1,7 +1,8 @@
 'use client';
 
-import { CheckCircle2, XCircle, RotateCcw, Star } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 import { checkSAEquivalent } from '@/lib/mathUtils';
+import { getQuestionResultState } from '@/lib/questionResult';
 
 // Score ring component
 function ScoreRing({ score, maxScore }) {
@@ -40,11 +41,13 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
     const realQs = questions.filter(q => q.type !== 'TEXT');
     const total = realQs.length;
     let correct = 0;
+    let unanswered = 0;
     let score = 0;
     let maxScore = 0;
 
     realQs.forEach(q => {
-        const ua = answers[q.id] || '';
+        const ua = answers[q.id] ?? (q.type === 'TF' ? {} : '');
+        if (getQuestionResultState(q, ua) === 'unanswered') unanswered++;
         
         if (q.type === 'MCQ') {
             maxScore += scoringConfig ? scoringConfig.mcq : 1;
@@ -108,7 +111,7 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
             <div style={{ height: 1, background: '#f0f2f6', margin: '20px 0' }} />
 
             {/* Stats row */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                         <CheckCircle2 style={{ width: 16, height: 16, color: 'var(--et-green)' }} />
@@ -122,9 +125,19 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                         <XCircle style={{ width: 16, height: 16, color: 'var(--et-red)' }} />
-                        <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--et-red)' }}>{total - correct}</span>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--et-red)' }}>{total - correct - unanswered}</span>
                     </div>
                     <div style={{ fontSize: 11, color: '#9aa3b2', marginTop: 3 }}>Câu sai</div>
+                </div>
+
+                <div style={{ width: 1, background: '#f0f2f6' }} />
+
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                        <AlertTriangle style={{ width: 16, height: 16, color: 'var(--et-amber)' }} />
+                        <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--et-amber)' }}>{unanswered}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9aa3b2', marginTop: 3 }}>Chưa làm</div>
                 </div>
 
                 <div style={{ width: 1, background: '#f0f2f6' }} />
