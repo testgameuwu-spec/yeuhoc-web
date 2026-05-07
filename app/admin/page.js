@@ -376,7 +376,7 @@ export default function AdminDashboard() {
         />
       </div>
 
-      <div className="min-w-0 w-full transition-all duration-300 md:ml-64">
+      <div className="min-w-0 transition-all duration-300 md:ml-64">
         {/* Top bar */}
         <header className="sticky top-0 z-30 glass border-b border-white/8" style={{ isolation: 'isolate' }}>
           <div className="px-3 sm:px-6 md:px-8 min-h-14 sm:min-h-16 py-2 flex items-center justify-between gap-2">
