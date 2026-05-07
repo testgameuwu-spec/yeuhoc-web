@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/deepseek": "^2.0.32",
     "@ai-sdk/react": "^3.0.176",
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.104.1",
     "ai": "^6.0.174",
     "katex": "^0.16.45",

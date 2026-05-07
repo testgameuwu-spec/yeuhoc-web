@@ -387,16 +387,16 @@ export default function HomePage() {
       .slice((browsePage - 1) * FOLDERS_PER_PAGE, browsePage * FOLDERS_PER_PAGE);
 
     return visibleFolders.length > 0 ? (
-      <div className="space-y-6">
+      <div className="space-y-5">
         {visibleFolders.map((folder) => {
           const isLocked = folder.visibility === 'locked';
           const isExpanded = expandedFolders[folder.id];
 
           return (
-            <div key={folder.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+            <div key={folder.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
               <div
                 onClick={() => setExpandedFolders((prev) => ({ ...prev, [folder.id]: !prev[folder.id] }))}
-                className="flex items-center justify-between gap-3 p-4 sm:p-5 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100"
+                className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 bg-slate-50/80 hover:bg-slate-100 cursor-pointer transition-colors border-b border-gray-100/80"
               >
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
                   <button className="shrink-0 p-1 rounded-md text-gray-400 hover:bg-gray-200">
@@ -422,9 +422,9 @@ export default function HomePage() {
               </div>
 
               {isExpanded && (
-                <div className="p-5 bg-white">
+                <div className="p-4 sm:p-5 bg-white">
                   {folder.exams.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {folder.exams.map((exam) => renderExamCard(exam, isLocked))}
                     </div>
                   ) : (
@@ -455,8 +455,8 @@ export default function HomePage() {
     <main className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
       <Navbar />
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 flex flex-col xl:flex-row justify-center gap-6 xl:gap-8">
-        <div className="w-full max-w-5xl flex flex-col gap-6 min-w-0">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-5 sm:pt-6 pb-24 flex flex-col xl:flex-row justify-center gap-5 xl:gap-7">
+        <div className="w-full max-w-5xl flex flex-col gap-5 min-w-0">
           <HomeGreeting
             displayName={displayName}
             nearestTargetExam={nearestTargetExam}
@@ -507,7 +507,7 @@ export default function HomePage() {
           )}
         </div>
 
-        <div className="w-full xl:w-[320px] shrink-0 space-y-6">
+        <div className="w-full xl:w-[310px] shrink-0 space-y-5">
           <div className="hidden xl:block">
             <ContinueExamsPanel items={continueItems} loading={continueLoading} />
           </div>
@@ -531,11 +531,11 @@ export default function HomePage() {
 
 function ContinueExamsPanel({ items, loading }) {
   return (
-    <section className="bg-white border border-gray-200 rounded-3xl p-5 sm:p-6 shadow-sm">
+    <section className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg font-black text-gray-950">Tiếp tục làm bài</h2>
-          <p className="text-xs font-medium text-gray-500 mt-1">Các đề bạn chưa làm xong:</p>
+          <h2 className="text-base font-black text-gray-950">Tiếp tục làm bài</h2>
+          <p className="text-[11px] font-medium text-gray-400 mt-0.5">Các đề bạn chưa làm xong:</p>
         </div>
         {items.length > 0 && (
           <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
@@ -550,7 +550,7 @@ function ContinueExamsPanel({ items, loading }) {
           Đang tải...
         </div>
       ) : items.length > 0 ? (
-        <div className="mt-4 max-h-[320px] xl:max-h-[520px] overflow-y-auto pr-1 space-y-3">
+        <div className="mt-3.5 max-h-[320px] xl:max-h-[520px] overflow-y-auto pr-1 space-y-2.5">
           {items.map((item) => (
             <ContinueExamItem key={item.id} item={item} />
           ))}
@@ -574,7 +574,7 @@ function ContinueExamItem({ item }) {
   return (
     <Link
       href={item.href}
-      className="group block rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-indigo-200 hover:bg-indigo-50/30"
+      className="group block rounded-xl border border-gray-100 bg-white p-3.5 transition-all hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-sm"
     >
       <div className="flex flex-col gap-3 min-w-0">
         <div className="min-w-0">
@@ -611,9 +611,9 @@ function ContinueExamItem({ item }) {
 
 function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTargetCount, wish }) {
   return (
-    <div className="relative bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 overflow-hidden shadow-sm">
+    <div className="relative bg-white border border-gray-100 rounded-2xl p-5 sm:p-7 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
       <div className="relative z-10">
-        <p className="text-sm font-bold uppercase tracking-wider text-indigo-500 mb-2">Trang chủ</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-indigo-500 mb-1.5">Trang chủ</p>
         <h1 className="text-2xl sm:text-3xl font-black text-gray-950 mb-3">
           Xin chào, {displayName}
         </h1>

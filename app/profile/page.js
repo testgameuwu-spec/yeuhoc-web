@@ -4,10 +4,10 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  User, Mail, Camera, LogOut, Save, Shield, BookOpen, CalendarDays,
-  AlertCircle, CheckCircle2, Loader2, FileText, History, Activity, PauseCircle, PlayCircle, Flag,
-  ChevronRight
-} from 'lucide-react';
+  User, Envelope as Mail, Camera, SignOut as LogOut, FloppyDisk as Save, Shield, BookOpen, CalendarBlank as CalendarDays,
+  WarningCircle as AlertCircle, CheckCircle as CheckCircle2, CircleNotch as Loader2, FileText, ClockCounterClockwise as History, ActivityIcon as Activity, PauseCircle, PlayCircle, Flag,
+  CaretRight as ChevronRight
+} from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import { markResolvedReportsAsSeen } from '@/lib/reportSeenStorage';
@@ -28,6 +28,25 @@ const REPORT_REASON_LABELS = {
   missing_image: 'Thiếu hình ảnh',
   other: 'Lý do khác',
 };
+
+const COVER_GRADIENTS = [
+  { id: 'default', name: 'Indigo Night', css: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { id: 'ocean', name: 'Ocean Blue', css: 'linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)' },
+  { id: 'sunset', name: 'Sunset', css: 'linear-gradient(135deg, #f97316 0%, #ec4899 100%)' },
+  { id: 'aurora', name: 'Aurora', css: 'linear-gradient(135deg, #a855f7 0%, #3b82f6 50%, #06b6d4 100%)' },
+  { id: 'emerald', name: 'Emerald', css: 'linear-gradient(135deg, #059669 0%, #34d399 100%)' },
+  { id: 'cherry', name: 'Cherry', css: 'linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)' },
+  { id: 'peach', name: 'Peach', css: 'linear-gradient(135deg, #fecaca 0%, #fde68a 100%)' },
+  { id: 'lavender', name: 'Lavender', css: 'linear-gradient(135deg, #c4b5fd 0%, #f9a8d4 100%)' },
+  { id: 'midnight', name: 'Midnight', css: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #312e81 100%)' },
+  { id: 'forest', name: 'Forest', css: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)' },
+  { id: 'arctic', name: 'Arctic', css: 'linear-gradient(135deg, #67e8f9 0%, #a5b4fc 100%)' },
+  { id: 'warmflame', name: 'Warm Flame', css: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)' },
+  { id: 'slate', name: 'Slate', css: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)' },
+  { id: 'rose', name: 'Rose Garden', css: 'linear-gradient(135deg, #fda4af 0%, #e879f9 100%)' },
+  { id: 'deepblue', name: 'Deep Blue', css: 'linear-gradient(135deg, #1e40af 0%, #7c3aed 100%)' },
+  { id: 'mint', name: 'Mint Fresh', css: 'linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 50%, #5eead4 100%)' },
+];
 
 function ProfilePageInner() {
   const router = useRouter();
@@ -53,6 +72,8 @@ function ProfilePageInner() {
   const [targetExams, setTargetExams] = useState([]);
   const [selectedTargetExams, setSelectedTargetExams] = useState([]);
   const [selectedTargetExamIds, setSelectedTargetExamIds] = useState([]);
+  const [coverGradient, setCoverGradient] = useState('');
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
 
   const dataLoadedRef = useRef(false);
   const avatarFileInputRef = useRef(null);
@@ -124,6 +145,7 @@ function ProfilePageInner() {
             setUsername(profileData.username || '');
             setBio(profileData.bio || '');
             setAvatarUrl(profileData.avatar_url || '');
+            setCoverGradient(profileData.cover_gradient || '');
           }
 
           if (historyRes.status === 'fulfilled' && historyRes.value.data) {
@@ -339,6 +361,18 @@ function ProfilePageInner() {
     window.location.href = '/login';
   };
 
+  const handleCoverChange = async (gradientCss) => {
+    setCoverGradient(gradientCss);
+    setShowCoverPicker(false);
+    if (user) {
+      try {
+        await supabase.from('profiles').update({ cover_gradient: gradientCss }).eq('id', user.id);
+      } catch (e) {
+        console.warn('Could not save cover gradient:', e);
+      }
+    }
+  };
+
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
   const isAdmin = profile?.role === 'admin';
   const targetExamOptions = [...selectedTargetExams, ...targetExams]
@@ -352,7 +386,7 @@ function ProfilePageInner() {
       <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
         <Navbar />
         <div className="flex flex-col items-center justify-center py-40">
-          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+          <Loader2 weight="bold" className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
           <p className="text-gray-500 font-medium animate-pulse">Đang tải dữ liệu hồ sơ...</p>
         </div>
       </div>
@@ -363,19 +397,53 @@ function ProfilePageInner() {
     <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-extrabold text-gray-900">Hồ sơ cá nhân</h1>
-          <p className="text-sm text-gray-500 mt-1">Quản lý thông tin tài khoản của bạn</p>
-        </div>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          {/* Cover Banner */}
+          <div
+            className="h-40 sm:h-56 w-full relative group cursor-default"
+            style={{ background: coverGradient || COVER_GRADIENTS[0].css }}
+          >
+            <button
+              onClick={() => setShowCoverPicker(true)}
+              className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-black/30 backdrop-blur-sm text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-all hover:bg-black/50 cursor-pointer"
+            >
+              Đổi bìa
+            </button>
+          </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* ─── Left Sidebar: Avatar & Info ─── */}
-          <div className="lg:w-72 flex-shrink-0">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center shadow-sm">
+          {/* Cover Picker Modal */}
+          {showCoverPicker && (
+            <>
+              <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40" onClick={() => setShowCoverPicker(false)} />
+              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl p-6 w-[440px] max-w-[92vw] max-h-[80vh] overflow-y-auto">
+                <h3 className="text-base font-bold font-outfit text-gray-900 mb-1">Chọn ảnh bìa</h3>
+                <p className="text-xs text-gray-400 mb-4">Chọn một gradient để làm ảnh bìa hồ sơ của bạn</p>
+                <p className="text-[11px] text-gray-500 mb-3 font-bold uppercase tracking-wider">Color & Gradient</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {COVER_GRADIENTS.map((g) => (
+                    <button
+                      key={g.id}
+                      title={g.name}
+                      onClick={() => handleCoverChange(g.css)}
+                      className={`h-16 rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-md border-2 ${
+                        coverGradient === g.css || (!coverGradient && g.id === 'default')
+                          ? 'border-indigo-500 shadow-md scale-105'
+                          : 'border-transparent'
+                      }`}
+                      style={{ background: g.css }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Profile Header (Avatar + Info + Actions) */}
+          <div className="px-6 sm:px-10 pb-6 relative">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end -mt-16 sm:-mt-20 mb-4 gap-4">
               {/* Avatar */}
-              <div className="relative inline-block mb-4">
+              <div className="relative inline-block">
                 <input
                   ref={avatarFileInputRef}
                   type="file"
@@ -388,12 +456,12 @@ function ProfilePageInner() {
                   <Image
                     src={avatarUrl}
                     alt={displayName}
-                    width={112}
-                    height={112}
-                    className="w-28 h-28 rounded-full object-cover ring-4 ring-indigo-100 shadow-lg"
+                    width={144}
+                    height={144}
+                    className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white bg-white shadow-lg"
                   />
                 ) : (
-                  <div className="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-4xl font-bold ring-4 ring-indigo-100 shadow-lg">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-5xl font-bold ring-4 ring-white shadow-lg">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -402,97 +470,96 @@ function ProfilePageInner() {
                   title="Đổi ảnh đại diện"
                   onClick={() => avatarFileInputRef.current?.click()}
                   disabled={uploadingAvatar || !user}
-                  className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-white border-2 border-gray-100 flex items-center justify-center shadow-md hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed z-10"
                 >
                   {uploadingAvatar ? (
-                    <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+                    <Loader2 weight="bold" className="w-5 h-5 text-indigo-500 animate-spin" />
                   ) : (
-                    <Camera className="w-4 h-4 text-gray-500" />
+                    <Camera weight="fill" className="w-[20px] h-[20px] text-gray-600" />
                   )}
                 </button>
               </div>
 
-              {/* Name */}
-              <h2 className="text-lg font-bold text-gray-900 mb-0.5">{displayName}</h2>
-              <p className="text-xs text-gray-400 mb-3">{user?.email}</p>
-
-              {/* Role Badge */}
-              {isAdmin ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200">
-                  <Shield className="w-3.5 h-3.5" />
-                  Admin
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200">
-                  <User className="w-3.5 h-3.5" />
-                  User
-                </span>
-              )}
-
-              {/* Stats */}
-              <div className="mt-5 pt-5 border-t border-gray-100">
-                <div className="flex items-center gap-2 text-xs text-gray-400 justify-center">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Thành viên từ {profile?.created_at
-                    ? new Date(profile.created_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
-                    : '—'}
-                </div>
+              {/* Actions (Logout) */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors font-semibold text-sm flex items-center gap-2"
+                >
+                  <LogOut weight="bold" className="w-4 h-4" /> Đăng xuất
+                </button>
               </div>
+            </div>
 
-              {/* Logout Button */}
+            {/* Info */}
+            <div className="mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-gray-900 flex items-center gap-2">
+                {displayName}
+                {isAdmin ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200">
+                    <Shield weight="fill" className="w-3.5 h-3.5" />
+                    Admin
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200">
+                    <User weight="fill" className="w-3.5 h-3.5" />
+                    User
+                  </span>
+                )}
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">{user?.email}</p>
+              <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
+                <span className="flex items-center gap-1.5">
+                  <CalendarDays weight="duotone" className="w-[18px] h-[18px]" /> 
+                  Tham gia {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) : '—'}
+                </span>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex items-center gap-6 border-b border-gray-100 overflow-x-auto whitespace-nowrap hide-scrollbar">
               <button
-                onClick={handleLogout}
-                className="mt-5 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 transition-all cursor-pointer"
+                onClick={() => setActiveTab('overview')}
+                className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
+                  activeTab === 'overview' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
               >
-                <LogOut className="w-4 h-4" />
-                Đăng xuất
+                <Activity weight="duotone" className="w-[18px] h-[18px]" /> Tổng quan
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
+                  activeTab === 'history' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <History weight="duotone" className="w-[18px] h-[18px]" /> Lịch sử làm bài
+              </button>
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
+                  activeTab === 'reports' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <Flag weight="duotone" className="w-[18px] h-[18px]" /> Báo cáo câu hỏi
+              </button>
+              <button
+                onClick={() => setActiveTab('info')}
+                className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
+                  activeTab === 'info' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <FileText weight="duotone" className="w-[18px] h-[18px]" /> Thông tin cá nhân
               </button>
             </div>
           </div>
 
-          {/* ─── Right Content ─── */}
-          <div className="flex-1 space-y-6">
-            {/* Tabs */}
-            <div className="flex items-center gap-2 border-b border-gray-200 overflow-x-auto whitespace-nowrap hide-scrollbar">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
-                  activeTab === 'overview' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Activity className="w-4 h-4" /> Tổng quan
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
-                  activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <History className="w-4 h-4" /> Lịch sử làm bài
-              </button>
-              <button
-                onClick={() => setActiveTab('reports')}
-                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
-                  activeTab === 'reports' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Flag className="w-4 h-4" /> Báo cáo câu hỏi
-              </button>
-              <button
-                onClick={() => setActiveTab('info')}
-                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
-                  activeTab === 'info' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <FileText className="w-4 h-4" /> Thông tin cá nhân
-              </button>
-            </div>
-
+          {/* Content Area */}
+          <div className="p-6 sm:p-10 bg-slate-50/50 min-h-[400px]">
             {/* Content */}
             {activeTab === 'overview' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-indigo-500" />
+                  <Activity weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
                   Tổng quan học tập
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">Thống kê và tiến trình học tập của bạn</p>
@@ -525,17 +592,17 @@ function ProfilePageInner() {
                       {pausedExams.length > 0 && (
                         <div>
                           <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider flex items-center gap-2">
-                            <PauseCircle className="w-4 h-4 text-amber-500" /> Bài thi đang bỏ dở
+                            <PauseCircle weight="duotone" className="w-[18px] h-[18px] text-amber-500" /> Bài thi đang bỏ dở
                           </h4>
                           <div className="space-y-3">
                             {pausedExams.map(exam => (
                               <div key={exam.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors gap-4 shadow-sm">
                                 <div>
                                   <h4 className="font-bold text-gray-900">{exam.title}</h4>
-                                  <p className="text-xs text-gray-600 mt-1 flex items-center gap-1"><BookOpen className="w-3 h-3"/> {exam.subject}</p>
+                                  <p className="text-xs text-gray-600 mt-1 flex items-center gap-1"><BookOpen weight="duotone" className="w-[14px] h-[14px]"/> {exam.subject}</p>
                                 </div>
                                 <button onClick={() => router.push(`/de-thi/${exam.id}?resume=1`)} className="px-4 py-2 rounded-lg font-bold text-xs bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
-                                  <PlayCircle className="w-4 h-4" /> Tiếp tục làm
+                                  <PlayCircle weight="fill" className="w-[18px] h-[18px]" /> Tiếp tục làm
                                 </button>
                               </div>
                             ))}
@@ -563,7 +630,7 @@ function ProfilePageInner() {
                                   <div className="flex-1">
                                     <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
                                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                                      <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
+                                      <span className="flex items-center gap-1"><BookOpen weight="duotone" className="w-[14px] h-[14px]" /> {attempt.exams?.subject || 'Không rõ'}</span>
                                       <span>•</span>
                                       <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
                                     </div>
@@ -582,7 +649,7 @@ function ProfilePageInner() {
                                       onClick={() => handleViewAttemptDetails(attempt)}
                                       className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
                                     >
-                                      Chi tiết <ChevronRight className="w-3 h-3" />
+                                      Chi tiết <ChevronRight weight="bold" className="w-[14px] h-[14px]" />
                                     </button>
                                   </div>
                                 </div>
@@ -604,7 +671,7 @@ function ProfilePageInner() {
             ) : activeTab === 'history' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <History className="w-5 h-5 text-indigo-500" />
+                  <History weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
                   Lịch sử làm bài
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">Xem lại các bài thi đã nộp và chi tiết từng câu trả lời</p>
@@ -619,7 +686,7 @@ function ProfilePageInner() {
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
                           <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-gray-500 mt-1">
-                            <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {attempt.exams?.subject || 'Không rõ'}</span>
+                            <span className="flex items-center gap-1"><BookOpen weight="duotone" className="w-[14px] h-[14px]" /> {attempt.exams?.subject || 'Không rõ'}</span>
                             <span className="hidden sm:inline">•</span>
                             <span>{new Date(attempt.created_at).toLocaleDateString('vi-VN')} {new Date(attempt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
                           </div>
@@ -638,7 +705,7 @@ function ProfilePageInner() {
                             onClick={() => handleViewAttemptDetails(attempt)}
                             className="ml-0 sm:ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
                           >
-                            Chi tiết <ChevronRight className="w-3 h-3" />
+                            Chi tiết <ChevronRight weight="bold" className="w-[14px] h-[14px]" />
                           </button>
                         </div>
                       </div>
@@ -655,7 +722,7 @@ function ProfilePageInner() {
             ) : activeTab === 'reports' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Flag className="w-5 h-5 text-indigo-500" />
+                  <Flag weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
                   Báo cáo của tôi
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">
@@ -738,7 +805,7 @@ function ProfilePageInner() {
             ) : activeTab === 'info' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-indigo-500" />
+                  <FileText weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
                   Cập nhật thông tin
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">Chỉnh sửa thông tin cá nhân hiển thị trên hồ sơ</p>
@@ -753,9 +820,9 @@ function ProfilePageInner() {
                   }`}
                 >
                   {message.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 weight="fill" className="w-[18px] h-[18px] mt-0.5 flex-shrink-0" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <AlertCircle weight="fill" className="w-[18px] h-[18px] mt-0.5 flex-shrink-0" />
                   )}
                   <span>{message.text}</span>
                 </div>
@@ -766,7 +833,7 @@ function ProfilePageInner() {
                 <div>
                   <label className="auth-label">Email</label>
                   <div className="auth-input-wrap bg-gray-50 cursor-not-allowed">
-                    <Mail className="w-4 h-4 text-gray-300" />
+                    <Mail weight="duotone" className="w-[18px] h-[18px] text-gray-300" />
                     <input
                       type="email"
                       value={user?.email || ''}
@@ -781,7 +848,7 @@ function ProfilePageInner() {
                 <div>
                   <label className="auth-label">Họ và tên</label>
                   <div className="auth-input-wrap">
-                    <User className="w-4 h-4 text-gray-400" />
+                    <User weight="duotone" className="w-[18px] h-[18px] text-gray-400" />
                     <input
                       type="text"
                       value={fullName}
@@ -855,7 +922,7 @@ function ProfilePageInner() {
                                 )}
                               </span>
                               <span className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
-                                <CalendarDays className="w-3.5 h-3.5" />
+                                <CalendarDays weight="duotone" className="w-[14px] h-[14px]" />
                                 {formatTargetExamDate(exam.examDate)}
                               </span>
                             </span>
@@ -891,13 +958,13 @@ function ProfilePageInner() {
                       )}
                       {uploadingAvatar && (
                         <div className="absolute inset-0 bg-white/60 rounded-full flex items-center justify-center">
-                          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                          <Loader2 weight="bold" className="w-6 h-6 text-indigo-600 animate-spin" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
                       <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2">
-                        <Camera className="w-4 h-4 text-gray-500" />
+                        <Camera weight="duotone" className="w-[18px] h-[18px] text-gray-500" />
                         <span>Tải ảnh mới lên</span>
                         <input
                           type="file"
@@ -922,7 +989,7 @@ function ProfilePageInner() {
                     <div className="auth-spinner" />
                   ) : (
                     <>
-                      <Save className="w-4 h-4" />
+                      <Save weight="duotone" className="w-[18px] h-[18px]" />
                       Cập nhật thông tin
                     </>
                   )}
@@ -943,7 +1010,7 @@ export default function ProfilePage() {
       fallback={
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
           <Navbar />
-          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mt-20" />
+          <Loader2 weight="bold" className="w-12 h-12 text-indigo-500 animate-spin mt-20" />
         </div>
       }
     >

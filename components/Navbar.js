@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { BarChart2, Home, User } from 'lucide-react';
+import { ChartBar, House, User as UserIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import UserProfile from './UserProfile';
@@ -105,13 +105,13 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200" style={{ isolation: 'isolate' }}>
-      <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2 min-w-0">
+      <div className="px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-3 min-w-0">
         {/* ─── Left: Logo ─── */}
         <Link href="/" className="flex shrink-0 items-center gap-2.5 no-underline group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-shadow">
-            <LogoIcon size={20} color="white" />
+          <div className="w-[38px] h-[38px] rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-shadow">
+            <LogoIcon size={22} color="white" />
           </div>
-          <span className="site-logo-text font-extrabold text-[17px] text-gray-900 group-hover:text-indigo-600 transition-colors">
+          <span className="site-logo-text font-extrabold font-outfit text-xl text-gray-900 group-hover:text-indigo-600 transition-colors">
             YeuHoc
           </span>
         </Link>
@@ -122,21 +122,21 @@ export default function Navbar() {
             href="/"
             className={linkClass(normalizedPath === '/')}
           >
-            <Home className="w-4 h-4" />
+            <House weight="duotone" className="w-[18px] h-[18px]" />
             <span className="hidden sm:inline">Đề thi</span>
           </Link>
           <Link
             href="/profile/phan-tich/"
             className={linkClass(normalizedPath === '/profile/phan-tich')}
           >
-            <BarChart2 className="w-4 h-4" />
+            <ChartBar weight="duotone" className="w-[18px] h-[18px]" />
             <span className="hidden sm:inline">Phân tích</span>
           </Link>
           <Link
             href={unseenResolvedReports > 0 ? '/profile/?tab=reports' : '/profile/'}
             className={linkClass(normalizedPath === '/profile', 'relative')}
           >
-            <User className="w-4 h-4" />
+            <UserIcon weight="duotone" className="w-[18px] h-[18px]" />
             <span className="hidden sm:inline">Hồ sơ</span>
             {unseenResolvedReports > 0 && (
               <span

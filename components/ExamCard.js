@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Clock, Play, Lock } from 'lucide-react';
+import { Clock, Play, LockKey } from '@phosphor-icons/react';
 
 const SUBJECT_META = {
   'Toán':               { color: 'text-indigo-700',  bg: 'bg-indigo-50'  },
@@ -79,14 +79,14 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
       </div>
 
       {/* Title */}
-      <p className="text-sm font-bold text-gray-900 leading-snug m-0 break-words">
+      <p className="text-sm font-bold font-outfit text-gray-900 leading-snug m-0 break-words">
         {exam.title}
       </p>
 
       {/* Meta */}
       <div className="flex items-center flex-wrap gap-3">
         <span className="flex items-center gap-1 text-xs text-gray-500">
-          <Clock className="w-3.5 h-3.5" /> {exam.duration} phút
+          <Clock weight="duotone" className="w-[15px] h-[15px]" /> {exam.duration} phút
         </span>
         <span className="text-xs text-gray-500">{totalQ} câu</span>
         <div className="flex flex-wrap gap-1.5 sm:ml-auto">
@@ -98,7 +98,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
 
       {/* CTA */}
       <span className={ctaClassName}>
-        {isLocked ? <Lock className="w-3.5 h-3.5" /> : isSaved ? <Clock className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+        {isLocked ? <LockKey weight="duotone" className="w-[15px] h-[15px]" /> : isSaved ? <Clock weight="duotone" className="w-[15px] h-[15px]" /> : <Play weight="fill" className="w-[15px] h-[15px]" />}
         {isLocked ? 'Đã khoá' : isSaved ? 'Tiếp tục làm bài' : 'Làm bài ngay'}
       </span>
     </>

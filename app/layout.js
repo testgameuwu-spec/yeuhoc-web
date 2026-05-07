@@ -1,10 +1,17 @@
-import { Be_Vietnam_Pro } from "next/font/google";
+import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import "./globals.css";
 
-const beVietnam = Be_Vietnam_Pro({
-  subsets: ["vietnamese"],
-  weight: ["400", "600", "700"],
-  variable: "--font-be-vietnam",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["vietnamese", "latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-outfit",
   display: "swap",
 });
 
@@ -16,8 +23,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="vi" className={beVietnam.variable}>
-      <body className="antialiased bg-gray-100 text-gray-900 min-h-screen" suppressHydrationWarning>
+    <html lang="vi" className={`${plusJakartaSans.variable} ${outfit.variable}`}>
+      <body className="antialiased bg-gray-100 text-gray-900 min-h-screen font-sans" suppressHydrationWarning>
         {children}
       </body>
     </html>

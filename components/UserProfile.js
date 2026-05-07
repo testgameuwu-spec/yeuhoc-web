@@ -4,12 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   User,
-  LogOut,
-  ChevronDown,
+  SignOut as LogOut,
+  CaretDown as ChevronDown,
   Shield,
   UserCircle,
-  History,
-} from 'lucide-react';
+  ClockCounterClockwise as History,
+} from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
 
 export default function UserProfile() {
@@ -157,7 +157,7 @@ export default function UserProfile() {
           </div>
         )}
         <span className="hidden sm:inline max-w-[100px] truncate">{displayName}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown weight="bold" className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {dropdownOpen && (
@@ -170,21 +170,21 @@ export default function UserProfile() {
             <p className="text-xs text-gray-400 truncate mt-0.5">{user.email}</p>
             {isAdmin && (
               <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700">
-                <Shield className="w-3 h-3" /> Admin
+                <Shield weight="fill" className="w-3 h-3" /> Admin
               </span>
             )}
           </div>
 
           <div className="py-1">
             <a href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
-              <UserCircle className="w-4 h-4 text-gray-400" /> Hồ sơ
+              <UserCircle weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Hồ sơ
             </a>
             <a href="/profile/?tab=history" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
-              <History className="w-4 h-4 text-gray-400" /> Lịch sử làm bài
+              <History weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Lịch sử làm bài
             </a>
             {isAdmin && (
               <a href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
-                <Shield className="w-4 h-4 text-gray-400" /> Bảng điều khiển Admin
+                <Shield weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Bảng điều khiển Admin
               </a>
             )}
           </div>
@@ -194,7 +194,7 @@ export default function UserProfile() {
               onClick={handleLogout}
               className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer border-0 bg-transparent font-medium text-left"
             >
-              <LogOut className="w-4 h-4" /> Đăng xuất
+              <LogOut weight="duotone" className="w-[18px] h-[18px]" /> Đăng xuất
             </button>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, ChevronRight, ChevronLeft, RotateCcw, Clock, X, BarChart2, Award, Eye, Bot, Save } from 'lucide-react';
+import { BookOpen, ArrowLeft, CaretRight, CaretLeft, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk } from '@phosphor-icons/react';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
@@ -29,7 +29,7 @@ const Topbar = ({ activeExam, handleReset, children }) => (
     </div>
     <div className="hidden sm:flex items-center gap-1.5 text-[13px] text-gray-400 flex-1 min-w-0 ml-4">
       <span className="cursor-pointer shrink-0 hover:text-indigo-600 transition-colors" onClick={handleReset}>Trang chủ</span>
-      <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+      <CaretRight weight="bold" className="w-3.5 h-3.5 shrink-0" />
       <span className="text-gray-800 font-semibold truncate">{activeExam?.title || 'Đề thi'}</span>
     </div>
     <div className="flex items-center gap-3 shrink-0 ml-auto">
@@ -1087,7 +1087,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             disabled={practiceSaving}
             title="Lưu tiến trình ôn luyện"
           >
-            <Save style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">{practiceSaving ? 'Đang lưu...' : 'Lưu'}</span>
+            <FloppyDisk weight="duotone" style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">{practiceSaving ? 'Đang lưu...' : 'Lưu'}</span>
           </button>
           <button
             className="et-btn-outline"
@@ -1095,7 +1095,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             onClick={handleRetryPractice}
             title="Làm lại toàn bộ đề"
           >
-            <RotateCcw style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">Làm lại</span>
+            <ArrowCounterClockwise weight="bold" style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">Làm lại</span>
           </button>
         </Topbar>
 
@@ -1199,7 +1199,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                             }}
                             type="button"
                           >
-                            <Bot className="w-4 h-4" /> Xem gợi ý
+                            <Robot weight="duotone" className="w-4 h-4" /> Xem gợi ý
                           </button>
                           {!isRev && (
                             <button
@@ -1267,7 +1267,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   cursor: firstIndex === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
-                <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Câu trước</span>
+                <CaretLeft weight="bold" className="w-4 h-4" /> <span className="hidden sm:inline">Câu trước</span>
               </button>
 
               <div className="flex items-center gap-2 sm:gap-3">
@@ -1286,7 +1286,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   }}
                   type="button"
                 >
-                  <Bot className="w-4 h-4" /> Xem gợi ý
+                  <Robot weight="duotone" className="w-4 h-4" /> Xem gợi ý
                 </button>
                 {!contextQ && !isRevealed && (
                   <button
@@ -1323,7 +1323,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   boxShadow: lastIndex === realQuestions.length - 1 ? 'none' : '0 4px 14px rgba(59,111,212,.3)',
                 }}
               >
-                <span className="hidden sm:inline">Câu tiếp</span> <ChevronRight className="w-4 h-4" />
+                <span className="hidden sm:inline">Câu tiếp</span> <CaretRight weight="bold" className="w-4 h-4" />
               </button>
             </div>
 
@@ -1357,7 +1357,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 <p className="text-sm text-gray-500 mb-4">Bạn đã xem hết {realQuestions.length} câu hỏi.</p>
                 <div className="flex justify-center gap-3 flex-wrap">
                   <button onClick={handleRetryPractice} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4" /> Ôn lại từ đầu
+                    <ArrowCounterClockwise weight="bold" className="w-4 h-4" /> Ôn lại từ đầu
                   </button>
                   <button onClick={handleReset} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-2">
                     <ArrowLeft className="w-4 h-4" /> Chọn đề khác
@@ -1460,7 +1460,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   {/* --- Thống kê --- */}
                   <div>
                     <div className="flex items-center gap-2 mb-4">
-                      <BarChart2 className="w-5 h-5 text-indigo-600" />
+                      <ChartBar weight="duotone" className="w-5 h-5 text-indigo-600" />
                       <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Chi tiết thống kê</h3>
                     </div>
                     <div className="flex bg-white border border-gray-200/60 rounded-xl overflow-hidden shadow-sm">
@@ -1495,7 +1495,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   {examLeaderboard.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-4">
-                        <Award className="w-5 h-5 text-amber-500" />
+                        <Medal weight="duotone" className="w-5 h-5 text-amber-500" />
                         <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Bảng xếp hạng (Top 10)</h3>
                       </div>
                       <div className="bg-white border border-gray-200/60 rounded-xl overflow-hidden shadow-sm">
@@ -1607,7 +1607,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           );
         }}>
           <div className="mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
-            <Clock className="w-4 h-4 text-indigo-600" />
+            <Clock weight="duotone" className="w-4 h-4 text-indigo-600" />
             <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
           </div>
           <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause} title="Tạm dừng">
@@ -1701,7 +1701,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={() => { showConfirm('Làm lại từ đầu', 'Toàn bộ câu trả lời hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => handleRetry()); }}>
-                  <RotateCcw style={{ width: 13, height: 13 }} /> Làm lại
+                  <ArrowCounterClockwise weight="bold" style={{ width: 13, height: 13 }} /> Làm lại
                 </button>
               </div>
             </div>
@@ -1750,7 +1750,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           <div className="lg:w-1/2 w-full lg:sticky lg:top-4">
                             <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm">
                               <div className="flex items-center gap-2 mb-3">
-                                <BookOpen className="w-4 h-4 text-indigo-500" />
+                                <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
                               </div>
                               <div className="text-sm leading-relaxed text-gray-700">
@@ -1809,7 +1809,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
                       {firstChild.contextHint && (
                         <div className="et-section-hint">
-                          <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                          <BookOpen weight="duotone" className="w-4 h-4 shrink-0 mt-0.5" />
                           <span>{firstChild.contextHint}</span>
                         </div>
                       )}
@@ -2001,7 +2001,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 onClick={() => setQuizPhase('results-detail')}
                 className="px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md flex items-center gap-2"
               >
-                Xem chi tiết bài thi <ChevronRight className="w-4 h-4" />
+                Xem chi tiết bài thi <CaretRight weight="bold" className="w-4 h-4" />
               </button>
               <button className="px-6 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-2" onClick={handleReset}>
                 <ArrowLeft className="w-4 h-4" /> Chọn đề khác
@@ -2083,7 +2083,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           <div className="lg:w-1/2 w-full lg:sticky lg:top-4">
                             <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm">
                               <div className="flex items-center gap-2 mb-3">
-                                <BookOpen className="w-4 h-4 text-indigo-500" />
+                                <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Ngữ liệu</span>
                               </div>
                               <div className="text-sm leading-relaxed text-gray-700">
@@ -2137,7 +2137,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
                       {firstChild.contextHint && (
                         <div className="et-section-hint">
-                          <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
+                          <BookOpen weight="duotone" className="w-4 h-4 shrink-0 mt-0.5" />
                           <span>{firstChild.contextHint}</span>
                         </div>
                       )}
@@ -2158,7 +2158,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             })()}
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, padding: '24px 0' }}>
-              <button className="et-btn-outline" onClick={handleRetry}><RotateCcw style={{ width: 13, height: 13 }} /> Làm lại đề này</button>
+              <button className="et-btn-outline" onClick={handleRetry}><ArrowCounterClockwise weight="bold" style={{ width: 13, height: 13 }} /> Làm lại đề này</button>
               <button className="et-btn-outline" onClick={handleReset}><ArrowLeft style={{ width: 13, height: 13 }} /> Chọn đề khác</button>
             </div>
           </div>
