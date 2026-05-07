@@ -38,7 +38,7 @@ export default function PracticeAIChatbox({
   const currentKeyRef = useRef(questionKey);
   const [timeoutError, setTimeoutError] = useState(null);
 
-  const transport = useMemo(() => new DefaultChatTransport({ api: 'api/chat' }), []);
+  const transport = useMemo(() => new DefaultChatTransport({ api: '/api/chat' }), []);
 
   const {
     messages,
