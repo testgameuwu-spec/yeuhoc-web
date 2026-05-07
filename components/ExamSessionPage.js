@@ -75,6 +75,13 @@ const CustomModal = ({ isOpen, type, title, message, onConfirm, onCancel, confir
 const PauseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
 const PlayIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
 
+const formatClock = (seconds) => {
+  const total = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
 const hasPracticeAnswer = (answer) => {
   if (!answer) return false;
   if (typeof answer === 'object') return Object.keys(answer).length > 0;
@@ -1567,6 +1574,23 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // ── QUIZ (2-column layout) ──
   if (quizPhase === 'quiz' && activeExam) {
     const pct = realQuestions.length > 0 ? Math.round((answeredCount / realQuestions.length) * 100) : 0;
+    const unansweredCount = Math.max(0, realQuestions.length - answeredCount);
+    const quizSecondsLeft = savedSecondsLeft ?? ((activeExam.duration || 90) * 60);
+    const getQuizNavClass = (q, i) => {
+      const isAnswered = hasPracticeAnswer(answers[q.id]);
+      const isBookmarked = bookmarks.has(q.id);
+      if (i === currentQ) return 'current';
+      if (isBookmarked) return 'bookmarked';
+      if (isAnswered) return 'answered';
+      return '';
+    };
+    const confirmSubmit = () => {
+      const msg = unansweredCount > 0
+        ? `⚠️ CẢNH BÁO: Bạn còn ${unansweredCount} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`
+        : `Bạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
+      showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
+    };
+
     return (
       <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={() => {
@@ -1813,13 +1837,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             {/* Bottom Submit Button */}
             <div className="mt-8 mb-24 flex justify-center">
               <button
-                onClick={() => {
-                  const unanswered = realQuestions.length - answeredCount;
-                  const msg = unanswered > 0
-                    ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`
-                    : `Bạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
-                  showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
-                }}
+                onClick={confirmSubmit}
                 className="px-8 py-3.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-md flex items-center gap-2"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 18, height: 18 }}><polyline points="20 6 9 17 4 12" /></svg>
@@ -1833,45 +1851,59 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
           {/* Mobile Drawer */}
           <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`}>
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex justify-between items-center mb-4">
               <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Danh sách câu hỏi</div>
               <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="et-prog-row mt-2"><span>Đã làm</span><span>{answeredCount} / {realQuestions.length}</span></div>
-            <div className="et-prog-bg mb-4"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
+            <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 mb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Thời gian</div>
+                  <div className="mt-1 text-2xl font-black text-indigo-600 tabular-nums">{formatClock(quizSecondsLeft)}</div>
+                </div>
+                <button className="px-3 py-2 rounded-lg bg-white text-red-600 font-bold text-xs border border-red-100 shadow-sm" onClick={() => { setIsDrawerOpen(false); handlePause(); }}>
+                  Tạm dừng
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div>
+                  <div className="text-xl font-black text-indigo-600">{answeredCount}</div>
+                  <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Đã làm</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-black text-gray-600">{unansweredCount}</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-black text-amber-600">{bookmarks.size}</div>
+                  <div className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mt-1">Đánh dấu</div>
+                </div>
+              </div>
+              <div className="et-prog-row mt-3"><span>Tiến độ</span><span>{answeredCount} / {realQuestions.length}</span></div>
+              <div className="et-prog-bg"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
+            </div>
 
             <div className="mb-4">
               {renderNavButtons((q, i) => {
-                const a = answers[q.id];
-                const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
-                const isBookmarked = bookmarks.has(q.id);
-                let cls = '';
-                if (i === currentQ) cls = 'current';
-                else if (isBookmarked) cls = 'bookmarked';
-                else if (isAnswered) cls = 'answered';
                 return (
-                  <button key={i} className={`et-nav-btn ${cls}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
+                  <button key={i} className={`et-nav-btn ${getQuizNavClass(q, i)}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
                     {i + 1}
                   </button>
                 );
               })}
             </div>
 
-            <div className="flex items-center gap-2 mb-4">
-              <button className="flex-1 py-3 bg-red-50 text-red-600 font-bold rounded-xl" onClick={() => { setIsDrawerOpen(false); handlePause(); }}>
-                Tạm dừng
-              </button>
-              <button className="flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2" onClick={() => {
-                setIsDrawerOpen(false);
-                const unanswered = realQuestions.length - answeredCount;
-                const msg = unanswered > 0
-                  ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`
-                  : `Bạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
-                showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
-              }}>
+            <div className="et-nav-legend flex-row justify-center gap-5 mt-0 mb-4">
+              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#e0e7ff', border: '1.5px solid #4f46e5' }} />Đã trả lời</div>
+              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fef3c7', border: '1.5px solid #d97706' }} />Đánh dấu</div>
+              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fff', border: '1.5px solid #d1d5db' }} />Chưa làm</div>
+            </div>
+
+            <div className="mb-4">
+              <button className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2" onClick={() => { setIsDrawerOpen(false); confirmSubmit(); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 16, height: 16 }}><polyline points="20 6 9 17 4 12" /></svg>
                 Nộp bài
               </button>
@@ -1880,48 +1912,64 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
           {/* Sidebar Toggle (outside sidebar to avoid overflow clipping) */}
           {isSidebarCollapsed && (
-            <button className="et-sidebar-toggle desktop-only" onClick={() => setIsSidebarCollapsed(false)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 25, height: 25 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <button className="et-sidebar-toggle desktop-only" onClick={() => setIsSidebarCollapsed(false)} title="Mở danh sách câu hỏi" aria-label="Mở danh sách câu hỏi">
+              <span className="et-sidebar-toggle-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </span>
             </button>
           )}
 
           {/* Sidebar */}
           <div className={`et-sidebar desktop-only ${isSidebarCollapsed ? 'et-sidebar-collapsed' : ''}`}>
-            <div style={{ position: 'relative' }}>
-              <button className="absolute right-3 top-3 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setIsSidebarCollapsed(true)} title="Đóng panel">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 25, height: 25 }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <div className="flex justify-between items-center px-[17px] py-4 border-b border-gray-100">
+              <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Danh sách câu hỏi</div>
+              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600" title="Đóng panel">
+                <X className="w-4 h-4" />
               </button>
-              <Timer initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
             </div>
 
-            <button className="et-btn-submit" onClick={() => {
-              const unanswered = realQuestions.length - answeredCount;
-              const msg = unanswered > 0
-                ? `⚠️ CẢNH BÁO: Bạn còn ${unanswered} câu chưa làm!\n\nBạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`
-                : `Bạn đã trả lời ${answeredCount}/${realQuestions.length} câu. Bạn có chắc chắn muốn nộp bài?`;
-              showConfirm('Xác nhận nộp bài', msg, () => handleSubmit());
-            }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 14, height: 14 }}><polyline points="20 6 9 17 4 12" /></svg>
-              Nộp bài
-            </button>
-
-            <div className="et-prog-block">
-              <div className="et-prog-row"><span>Đã làm</span><span>{answeredCount} / {realQuestions.length}</span></div>
+            <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-3 m-[17px] mb-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Thời gian</div>
+                  <div className="mt-1 text-2xl font-black text-indigo-600 tabular-nums">
+                    <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+                  </div>
+                </div>
+                <button className="px-3 py-2 rounded-lg bg-white text-red-600 font-bold text-xs border border-red-100 shadow-sm" onClick={handlePause}>
+                  Tạm dừng
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div>
+                  <div className="text-xl font-black text-indigo-600">{answeredCount}</div>
+                  <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Đã làm</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-black text-gray-600">{unansweredCount}</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-black text-amber-600">{bookmarks.size}</div>
+                  <div className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mt-1">Đánh dấu</div>
+                </div>
+              </div>
+              <div className="et-prog-row mt-3"><span>Tiến độ</span><span>{answeredCount} / {realQuestions.length}</span></div>
               <div className="et-prog-bg"><div className="et-prog-fill" style={{ width: `${pct}%` }} /></div>
+            </div>
+
+            <div className="px-[17px] pb-2">
+              <button className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2" onClick={confirmSubmit}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ width: 16, height: 16 }}><polyline points="20 6 9 17 4 12" /></svg>
+                Nộp bài
+              </button>
             </div>
 
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
               {renderNavButtons((q, i) => {
-                const a = answers[q.id];
-                const isAnswered = a && (typeof a === 'object' ? Object.keys(a).length > 0 : a !== '');
-                const isBookmarked = bookmarks.has(q.id);
-                let cls = '';
-                if (i === currentQ) cls = 'current';
-                else if (isBookmarked) cls = 'bookmarked';
-                else if (isAnswered) cls = 'answered';
                 return (
-                  <button key={i} className={`et-nav-btn ${cls}`} onClick={() => scrollToQ(i)}>
+                  <button key={i} className={`et-nav-btn ${getQuizNavClass(q, i)}`} onClick={() => scrollToQ(i)}>
                     {i + 1}
                   </button>
                 );
@@ -2166,19 +2214,35 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
           {/* Sidebar Toggle (outside sidebar to avoid overflow clipping) */}
           {isSidebarCollapsed && (
-            <button className="et-sidebar-toggle desktop-only" onClick={() => setIsSidebarCollapsed(false)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <button className="et-sidebar-toggle desktop-only" onClick={() => setIsSidebarCollapsed(false)} title="Mở danh sách câu hỏi" aria-label="Mở danh sách câu hỏi">
+              <span className="et-sidebar-toggle-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </span>
             </button>
           )}
 
           {/* Results sidebar with nav */}
           <div className={`et-sidebar desktop-only ${isSidebarCollapsed ? 'et-sidebar-collapsed' : ''}`}>
-            <div className="et-timer-block" style={{ position: 'relative' }}>
-              <button className="absolute right-3 top-3 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setIsSidebarCollapsed(true)} title="Đóng panel">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <div className="flex justify-between items-center px-[17px] py-4 border-b border-gray-100">
+              <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Chi tiết bài làm</div>
+              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600" title="Đóng panel">
+                <X className="w-4 h-4" />
               </button>
-              <div className="et-timer-lbl">📊 Kết quả</div>
-              <div className="et-timer-disp" style={{ fontSize: 28 }}>Hoàn thành</div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 bg-indigo-50 rounded-xl p-3 m-[17px] mb-2">
+              <div>
+                <div className="text-xl font-black text-indigo-600">{correctCount}/{realQuestions.length}</div>
+                <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Đúng</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-black text-amber-600">{unansweredCount}</div>
+                <div className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-black text-indigo-600">{(realQuestions.length > 0 ? (correctCount / realQuestions.length * 10) : 0).toFixed(1)}</div>
+                <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm</div>
+              </div>
             </div>
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>

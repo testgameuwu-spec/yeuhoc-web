@@ -66,6 +66,7 @@ export default function AttemptHistoryDetailPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [reportModal, setReportModal] = useState({ isOpen: false, question: null });
 
   const showAlert = useCallback((title, message) => {
@@ -200,105 +201,166 @@ export default function AttemptHistoryDetailPage() {
     );
   }, [exam?.exam_type, realQuestions]);
 
+  const hasResultNav = !loading && !error && attempt && exam && realQuestions.length > 0;
+
   return (
     <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        <button
-          type="button"
-          onClick={() => router.push('/profile/?tab=history')}
-          className="mb-5 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Quay lại lịch sử
-        </button>
+      <div className={`et-screen ${(isSidebarCollapsed || !hasResultNav) ? 'sidebar-hidden' : ''}`} style={{ position: 'relative' }}>
+        <div className="et-main">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <button
+              type="button"
+              onClick={() => router.push('/profile/?tab=history')}
+              className="mb-5 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Quay lại lịch sử
+            </button>
 
-        {loading ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-sm">
-            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto mb-3" />
-            <p className="text-sm text-gray-500 font-medium">Đang tải chi tiết bài làm...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center shadow-sm">
-            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-            <h1 className="text-lg font-bold text-gray-900 mb-1">Không thể mở chi tiết bài làm</h1>
-            <p className="text-sm text-gray-500">{error}</p>
-          </div>
-        ) : !attempt || !exam ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center shadow-sm">
-            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-            <h1 className="text-lg font-bold text-gray-900 mb-1">Không thể mở chi tiết bài làm</h1>
-            <p className="text-sm text-gray-500">Không tìm thấy dữ liệu bài làm.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2 flex items-center gap-2">
-                    <History className="w-4 h-4" />
-                    Lịch sử làm bài
-                  </p>
-                  <h1 className="text-xl sm:text-2xl font-black text-gray-950">{examTitle}</h1>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="w-3.5 h-3.5" />
-                      {exam?.subject || attempt?.exams?.subject || 'Không rõ môn'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      {new Date(attempt.created_at).toLocaleString('vi-VN')}
-                    </span>
+            {loading ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-sm">
+                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto mb-3" />
+                <p className="text-sm text-gray-500 font-medium">Đang tải chi tiết bài làm...</p>
+              </div>
+            ) : error ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center shadow-sm">
+                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                <h1 className="text-lg font-bold text-gray-900 mb-1">Không thể mở chi tiết bài làm</h1>
+                <p className="text-sm text-gray-500">{error}</p>
+              </div>
+            ) : !attempt || !exam ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center shadow-sm">
+                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                <h1 className="text-lg font-bold text-gray-900 mb-1">Không thể mở chi tiết bài làm</h1>
+                <p className="text-sm text-gray-500">Không tìm thấy dữ liệu bài làm.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2 flex items-center gap-2">
+                        <History className="w-4 h-4" />
+                        Lịch sử làm bài
+                      </p>
+                      <h1 className="text-xl sm:text-2xl font-black text-gray-950">{examTitle}</h1>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          {exam?.subject || attempt?.exams?.subject || 'Không rõ môn'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          {new Date(attempt.created_at).toLocaleString('vi-VN')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 sm:min-w-[300px]">
+                      <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center">
+                        <Trophy className="w-4 h-4 text-indigo-500 mx-auto mb-1" />
+                        <p className="text-[11px] font-semibold text-indigo-600 uppercase">Điểm</p>
+                        <p className="text-lg font-black text-indigo-700">{attempt.score?.toFixed(1) || 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                        <p className="text-[11px] font-semibold text-emerald-600 uppercase">Đúng</p>
+                        <p className="text-lg font-black text-emerald-700">{attempt.correct_answers}/{attempt.total_questions}</p>
+                      </div>
+                      <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-center">
+                        <Clock className="w-4 h-4 text-amber-500 mx-auto mb-1" />
+                        <p className="text-[11px] font-semibold text-amber-600 uppercase">Thời gian</p>
+                        <p className="text-sm font-black text-amber-700">{formatDuration(attempt.time_spent)}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 sm:min-w-[300px]">
-                  <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center">
-                    <Trophy className="w-4 h-4 text-indigo-500 mx-auto mb-1" />
-                    <p className="text-[11px] font-semibold text-indigo-600 uppercase">Điểm</p>
-                    <p className="text-lg font-black text-indigo-700">{attempt.score?.toFixed(1) || 0}</p>
+                {realQuestions.length > 0 ? (
+                  <div className="space-y-6">
+                    {realQuestions.map((question, index) => (
+                      <div key={question.id || index} id={`history-q-card-${index}`}>
+                        <QuestionCard
+                          question={question}
+                          index={index}
+                          selectedAnswer={answers[question.id] ?? (question.type === 'TF' ? {} : '')}
+                          onAnswerChange={() => {}}
+                          onReport={handleOpenReport}
+                          showResult
+                          disabled
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
-                    <p className="text-[11px] font-semibold text-emerald-600 uppercase">Đúng</p>
-                    <p className="text-lg font-black text-emerald-700">{attempt.correct_answers}/{attempt.total_questions}</p>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center shadow-sm">
+                    <p className="text-sm text-gray-500">Không có dữ liệu câu hỏi cho bài làm này.</p>
                   </div>
-                  <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-center">
-                    <Clock className="w-4 h-4 text-amber-500 mx-auto mb-1" />
-                    <p className="text-[11px] font-semibold text-amber-600 uppercase">Thời gian</p>
-                    <p className="text-sm font-black text-amber-700">{formatDuration(attempt.time_spent)}</p>
-                  </div>
-                </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {hasResultNav && isSidebarCollapsed && (
+          <button className="et-sidebar-toggle desktop-only" onClick={() => setIsSidebarCollapsed(false)} title="Mở danh sách câu hỏi" aria-label="Mở danh sách câu hỏi">
+            <span className="et-sidebar-toggle-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </span>
+          </button>
+        )}
+
+        {hasResultNav && (
+          <div className={`et-sidebar desktop-only ${isSidebarCollapsed ? 'et-sidebar-collapsed' : ''}`}>
+            <div className="flex justify-between items-center px-[17px] py-4 border-b border-gray-100">
+              <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Chi tiết bài làm</div>
+              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600" title="Đóng panel">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 bg-indigo-50 rounded-xl p-3 m-[17px] mb-2">
+              <div>
+                <div className="text-xl font-black text-indigo-600">{correctCount}/{realQuestions.length}</div>
+                <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Đúng</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-black text-amber-600">{unansweredCount}</div>
+                <div className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</div>
+                <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm</div>
               </div>
             </div>
 
-            {realQuestions.length > 0 ? (
-              <div className="space-y-6">
-                {realQuestions.map((question, index) => (
-                  <div key={question.id || index} id={`history-q-card-${index}`}>
-                    <QuestionCard
-                      question={question}
-                      index={index}
-                      selectedAnswer={answers[question.id] ?? (question.type === 'TF' ? {} : '')}
-                      onAnswerChange={() => {}}
-                      onReport={handleOpenReport}
-                      showResult
-                      disabled
-                    />
-                  </div>
-                ))}
+            <div className="et-nav-block">
+              <div className="et-nav-title">Danh sách câu hỏi</div>
+              {renderNavButtons((question, index) => {
+                const resultState = getQuestionResultState(question, answers?.[question.id] ?? (question.type === 'TF' ? {} : ''));
+                return (
+                  <button
+                    key={question.id || index}
+                    className={`et-nav-btn ${resultState}`}
+                    onClick={() => scrollToQuestion(index)}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+              <div className="et-nav-legend mt-4">
+                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-green-lt)', border: '1.5px solid var(--et-green)' }} />Đúng</div>
+                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-red-lt)', border: '1.5px solid var(--et-red)' }} />Sai</div>
+                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: 'var(--et-amber-lt)', border: '1.5px solid var(--et-amber)' }} />Chưa làm</div>
               </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center shadow-sm">
-                <p className="text-sm text-gray-500">Không có dữ liệu câu hỏi cho bài làm này.</p>
-              </div>
-            )}
+            </div>
           </div>
         )}
       </div>
 
-      {!loading && !error && realQuestions.length > 0 && (
+      {hasResultNav && (
         <>
           <button className="et-fab mobile-only" onClick={() => setIsDrawerOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>

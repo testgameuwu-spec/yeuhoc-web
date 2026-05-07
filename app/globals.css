@@ -808,27 +808,46 @@ select {
 .et-sidebar-toggle {
   position: fixed;
   top: 50%;
-  right: 0;
+  right: 16px;
   transform: translateY(-50%);
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 999px;
   background: #fff;
-  border: 1.5px solid var(--et-gray-200);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1.5px solid rgba(59, 111, 212, .22);
+  box-shadow: 0 10px 26px rgba(30, 37, 51, .14), 0 2px 8px rgba(59, 111, 212, .12);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   cursor: pointer;
   z-index: 210;
-  color: var(--et-gray-600);
-  transition: all 0.2s;
+  color: var(--et-blue);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.et-sidebar-toggle-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--et-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: none;
 }
 
 .et-sidebar-toggle:hover {
-  border-color: var(--et-blue);
-  color: var(--et-blue);
-  box-shadow: 0 2px 12px rgba(59, 111, 212, 0.2);
+  transform: translateY(-50%) translateX(-3px);
+  border-color: rgba(59, 111, 212, .45);
+  box-shadow: 0 14px 34px rgba(30, 37, 51, .18), 0 4px 14px rgba(59, 111, 212, .18);
+}
+
+.et-sidebar-toggle:active {
+  transform: translateY(-50%) translateX(-1px) scale(.98);
 }
 
 /* ─── Mobile FAB & Drawer ─── */
