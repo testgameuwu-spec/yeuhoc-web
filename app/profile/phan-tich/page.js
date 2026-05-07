@@ -1090,6 +1090,12 @@ export default function PersonalAnalysisPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">Phân tích cá nhân</h1>
             <p className="mt-3 text-base font-medium text-slate-500">Xem điểm mạnh, điểm yếu và gợi ý ôn tập thông minh theo từng kỳ thi.</p>
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-900 shadow-sm">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <p className="text-sm font-extrabold leading-relaxed sm:text-base">
+                Lưu ý: Phần phân tích cá nhân chỉ nhận kết quả trong chế độ thi thật.
+              </p>
+            </div>
           </div>
 
           <ExamSwitch activeKey={activeExamKey} onChange={handleExamTabChange} statsByExam={statsByExam} />
