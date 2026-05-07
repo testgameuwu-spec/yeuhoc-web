@@ -1,111 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Clock, Folder, Loader2, Lock, PlayCircle } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Folder, Loader2, Lock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FilterBar from '@/components/FilterBar';
 import ExamCard from '@/components/ExamCard';
 import Pagination from '@/components/Pagination';
 import DonateWidget from '@/components/DonateWidget';
+import ContinueExamsPanel from '@/components/ContinueExamsPanel';
 import { getAllFolders, getPublishedExams } from '@/lib/examStore';
+import { getContinueExamItems, readSavedExams } from '@/lib/continueExamStore';
 import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
 import { findNearestTargetExam, formatTargetExamDate, getCountdownSentence, getRandomWish } from '@/lib/targetExamDisplay';
 import { supabase } from '@/lib/supabase';
 
 const ITEMS_PER_PAGE = 9;
 const FOLDERS_PER_PAGE = 5;
-
-function hasSavedAnswer(answer) {
-  if (!answer) return false;
-  if (typeof answer === 'object') return Object.keys(answer).length > 0;
-  return answer !== '';
-}
-
-function getSortableTime(value) {
-  const time = new Date(value || 0).getTime();
-  return Number.isFinite(time) ? time : 0;
-}
-
-function formatContinueTime(value) {
-  if (!value) return 'Chưa rõ thời gian';
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'Chưa rõ thời gian';
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function getVisibleExamMap(exams, folders) {
-  const hiddenFolderIds = new Set(
-    folders
-      .filter((folder) => folder.visibility === 'private' || folder.visibility === 'locked')
-      .map((folder) => folder.id)
-  );
-
-  return new Map(
-    exams
-      .filter((exam) => !exam.folderId || !hiddenFolderIds.has(exam.folderId))
-      .map((exam) => [String(exam.id), exam])
-  );
-}
-
-function readSavedExams(userId) {
-  if (!userId || typeof window === 'undefined') return new Set();
-
-  const saved = new Set();
-  const prefix = `yeuhoc_progress_${userId}_`;
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith(prefix)) {
-      saved.add(key.substring(prefix.length));
-    }
-  });
-  return saved;
-}
-
-function readSavedQuizItems(userId, examMap) {
-  if (!userId || typeof window === 'undefined') return [];
-
-  const items = [];
-  const prefix = `yeuhoc_progress_${userId}_`;
-  Object.keys(localStorage).forEach((key) => {
-    if (!key.startsWith(prefix)) return;
-
-    const examId = key.substring(prefix.length);
-    const exam = examMap.get(String(examId));
-    if (!exam) return;
-
-    let savedAt = '';
-    let answeredCount = 0;
-    try {
-      const saved = JSON.parse(localStorage.getItem(key) || '{}');
-      savedAt = saved.savedAt || '';
-      answeredCount = Object.values(saved.answers || {}).filter(hasSavedAnswer).length;
-    } catch {
-      savedAt = '';
-    }
-
-    const totalQuestions = exam.totalQ || (exam.questions || []).filter((question) => question.type !== 'TEXT').length || 0;
-    items.push({
-      id: `exam-${exam.id}`,
-      mode: 'exam',
-      href: `/de-thi/${exam.id}?resume=1`,
-      title: exam.title,
-      subject: exam.subject,
-      examType: exam.examType,
-      updatedAt: savedAt,
-      progressText: totalQuestions > 0
-        ? `${answeredCount}/${totalQuestions} câu đã trả lời`
-        : 'Đang làm bài thi',
-    });
-  });
-
-  return items;
-}
 
 export default function HomePage() {
   const router = useRouter();
@@ -238,50 +149,7 @@ export default function HomePage() {
       }
 
       setContinueLoading(true);
-      const examMap = getVisibleExamMap(allExams, allFolders);
-      const quizItems = readSavedQuizItems(user.id, examMap);
-      let practiceItems = [];
-
-      try {
-        const { data, error } = await supabase
-          .from('practice_progress')
-          .select('exam_id, answered_count, revealed_count, total_questions, saved_at, updated_at')
-          .eq('user_id', user.id)
-          .eq('completed', false)
-          .order('updated_at', { ascending: false });
-
-        if (error) {
-          console.warn('Practice progress fetch failed:', error.message);
-        } else {
-          practiceItems = (data || [])
-            .map((row) => {
-              const exam = examMap.get(String(row.exam_id));
-              if (!exam) return null;
-
-              const totalQuestions = row.total_questions || exam.totalQ || 0;
-              const revealedCount = row.revealed_count || 0;
-              const answeredCount = row.answered_count || 0;
-              return {
-                id: `practice-${exam.id}`,
-                mode: 'practice',
-                href: `/de-thi/${exam.id}?practiceResume=1`,
-                title: exam.title,
-                subject: exam.subject,
-                examType: exam.examType,
-                updatedAt: row.updated_at || row.saved_at,
-                progressText: totalQuestions > 0
-                  ? `${revealedCount}/${totalQuestions} câu đã xem · ${answeredCount} câu đã trả lời`
-                  : 'Đang ôn luyện',
-              };
-            })
-            .filter(Boolean);
-        }
-      } catch (error) {
-        console.warn('Practice progress fetch failed:', error);
-      }
-
-      const nextItems = [...quizItems, ...practiceItems]
-        .sort((a, b) => getSortableTime(b.updatedAt) - getSortableTime(a.updatedAt));
+      const nextItems = await getContinueExamItems(user.id, allExams, allFolders);
 
       if (!cancelled) {
         setContinueItems(nextItems);
@@ -526,86 +394,6 @@ export default function HomePage() {
         />
       )}
     </main>
-  );
-}
-
-function ContinueExamsPanel({ items, loading }) {
-  return (
-    <section className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-black text-gray-950">Tiếp tục làm bài</h2>
-          <p className="text-[11px] font-medium text-gray-400 mt-0.5">Các đề bạn chưa làm xong:</p>
-        </div>
-        {items.length > 0 && (
-          <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
-            {items.length}
-          </span>
-        )}
-      </div>
-
-      {loading ? (
-        <div className="mt-5 flex items-center gap-2 text-sm font-medium text-gray-500">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Đang tải...
-        </div>
-      ) : items.length > 0 ? (
-        <div className="mt-3.5 max-h-[320px] xl:max-h-[520px] overflow-y-auto pr-1 space-y-2.5">
-          {items.map((item) => (
-            <ContinueExamItem key={item.id} item={item} />
-          ))}
-        </div>
-      ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm font-medium text-gray-500">
-          Chưa có bài đang làm.
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ContinueExamItem({ item }) {
-  const isPractice = item.mode === 'practice';
-  const badgeClassName = isPractice
-    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-    : 'bg-indigo-50 text-indigo-700 border-indigo-100';
-  const Icon = isPractice ? BookOpen : Clock;
-
-  return (
-    <Link
-      href={item.href}
-      className="group block rounded-xl border border-gray-100 bg-white p-3.5 transition-all hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-sm"
-    >
-      <div className="flex flex-col gap-3 min-w-0">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${badgeClassName}`}>
-              <Icon className="w-3.5 h-3.5" />
-              {isPractice ? 'Đề ôn luyện' : 'Bài thi thật'}
-            </span>
-            {item.examType && (
-              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-500">
-                {item.examType}
-              </span>
-            )}
-          </div>
-          <h3 className="mt-2 truncate text-sm font-bold text-gray-950 group-hover:text-indigo-700">
-            {item.title}
-          </h3>
-          <p className="mt-1 truncate text-xs font-medium text-gray-500">
-            {item.subject || 'Không rõ môn'} · {item.progressText}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 text-xs text-gray-400">
-          <span className="truncate">{formatContinueTime(item.updatedAt)}</span>
-          <span className="inline-flex shrink-0 items-center gap-1 font-bold text-indigo-600">
-            Tiếp tục
-            <PlayCircle className="w-3.5 h-3.5" />
-          </span>
-        </div>
-      </div>
-    </Link>
   );
 }
 

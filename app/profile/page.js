@@ -5,12 +5,15 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Envelope as Mail, Camera, SignOut as LogOut, FloppyDisk as Save, Shield, BookOpen, CalendarBlank as CalendarDays,
-  WarningCircle as AlertCircle, CheckCircle as CheckCircle2, CircleNotch as Loader2, FileText, ClockCounterClockwise as History, ActivityIcon as Activity, PauseCircle, PlayCircle, Flag,
+  WarningCircle as AlertCircle, CheckCircle as CheckCircle2, CircleNotch as Loader2, FileText, ClockCounterClockwise as History, ActivityIcon as Activity, Flag,
   CaretRight as ChevronRight
 } from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
+import ContinueExamsPanel from '@/components/ContinueExamsPanel';
 import { markResolvedReportsAsSeen } from '@/lib/reportSeenStorage';
+import { getAllFolders, getPublishedExams } from '@/lib/examStore';
+import { getContinueExamItems } from '@/lib/continueExamStore';
 import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
 import { formatTargetExamDate } from '@/lib/targetExamDisplay';
 
@@ -67,7 +70,8 @@ function ProfilePageInner() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activeTab, setActiveTab] = useState(initialActiveTab); // overview | history | reports | info
-  const [pausedExams, setPausedExams] = useState([]);
+  const [continueItems, setContinueItems] = useState([]);
+  const [continueLoading, setContinueLoading] = useState(true);
   const [myReports, setMyReports] = useState([]);
   const [targetExams, setTargetExams] = useState([]);
   const [selectedTargetExams, setSelectedTargetExams] = useState([]);
@@ -92,6 +96,7 @@ function ProfilePageInner() {
       dataLoadedRef.current = true; // Prevent double fetching immediately
 
       setUser(sessionUser);
+      setContinueLoading(true);
 
       try {
         const profilePromise = supabase
@@ -114,29 +119,41 @@ function ProfilePageInner() {
 
         const targetExamsPromise = getTargetExams();
         const selectedTargetExamsPromise = getUserTargetExams(sessionUser.id);
+        const publishedExamsPromise = getPublishedExams();
+        const foldersPromise = getAllFolders();
 
-        const [profileRes, historyRes, reportsRes, targetExamsRes, selectedTargetExamsRes] = await Promise.allSettled([
+        const [
+          profileRes,
+          historyRes,
+          reportsRes,
+          targetExamsRes,
+          selectedTargetExamsRes,
+          publishedExamsRes,
+          foldersRes,
+        ] = await Promise.allSettled([
           profilePromise,
           historyPromise,
           reportsPromise,
           targetExamsPromise,
           selectedTargetExamsPromise,
+          publishedExamsPromise,
+          foldersPromise,
         ]);
 
-        const keys = Object.keys(localStorage);
-        const prefix = `yeuhoc_progress_${sessionUser.id}_`;
-        const savedExamIds = [];
-        keys.forEach(k => {
-          if (k.startsWith(prefix)) {
-            savedExamIds.push(k.substring(prefix.length));
-          }
-        });
+        let nextContinueItems = [];
+        if (publishedExamsRes.status === 'fulfilled' && foldersRes.status === 'fulfilled') {
+          nextContinueItems = await getContinueExamItems(
+            sessionUser.id,
+            publishedExamsRes.value,
+            foldersRes.value
+          );
+        } else {
+          if (publishedExamsRes.status === 'rejected') console.warn('Published exams fetch failed:', publishedExamsRes.reason);
+          if (foldersRes.status === 'rejected') console.warn('Folders fetch failed:', foldersRes.reason);
+        }
 
         if (isMounted) {
-          if (savedExamIds.length > 0) {
-            const { data } = await supabase.from('exams').select('id, title, subject').in('id', savedExamIds);
-            if (data) setPausedExams(data);
-          }
+          setContinueItems(nextContinueItems);
 
           if (profileRes.status === 'fulfilled' && profileRes.value.data) {
             const profileData = profileRes.value.data;
@@ -175,6 +192,7 @@ function ProfilePageInner() {
       } finally {
         if (isMounted) {
           setLoading(false);
+          setContinueLoading(false);
         }
       }
     };
@@ -588,26 +606,14 @@ function ProfilePageInner() {
                         </div>
                       </div>
 
-                      {/* Paused Exams */}
-                      {pausedExams.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider flex items-center gap-2">
-                            <PauseCircle weight="duotone" className="w-[18px] h-[18px] text-amber-500" /> Bài thi đang bỏ dở
-                          </h4>
-                          <div className="space-y-3">
-                            {pausedExams.map(exam => (
-                              <div key={exam.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors gap-4 shadow-sm">
-                                <div>
-                                  <h4 className="font-bold text-gray-900">{exam.title}</h4>
-                                  <p className="text-xs text-gray-600 mt-1 flex items-center gap-1"><BookOpen weight="duotone" className="w-[14px] h-[14px]"/> {exam.subject}</p>
-                                </div>
-                                <button onClick={() => router.push(`/de-thi/${exam.id}?resume=1`)} className="px-4 py-2 rounded-lg font-bold text-xs bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
-                                  <PlayCircle weight="fill" className="w-[18px] h-[18px]" /> Tiếp tục làm
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      {/* Continue Exams */}
+                      {continueItems.length > 0 && (
+                        <ContinueExamsPanel
+                          items={continueItems}
+                          loading={continueLoading}
+                          title="Bài thi đang làm"
+                          description="Các đề và phiên ôn luyện bạn chưa làm xong:"
+                        />
                       )}
                       
                       {/* Recent Exams */}
@@ -658,7 +664,7 @@ function ProfilePageInner() {
                         </div>
                       )}
 
-                      {attempts.length === 0 && pausedExams.length === 0 && (
+                      {attempts.length === 0 && continueItems.length === 0 && (
                         <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                           <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                           <p className="text-sm text-gray-500 font-medium">Bạn chưa tham gia học tập</p>
