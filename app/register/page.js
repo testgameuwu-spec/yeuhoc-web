@@ -3,15 +3,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Mail, Lock, UserPlus, Eye, EyeOff, BookOpen, AlertCircle,
+  Mail, Lock, UserPlus, Eye, EyeOff, AlertCircle,
   ArrowRight, User, CheckCircle2, ShieldCheck, RefreshCw, ArrowLeft,
 } from 'lucide-react';
 import LogoIcon from '@/components/LogoIcon';
-import { supabase } from '@/lib/supabase';
-import Navbar from '@/components/Navbar';
+import AuthHeader from '@/components/AuthHeader';
 
 const OTP_LENGTH = 8;
 const RESEND_COOLDOWN = 60; // seconds
+
+async function getSupabase() {
+  return (await import('@/lib/supabase')).supabase;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -77,6 +80,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
+    const supabase = await getSupabase();
     const { data, error: authError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -172,6 +176,7 @@ export default function RegisterPage() {
     setVerifying(true);
     setOtpError('');
 
+    const supabase = await getSupabase();
     const { data, error: verifyError } = await supabase.auth.verifyOtp({
       email: email.trim(),
       token: otpCode,
@@ -207,6 +212,7 @@ export default function RegisterPage() {
     setOtpError('');
     setResendCooldown(RESEND_COOLDOWN);
 
+    const supabase = await getSupabase();
     const { error: resendError } = await supabase.auth.resend({
       type: 'signup',
       email: email.trim(),
@@ -236,8 +242,8 @@ export default function RegisterPage() {
   // ══════════════════════════════════════════
   if (verified) {
     return (
-      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
-        <Navbar />
+      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+        <AuthHeader active="register" />
         <div className="flex items-center justify-center px-4 py-12 sm:py-20">
           <div className="w-full max-w-md">
             <div className="auth-card text-center">
@@ -270,8 +276,8 @@ export default function RegisterPage() {
     const isOtpComplete = otpCode.length === OTP_LENGTH;
 
     return (
-      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
-        <Navbar />
+      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+        <AuthHeader active="register" />
         <div className="flex items-center justify-center px-4 py-12 sm:py-16">
           <div className="w-full max-w-md">
             <div className="auth-card">
@@ -426,8 +432,8 @@ export default function RegisterPage() {
   // ── SCREEN 1: Registration Form ──
   // ══════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
-      <Navbar />
+    <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+      <AuthHeader active="register" />
 
       <div className="flex items-center justify-center px-4 py-12 sm:py-16">
         <div className="w-full max-w-md">

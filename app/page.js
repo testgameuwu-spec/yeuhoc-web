@@ -205,7 +205,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+    <main className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
       <Navbar />
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 flex flex-col xl:flex-row justify-center gap-6 xl:gap-8">

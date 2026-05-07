@@ -352,7 +352,7 @@ function ProfilePageInner() {
   // ── Loading State ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
         <Navbar />
         <div className="flex flex-col items-center justify-center py-40">
           <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
@@ -363,7 +363,7 @@ function ProfilePageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+    <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -956,7 +956,7 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
           <Navbar />
           <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mt-20" />
         </div>

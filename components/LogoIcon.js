@@ -1,5 +1,3 @@
-'use client';
-
 export default function LogoIcon({ size = 32, color = 'currentColor', className = '' }) {
   return (
     <svg

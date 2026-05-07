@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, LogIn, Eye, EyeOff, BookOpen, AlertCircle, ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import Navbar from '@/components/Navbar';
+import { Mail, Lock, LogIn, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
+import AuthHeader from '@/components/AuthHeader';
 import LogoIcon from '@/components/LogoIcon';
 
 export default function LoginPage() {
@@ -60,6 +59,7 @@ export default function LoginPage() {
       return;
     }
 
+    const { supabase } = await import('@/lib/supabase');
     const { error: sessionError } = await supabase.auth.setSession({
       access_token: result.session.access_token,
       refresh_token: result.session.refresh_token,
@@ -75,8 +75,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
-      <Navbar />
+    <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+      <AuthHeader active="login" />
 
       <div className="flex items-center justify-center px-4 py-12 sm:py-20">
         <div className="w-full max-w-md">

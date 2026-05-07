@@ -901,7 +901,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     } : null;
 
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset}>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs font-bold">
             📖 Chế độ ôn luyện
@@ -1192,7 +1192,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
   // ── PREVIEW ──
   if (quizPhase === 'preview' && activeExam) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className="flex-1 overflow-y-auto w-full p-4 sm:p-8">
           <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center shadow-sm">
@@ -1384,7 +1384,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
   if (quizPhase === 'quiz' && activeExam) {
     const pct = realQuestions.length > 0 ? Math.round((answeredCount / realQuestions.length) * 100) : 0;
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={() => {
           showConfirm('Xác nhận thoát', 'Tiến trình làm bài của bạn sẽ được lưu lại tự động. Bạn có chắc chắn muốn thoát?', () => handleReset());
         }}>
@@ -1749,7 +1749,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
   // ── RESULTS SUMMARY ──
   if (quizPhase === 'results' && activeExam) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-sm text-center animate-fadeIn">
@@ -1789,7 +1789,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
     const pct = realQuestions.length > 0 ? Math.round((correctCount / realQuestions.length) * 100) : 0;
 
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className={`et-screen ${isSidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ position: 'relative' }}>
           <div className="et-main">
@@ -2030,7 +2030,7 @@ export default function ExamSessionPage({ examId, shouldResume = false }) {
 
   if (examLoadError) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
         <div className="max-w-sm w-full bg-white rounded-2xl border border-gray-200 p-6 text-center shadow-sm">
           <h1 className="text-lg font-bold text-gray-900 mb-2">Không mở được đề thi</h1>
           <p className="text-sm text-gray-500 mb-5">{examLoadError}</p>

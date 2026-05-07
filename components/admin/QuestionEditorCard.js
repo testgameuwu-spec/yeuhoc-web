@@ -6,7 +6,6 @@ import {
   Image as ImageIcon, FileText, CheckCircle2, XCircle, Type,
   ToggleLeft, Hash, AlertCircle, BookOpen, ArrowUpDown
 } from 'lucide-react';
-import 'katex/dist/katex.min.css';
 import MathRenderer from '@/components/MathRenderer';
 
 const TYPE_STYLES = {
