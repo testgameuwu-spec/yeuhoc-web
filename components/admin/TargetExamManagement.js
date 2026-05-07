@@ -1,16 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CalendarDays, CheckCircle2, Edit3, Loader2, Plus, Power, Search, Trash2, XCircle
+  CalendarDays, CheckCircle2, Edit3, GripVertical, Loader2, Plus, Power, Search, Trash2, XCircle
 } from 'lucide-react';
-import { deleteTargetExam, getTargetExams, saveTargetExam } from '@/lib/targetExamStore';
+import { deleteTargetExam, getTargetExams, saveTargetExam, updateTargetExamsOrder } from '@/lib/targetExamStore';
 
 const emptyForm = {
   id: null,
   name: '',
   examDate: '',
   isActive: true,
+  orderIndex: null,
 };
 
 function formatDate(dateString) {
@@ -42,6 +43,12 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [draggedExamId, setDraggedExamId] = useState(null);
+  const draggedExamIdRef = useRef(null);
+  const dragChangedRef = useRef(false);
+  const dragStartOrderRef = useRef([]);
+  const dragNextOrderRef = useRef([]);
 
   const fetchTargetExams = useCallback(async () => {
     setLoading(true);
@@ -49,7 +56,7 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
       const data = await getTargetExams({ includeInactive: true });
       setTargetExams(data);
     } catch (error) {
-      showAlert?.('Lỗi tải kỳ thi', `${error.message}\n\nHãy chạy migration tạo bảng target_exams trên Supabase.`);
+      showAlert?.('Lỗi tải kỳ thi', `${error.message}\n\nHãy chạy các migration target_exams mới nhất trên Supabase.`);
     } finally {
       setLoading(false);
     }
@@ -70,6 +77,7 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
 
   const upcomingCount = targetExams.filter((exam) => exam.isActive && daysUntil(exam.examDate) >= 0).length;
   const activeCount = targetExams.filter((exam) => exam.isActive).length;
+  const canReorder = !search.trim() && !loading && !savingOrder && targetExams.length > 1;
 
   const openCreateForm = () => {
     setForm(emptyForm);
@@ -82,6 +90,7 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
       name: exam.name,
       examDate: exam.examDate,
       isActive: exam.isActive,
+      orderIndex: exam.orderIndex,
     });
     setFormOpen(true);
   };
@@ -96,7 +105,11 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
 
     setSaving(true);
     try {
-      await saveTargetExam({ ...form, name });
+      await saveTargetExam({
+        ...form,
+        name,
+        orderIndex: form.orderIndex ?? targetExams.length,
+      });
       setFormOpen(false);
       setForm(emptyForm);
       await fetchTargetExams();
@@ -132,6 +145,65 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
         }
       }
     );
+  };
+
+  const persistOrder = useCallback(async (orderedExams, fallbackExams) => {
+    setSavingOrder(true);
+    try {
+      await updateTargetExamsOrder(orderedExams);
+      setTargetExams(orderedExams.map((exam, index) => ({ ...exam, orderIndex: index })));
+    } catch (error) {
+      setTargetExams(fallbackExams);
+      showAlert?.('Lỗi sắp xếp', error.message || 'Không thể lưu thứ tự kỳ thi.');
+    } finally {
+      setSavingOrder(false);
+    }
+  }, [showAlert]);
+
+  const handleDragStart = (event, exam) => {
+    if (!canReorder) return;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', exam.id);
+    draggedExamIdRef.current = exam.id;
+    dragChangedRef.current = false;
+    dragStartOrderRef.current = targetExams;
+    dragNextOrderRef.current = targetExams;
+    setDraggedExamId(exam.id);
+  };
+
+  const handleDragOver = (event, targetExam) => {
+    const activeId = draggedExamIdRef.current;
+    if (!activeId || activeId === targetExam.id) return;
+    event.preventDefault();
+
+    setTargetExams((prev) => {
+      const fromIndex = prev.findIndex((exam) => exam.id === activeId);
+      const toIndex = prev.findIndex((exam) => exam.id === targetExam.id);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      dragChangedRef.current = true;
+      dragNextOrderRef.current = next;
+      return next;
+    });
+  };
+
+  const handleDragEnd = () => {
+    const changed = dragChangedRef.current;
+    const nextOrder = dragNextOrderRef.current;
+    const fallbackOrder = dragStartOrderRef.current;
+
+    draggedExamIdRef.current = null;
+    dragChangedRef.current = false;
+    dragStartOrderRef.current = [];
+    dragNextOrderRef.current = [];
+    setDraggedExamId(null);
+
+    if (changed) {
+      persistOrder(nextOrder, fallbackOrder);
+    }
   };
 
   return (
@@ -188,28 +260,54 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
         ) : filteredExams.length > 0 ? (
           <div className="divide-y divide-white/10">
             {filteredExams.map((exam) => (
-              <div key={exam.id} className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-bold text-white truncate">{exam.name}</h3>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
-                      exam.isActive
-                        ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
-                        : 'bg-white/5 text-white/35 border-white/10'
-                    }`}>
-                      {exam.isActive ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                      {exam.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-white/45">
-                    <span>{formatDate(exam.examDate)}</span>
-                    <span>{countdownLabel(exam.examDate)}</span>
+              <div
+                key={exam.id}
+                draggable={canReorder}
+                onDragStart={(event) => handleDragStart(event, exam)}
+                onDragOver={(event) => handleDragOver(event, exam)}
+                onDragEnd={handleDragEnd}
+                onDrop={(event) => event.preventDefault()}
+                className={`group p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors ${
+                  canReorder ? 'cursor-grab active:cursor-grabbing' : ''
+                } ${draggedExamId === exam.id ? 'opacity-50 bg-white/[0.06]' : ''}`}
+              >
+                <div className="min-w-0 flex items-start gap-3">
+                  <span
+                    title={canReorder ? 'Kéo để sắp xếp' : 'Xóa tìm kiếm để sắp xếp'}
+                    className={`mt-0.5 rounded-lg p-1.5 border transition-colors ${
+                      canReorder
+                        ? 'border-white/10 text-white/35 bg-white/5 group-hover:text-white/60'
+                        : 'border-white/5 text-white/15 bg-white/[0.02]'
+                    }`}
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-bold text-white truncate">{exam.name}</h3>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+                        exam.isActive
+                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+                          : 'bg-white/5 text-white/35 border-white/10'
+                      }`}>
+                        {exam.isActive ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        {exam.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-3 text-sm text-white/45">
+                      <span>{formatDate(exam.examDate)}</span>
+                      <span>{countdownLabel(exam.examDate)}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  {savingOrder && draggedExamId === null && filteredExams[0]?.id === exam.id && (
+                    <Loader2 className="w-4 h-4 text-indigo-300 animate-spin" />
+                  )}
                   <button
                     onClick={() => handleToggleActive(exam)}
+                    disabled={savingOrder}
                     className={`p-2 rounded-xl border transition-colors ${
                       exam.isActive
                         ? 'text-amber-300 border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/15'
@@ -221,6 +319,7 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
                   </button>
                   <button
                     onClick={() => openEditForm(exam)}
+                    disabled={savingOrder}
                     className="p-2 rounded-xl text-indigo-300 border border-indigo-500/20 bg-indigo-500/10 hover:bg-indigo-500/15 transition-colors"
                     title="Sửa kỳ thi"
                   >
@@ -228,6 +327,7 @@ export default function TargetExamManagement({ showAlert, showConfirm }) {
                   </button>
                   <button
                     onClick={() => handleDelete(exam)}
+                    disabled={savingOrder}
                     className="p-2 rounded-xl text-rose-300 border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/15 transition-colors"
                     title="Xóa kỳ thi"
                   >

@@ -395,7 +395,7 @@ function ProfilePageInner() {
   const isAdmin = profile?.role === 'admin';
   const targetExamOptions = [...selectedTargetExams, ...targetExams]
     .filter((exam, index, exams) => exams.findIndex((item) => item.id === exam.id) === index)
-    .sort((a, b) => new Date(`${a.examDate}T00:00:00`) - new Date(`${b.examDate}T00:00:00`) || a.name.localeCompare(b.name));
+    .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0) || new Date(`${a.examDate}T00:00:00`) - new Date(`${b.examDate}T00:00:00`) || a.name.localeCompare(b.name));
 
 
   // ── Loading State ──
