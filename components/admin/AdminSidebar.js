@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { key: 'scoring', label: 'Điểm số', icon: Trophy },
   { key: 'reports', label: 'Báo cáo', icon: AlertTriangle },
   { key: 'ocrLogs', label: 'OCR Logs', icon: ScanText },
+  { key: 'practice', label: 'Ôn luyện', icon: BookOpen },
   { key: 'users', label: 'Người dùng', icon: Users },
   { key: 'transactions', label: 'Giao dịch', icon: CreditCard },
 ];
