@@ -20,8 +20,8 @@ const NAV_ITEMS = [
 
 export default function AdminSidebar({ activeTab, onTabChange, onClose }) {
   return (
-    <aside className="fixed top-0 left-0 h-dvh z-40 flex w-64 max-w-[84vw] flex-col overflow-hidden border-r border-white/8 transition-all duration-300"
-      style={{ background: 'rgba(10, 10, 30, 0.95)', backdropFilter: 'blur(20px)' }}>
+    <aside className="admin-sidebar fixed top-0 left-0 h-dvh z-40 flex w-64 max-w-[84vw] flex-col overflow-hidden border-r border-white/8 transition-all duration-300"
+      style={{ background: 'var(--admin-sidebar-bg)', backdropFilter: 'blur(20px)' }}>
 
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-white/8">

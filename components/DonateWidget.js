@@ -48,7 +48,7 @@ export default function DonateWidget({ user }) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden group">
+    <div className="home-box home-donate bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden group">
       {/* Decorative background blur */}
       <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-200/50 rounded-full blur-2xl group-hover:bg-rose-300/50 transition-colors" />
       <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-orange-200/50 rounded-full blur-2xl group-hover:bg-orange-300/50 transition-colors" />
@@ -69,7 +69,7 @@ export default function DonateWidget({ user }) {
         </p>
 
         {showQR ? (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 animate-fadeIn flex flex-col items-center text-center">
+          <div className="home-box home-box-muted bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 animate-fadeIn flex flex-col items-center text-center">
             <Image src={qrUrl} alt="QR Code thanh toán SePay" width={192} height={192} className="w-48 h-48 object-contain mb-3 rounded-lg" />
             <p className="text-xs text-gray-500 mb-1">Quét mã qua ứng dụng ngân hàng</p>
             <div className="flex items-center justify-center gap-2 mb-3">
@@ -93,7 +93,7 @@ export default function DonateWidget({ user }) {
           </div>
         ) : (
           <div className="space-y-3 mb-4 animate-fadeIn">
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-rose-100/50">
+            <div className="home-box home-box-muted bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-rose-100/50">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                 Ngân hàng {BANK_INFO.bankName}
               </div>
@@ -112,7 +112,7 @@ export default function DonateWidget({ user }) {
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-rose-100/50">
+            <div className="home-box home-box-muted bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-rose-100/50">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
                 Nội dung chuyển khoản
               </div>

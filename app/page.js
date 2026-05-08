@@ -17,6 +17,20 @@ import { supabase } from '@/lib/supabase';
 
 const ITEMS_PER_PAGE = 9;
 const FOLDERS_PER_PAGE = 5;
+const HOME_BADGE_TONES = {
+  default: { dark: '#cbd5e1' },
+  target: { dark: '#a5b4fc' },
+  count: { dark: '#93c5fd' },
+  lock: { dark: '#fcd34d' },
+};
+
+function getHomeBadgeStyle(toneKey = 'default') {
+  const tone = HOME_BADGE_TONES[toneKey] || HOME_BADGE_TONES.default;
+
+  return {
+    '--home-badge-dark-color': tone.dark,
+  };
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -261,10 +275,10 @@ export default function HomePage() {
           const isExpanded = expandedFolders[folder.id];
 
           return (
-            <div key={folder.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
+            <div key={folder.id} className="home-box bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
               <div
                 onClick={() => setExpandedFolders((prev) => ({ ...prev, [folder.id]: !prev[folder.id] }))}
-                className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 bg-slate-50/80 hover:bg-slate-100 cursor-pointer transition-colors border-b border-gray-100/80"
+                className="home-box home-box-muted flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 bg-slate-50/80 hover:bg-slate-100 cursor-pointer transition-colors border-b border-gray-100/80"
               >
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
                   <button className="shrink-0 p-1 rounded-md text-gray-400 hover:bg-gray-200">
@@ -278,11 +292,17 @@ export default function HomePage() {
                     <Folder className="w-5 h-5 shrink-0 text-indigo-500" fill="currentColor" fillOpacity={0.2} />
                   )}
                   <h2 className="min-w-0 max-w-full truncate text-base sm:text-lg font-bold text-gray-800">{folder.name}</h2>
-                  <span className="shrink-0 text-xs font-semibold text-gray-500 bg-gray-200 px-2.5 py-1 rounded-full">
+                  <span
+                    className="home-dark-badge shrink-0 rounded-full border border-gray-200 bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-500"
+                    style={getHomeBadgeStyle('count')}
+                  >
                     {folder.exams.length} đề
                   </span>
                   {isLocked && (
-                    <span className="shrink-0 text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-md flex items-center gap-1">
+                    <span
+                      className="home-dark-badge flex shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-gray-200 px-2 py-1 text-xs font-bold text-gray-500"
+                      style={getHomeBadgeStyle('lock')}
+                    >
                       <Lock className="w-3 h-3" /> Đã khoá
                     </span>
                   )}
@@ -290,7 +310,7 @@ export default function HomePage() {
               </div>
 
               {isExpanded && (
-                <div className="p-4 sm:p-5 bg-white">
+                <div className="home-box p-4 sm:p-5 bg-white">
                   {folder.exams.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {folder.exams.map((exam) => renderExamCard(exam, isLocked))}
@@ -313,14 +333,14 @@ export default function HomePage() {
 
   if (!authLoaded || !user || !targetDataLoaded) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="home-page min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-gray-500 text-base font-medium">Đang tải...</div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+    <main className="home-page min-h-screen bg-slate-50" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
       <Navbar />
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-5 sm:pt-6 pb-24 flex flex-col xl:flex-row justify-center gap-5 xl:gap-7">
@@ -364,7 +384,7 @@ export default function HomePage() {
               )}
             </>
           ) : (
-            <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+            <div className="home-box py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
               <div className="text-5xl mb-4">🔍</div>
               <h3 className="text-lg font-bold text-gray-800 mb-1">Không tìm thấy đề thi</h3>
               <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem các đề thi khác.</p>
@@ -399,7 +419,7 @@ export default function HomePage() {
 
 function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTargetCount, wish }) {
   return (
-    <div className="relative bg-white border border-gray-100 rounded-2xl p-5 sm:p-7 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
+    <div className="home-box relative bg-white border border-gray-100 rounded-2xl p-5 sm:p-7 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
       <div className="relative z-10">
         <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-indigo-500 mb-1.5">Trang chủ</p>
         <h1 className="text-2xl sm:text-3xl font-black text-gray-950 mb-3">
@@ -412,12 +432,18 @@ function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTar
               {getCountdownSentence(nearestTargetExam)}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 font-semibold text-indigo-700">
+              <span
+                className="home-dark-badge inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 font-semibold text-indigo-700"
+                style={getHomeBadgeStyle('target')}
+              >
                 <CalendarDays className="w-4 h-4" />
                 {formatTargetExamDate(nearestTargetExam.examDate)}
               </span>
               {selectedCount > 1 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-600">
+                <span
+                  className="home-dark-badge inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-100 px-3 py-1 font-semibold text-gray-600"
+                  style={getHomeBadgeStyle('default')}
+                >
                   <CheckCircle2 className="w-4 h-4" />
                   {selectedCount} kỳ thi mục tiêu
                 </span>
@@ -444,7 +470,7 @@ function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTar
 function TargetExamSetupModal({ targetExams, selectedIds, onToggle, onSave, saving, error }) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white border border-gray-200 shadow-2xl overflow-hidden">
+      <div className="home-box w-full max-w-lg rounded-2xl bg-white border border-gray-200 shadow-2xl overflow-hidden">
         <div className="p-5 sm:p-6 border-b border-gray-100">
           <h2 className="text-xl font-black text-gray-950">Chọn kỳ thi mục tiêu</h2>
           <p className="text-sm text-gray-500 mt-1">Bạn có thể chọn nhiều kỳ thi. Trang chủ sẽ ưu tiên kỳ thi gần nhất.</p>
@@ -456,7 +482,7 @@ function TargetExamSetupModal({ targetExams, selectedIds, onToggle, onSave, savi
             return (
               <label
                 key={exam.id}
-                className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
+                className={`home-box flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
                   checked
                     ? 'border-indigo-200 bg-indigo-50'
                     : 'border-gray-200 bg-white hover:bg-gray-50'
@@ -540,7 +566,7 @@ function getRenderableFolders(exams, folders) {
 
 function LockedOverlay() {
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 backdrop-blur-[1px] rounded-2xl cursor-not-allowed">
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 backdrop-blur-[1px] rounded-2xl cursor-not-allowed">
       <div className="bg-gray-900/80 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg pointer-events-none">
         <Lock className="w-4 h-4" /> Đã khoá
       </div>

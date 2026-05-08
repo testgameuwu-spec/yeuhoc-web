@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import ContinueExamsPanel from '@/components/ContinueExamsPanel';
+import ThemeToggle from '@/components/ThemeToggle';
 import { markResolvedReportsAsSeen } from '@/lib/reportSeenStorage';
 import { getAllFolders, getPublishedExams } from '@/lib/examStore';
 import { getContinueExamItems } from '@/lib/continueExamStore';
@@ -472,7 +473,7 @@ function ProfilePageInner() {
   // ── Loading State ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+      <div className="profile-page min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
         <Navbar />
         <div className="flex flex-col items-center justify-center py-40">
           <Loader2 weight="bold" className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
@@ -483,7 +484,7 @@ function ProfilePageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+    <div className="profile-page min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
       <Navbar />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -585,12 +586,12 @@ function ProfilePageInner() {
               <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-gray-900 flex items-center gap-2">
                 {displayName}
                 {isAdmin ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200">
+                  <span className="profile-theme-badge inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200" style={{ '--profile-badge-dark-color': '#fcd34d' }}>
                     <Shield weight="fill" className="w-3.5 h-3.5" />
                     Admin
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200">
+                  <span className="profile-theme-badge inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200" style={{ '--profile-badge-dark-color': '#a5b4fc' }}>
                     <User weight="fill" className="w-3.5 h-3.5" />
                     User
                   </span>
@@ -663,15 +664,15 @@ function ProfilePageInner() {
                     <div className="space-y-8">
                       {/* Stats grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
+                        <div className="profile-dark-text-box bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
                           <p className="text-xs text-indigo-600 font-semibold mb-1 uppercase tracking-wider">Điểm cao nhất</p>
                           <p className="text-2xl font-black text-indigo-700">{highestScore}</p>
                         </div>
-                        <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
+                        <div className="profile-dark-text-box bg-green-50 border border-green-100 rounded-xl p-4 text-center">
                           <p className="text-xs text-green-600 font-semibold mb-1 uppercase tracking-wider">Điểm trung bình</p>
                           <p className="text-2xl font-black text-green-700">{averageScore}</p>
                         </div>
-                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
+                        <div className="profile-dark-text-box bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
                           <p className="text-xs text-amber-600 font-semibold mb-1 uppercase tracking-wider">Số bài đã làm</p>
                           <p className="text-2xl font-black text-amber-700">{totalExams}</p>
                         </div>
@@ -703,7 +704,7 @@ function ProfilePageInner() {
                           </div>
                           <div className="space-y-3">
                             {recentAttempts.map((attempt, index) => (
-                                <div key={attempt.id || index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4">
+                                <div key={attempt.id || index} className="profile-dark-text-box flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4">
                                   <div className="flex-1">
                                     <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
                                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
@@ -736,7 +737,7 @@ function ProfilePageInner() {
                       )}
 
                       {attempts.length === 0 && continueItems.length === 0 && (
-                        <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                        <div className="profile-dark-text-box py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                           <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                           <p className="text-sm text-gray-500 font-medium">Bạn chưa tham gia học tập</p>
                         </div>
@@ -758,7 +759,7 @@ function ProfilePageInner() {
                     {attempts.map((attempt, index) => (
                       <div
                         key={attempt.id || index}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4"
+                        className="profile-dark-text-box flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all gap-4"
                       >
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-gray-900">{attempt.exams?.title || 'Đề thi đã bị xóa'}</h4>
@@ -789,7 +790,7 @@ function ProfilePageInner() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                  <div className="profile-dark-text-box py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                     <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500 font-medium">Bạn chưa có lịch sử làm bài</p>
                     <p className="text-xs text-gray-400 mt-1">Sau khi nộp bài, kết quả sẽ xuất hiện tại đây.</p>
@@ -818,7 +819,7 @@ function ProfilePageInner() {
                       return (
                         <div
                           key={r.id}
-                          className="p-3.5 sm:p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all"
+                          className="profile-dark-text-box p-3.5 sm:p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm transition-all"
                         >
                           <div className="flex flex-col sm:flex-row sm:flex-wrap items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -834,7 +835,7 @@ function ProfilePageInner() {
                                 ) : null}
                               </p>
                               {hasAdminReply && (
-                                <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                                <div className="profile-dark-text-box mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
                                   <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700">
                                     Phản hồi từ Đội ngũ YeuHoc
                                   </p>
@@ -844,11 +845,12 @@ function ProfilePageInner() {
                             </div>
                             <div className="w-full sm:w-auto flex flex-col sm:items-end gap-1 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-100">
                               <span
-                                className={`inline-flex w-fit items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                                className={`profile-theme-badge inline-flex w-fit items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${
                                   isPending
                                     ? 'bg-amber-100 text-amber-800 border border-amber-200'
                                     : 'bg-green-100 text-green-800 border border-green-200'
                                 }`}
+                                style={{ '--profile-badge-dark-color': isPending ? '#fcd34d' : '#86efac' }}
                               >
                                 {isPending ? 'Đang chờ xử lý' : 'Đã xử lý'}
                               </span>
@@ -872,7 +874,7 @@ function ProfilePageInner() {
                     })}
                   </div>
                 ) : (
-                  <div className="py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
+                  <div className="profile-dark-text-box py-16 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50">
                     <Flag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500 font-medium">Bạn chưa gửi báo cáo nào</p>
                     <p className="text-xs text-gray-400 mt-1">Khi làm bài, dùng mục báo cáo trên từng câu hỏi để gửi phản hồi.</p>
@@ -890,7 +892,7 @@ function ProfilePageInner() {
               {/* Message Alert */}
               {message.text && (
                 <div
-                  className={`flex items-start gap-2.5 p-3.5 mb-5 rounded-xl text-sm animate-fadeIn ${
+                    className={`profile-dark-text-box flex items-start gap-2.5 p-3.5 mb-5 rounded-xl text-sm animate-fadeIn ${
                     message.type === 'success'
                       ? 'bg-green-50 border border-green-200 text-green-700'
                       : 'bg-red-50 border border-red-200 text-red-700'
@@ -906,6 +908,17 @@ function ProfilePageInner() {
               )}
 
               <form onSubmit={handleSave} className="space-y-5">
+                <div>
+                  <label className="auth-label">Giao diện</label>
+                  <div className="profile-dark-text-box flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Light / Dark mode</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Đồng bộ trên toàn bộ website trong trình duyệt này.</p>
+                    </div>
+                    <ThemeToggle showLabel variant="settings" />
+                  </div>
+                </div>
+
                 {/* Email (read-only) */}
                 <div>
                   <label className="auth-label">Email</label>
@@ -977,7 +990,7 @@ function ProfilePageInner() {
                         return (
                           <label
                             key={exam.id}
-                            className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
+                            className={`profile-dark-text-box flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
                               checked
                                 ? 'border-indigo-200 bg-indigo-50'
                                 : 'border-gray-200 bg-white hover:bg-gray-50'
@@ -993,7 +1006,7 @@ function ProfilePageInner() {
                               <span className="flex flex-wrap items-center gap-2">
                                 <span className="font-bold text-gray-900">{exam.name}</span>
                                 {!exam.isActive && (
-                                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-[10px] font-bold uppercase tracking-wider text-gray-500 border border-gray-200">
+                                  <span className="profile-theme-badge px-2 py-0.5 rounded-full bg-gray-100 text-[10px] font-bold uppercase tracking-wider text-gray-500 border border-gray-200" style={{ '--profile-badge-dark-color': '#cbd5e1' }}>
                                     Inactive
                                   </span>
                                 )}
@@ -1008,7 +1021,7 @@ function ProfilePageInner() {
                       })}
                     </div>
                   ) : (
-                    <div className="mt-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                    <div className="profile-dark-text-box mt-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
                       Admin chưa cấu hình kỳ thi mục tiêu.
                     </div>
                   )}
@@ -1040,7 +1053,7 @@ function ProfilePageInner() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2">
+                      <label className="profile-dark-text-box cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2">
                         <Camera weight="duotone" className="w-[18px] h-[18px] text-gray-500" />
                         <span>Tải ảnh mới lên</span>
                         <input
@@ -1243,7 +1256,7 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+        <div className="profile-page min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
           <Navbar />
           <Loader2 weight="bold" className="w-12 h-12 text-indigo-500 animate-spin mt-20" />
         </div>

@@ -19,6 +19,7 @@ import {
   BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
 import UserProfile from '@/components/UserProfile';
+import ThemeToggle from '@/components/ThemeToggle';
 import { supabase } from '@/lib/supabase';
 
 // ── Custom UI Modal cho Admin ──
@@ -365,7 +366,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden" style={{ background: '#0a0a1e' }}>
+    <main className="admin-shell min-h-screen overflow-x-hidden">
       {/* Mobile overlay backdrop */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setMobileMenuOpen(false)} />
@@ -407,6 +408,7 @@ export default function AdminDashboard() {
               </h1>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              <ThemeToggle />
               <button 
                 onClick={() => window.location.href = '/'} 
                 className="flex items-center gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"

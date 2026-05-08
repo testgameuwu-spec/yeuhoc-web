@@ -28,13 +28,13 @@ const THPT_PARTS = [
   {
     key: 'part1',
     name: 'Phần I',
-    label: 'Trắc nghiệm nhiều phương án',
+    label: 'Trắc Nghiệm',
     scoring: '0,25 điểm/câu',
   },
   {
     key: 'part2',
     name: 'Phần II',
-    label: 'Trắc nghiệm đúng/sai',
+    label: 'Đúng/Sai',
     scoring: '1 ý: 0,1đ; 2 ý: 0,25đ; 3 ý: 0,5đ; 4 ý: 1đ',
   },
   {
@@ -1090,8 +1090,8 @@ export default function PersonalAnalysisPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">Phân tích cá nhân</h1>
             <p className="mt-3 text-base font-medium text-slate-500">Xem điểm mạnh, điểm yếu và gợi ý ôn tập thông minh theo từng kỳ thi.</p>
-            <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-900 shadow-sm">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-900 shadow-sm [html[data-theme=dark]_&]:text-amber-100">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 [html[data-theme=dark]_&]:text-amber-200" />
               <p className="text-sm font-extrabold leading-relaxed sm:text-base">
                 Lưu ý: Phần phân tích cá nhân chỉ nhận kết quả trong chế độ thi thật.
               </p>

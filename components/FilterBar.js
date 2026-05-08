@@ -22,20 +22,55 @@ const SUBJECTS = [
   { key: 'Khác', label: 'Khác' },
 ];
 
-function Chip({ label, active, onClick }) {
+const CHIP_TONES = {
+  default: { bg: '#ffffff', color: '#4b5563', border: '#e5e7eb', activeBg: '#4f46e5', activeBorder: '#4f46e5', activeColor: '#ffffff', dark: '#cbd5e1' },
+  'Toán': { bg: '#eef2ff', color: '#3730a3', border: '#c7d2fe', activeBg: '#4f46e5', activeBorder: '#4f46e5', activeColor: '#ffffff', dark: '#a5b4fc' },
+  'Vật Lý': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', activeBg: '#2563eb', activeBorder: '#2563eb', activeColor: '#ffffff', dark: '#93c5fd' },
+  'Hoá Học': { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', activeBg: '#059669', activeBorder: '#059669', activeColor: '#ffffff', dark: '#86efac' },
+  'Tiếng Anh': { bg: '#fffbeb', color: '#b45309', border: '#fde68a', activeBg: '#d97706', activeBorder: '#d97706', activeColor: '#ffffff', dark: '#fcd34d' },
+  'Tư duy định lượng': { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', activeBg: '#7c3aed', activeBorder: '#7c3aed', activeColor: '#ffffff', dark: '#c4b5fd' },
+  'Tư duy định tính': { bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8', activeBg: '#db2777', activeBorder: '#db2777', activeColor: '#ffffff', dark: '#f9a8d4' },
+  THPT: { bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd', activeBg: '#0284c7', activeBorder: '#0284c7', activeColor: '#ffffff', dark: '#7dd3fc' },
+  HSA: { bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc', activeBg: '#0891b2', activeBorder: '#0891b2', activeColor: '#ffffff', dark: '#67e8f9' },
+  TSA: { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', activeBg: '#7c3aed', activeBorder: '#7c3aed', activeColor: '#ffffff', dark: '#c4b5fd' },
+  Other: { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', activeBg: '#64748b', activeBorder: '#64748b', activeColor: '#ffffff', dark: '#cbd5e1' },
+  'Khác': { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', activeBg: '#64748b', activeBorder: '#64748b', activeColor: '#ffffff', dark: '#cbd5e1' },
+};
+
+function getChipStyle(toneKey, active = false) {
+  const tone = CHIP_TONES[toneKey] || CHIP_TONES.default;
+
+  return {
+    '--home-badge-bg': active ? tone.activeBg : tone.bg,
+    '--home-badge-border': active ? tone.activeBorder : tone.border,
+    '--home-badge-color': active ? tone.activeColor : tone.color,
+    '--home-badge-dark-color': tone.dark,
+  };
+}
+
+function Chip({ label, active, onClick, tone }) {
   return (
     <button
       onClick={onClick}
       className={`
-        px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-150 whitespace-nowrap cursor-pointer border
-        ${active
-          ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-          : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50'
-        }
+        home-theme-badge rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap cursor-pointer
+        transition-all duration-150 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200
       `}
+      style={getChipStyle(tone, active)}
     >
       {label}
     </button>
+  );
+}
+
+function FilterPill({ label, tone }) {
+  return (
+    <span
+      className="home-theme-badge shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold"
+      style={getChipStyle(tone)}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -52,7 +87,7 @@ export default function FilterBar({
   const hasFilter = selYear || selType || selSubject || search;
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+    <div className="home-box bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
       {/* Top bar: 2 rows on mobile, 1 row on desktop */}
       <div className="px-4 py-3 border-b border-gray-100">
         {/* Row 1: Filter chips — scrollable */}
@@ -60,14 +95,15 @@ export default function FilterBar({
           <Chip
             label="Tất cả"
             active={!selType && !selSubject && !selYear}
+            tone="default"
             onClick={() => { onType(null); onSubject(null); onYear(null); }}
           />
           <div className="w-px h-5 bg-gray-200 flex-shrink-0" />
           {SUBJECTS.slice(0, 4).map(s => (
-            <Chip key={s.key} label={s.label} active={selSubject === s.key} onClick={() => onSubject(selSubject === s.key ? null : s.key)} />
+            <Chip key={s.key} label={s.label} active={selSubject === s.key} tone={s.key} onClick={() => onSubject(selSubject === s.key ? null : s.key)} />
           ))}
           {EXAM_TYPES.map(t => (
-            <Chip key={t.key} label={t.label} active={selType === t.key} onClick={() => onType(selType === t.key ? null : t.key)} />
+            <Chip key={t.key} label={t.label} active={selType === t.key} tone={t.key} onClick={() => onType(selType === t.key ? null : t.key)} />
           ))}
         </div>
 
@@ -105,7 +141,7 @@ export default function FilterBar({
 
       {/* Advanced filter panel (collapsible) */}
       {showAdvanced && (
-        <div className="px-5 py-4 flex flex-col gap-3 border-b border-gray-100 bg-gray-50 animate-fadeIn">
+        <div className="home-box home-box-muted px-5 py-4 flex flex-col gap-3 border-b border-gray-100 bg-gray-50 animate-fadeIn">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -123,7 +159,7 @@ export default function FilterBar({
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider w-16 shrink-0">Năm</span>
             <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
               {YEARS.map(y => (
-                <Chip key={y} label={String(y)} active={selYear === y} onClick={() => onYear(selYear === y ? null : y)} />
+                <Chip key={y} label={String(y)} active={selYear === y} tone="default" onClick={() => onYear(selYear === y ? null : y)} />
               ))}
             </div>
           </div>
@@ -133,7 +169,7 @@ export default function FilterBar({
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider w-16 shrink-0">Môn</span>
             <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
               {SUBJECTS.map(s => (
-                <Chip key={s.key} label={s.label} active={selSubject === s.key} onClick={() => onSubject(selSubject === s.key ? null : s.key)} />
+                <Chip key={s.key} label={s.label} active={selSubject === s.key} tone={s.key} onClick={() => onSubject(selSubject === s.key ? null : s.key)} />
               ))}
             </div>
           </div>
@@ -155,10 +191,10 @@ export default function FilterBar({
       {hasFilter && !showAdvanced && (
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-4 py-2 bg-indigo-50 border-t border-indigo-100">
           <span className="shrink-0 text-xs text-indigo-600 font-medium">Đang lọc:</span>
-          {selSubject && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selSubject}</span>}
-          {selType && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selType}</span>}
-          {selYear && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{selYear}</span>}
-          {search && <span className="shrink-0 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">{`"${search}"`}</span>}
+          {selSubject && <FilterPill label={selSubject} tone={selSubject} />}
+          {selType && <FilterPill label={selType} tone={selType} />}
+          {selYear && <FilterPill label={selYear} tone="default" />}
+          {search && <FilterPill label={`"${search}"`} tone="default" />}
           <span className="shrink-0 text-xs text-indigo-500 ml-auto font-medium">{resultCount} kết quả</span>
           <button onClick={onClear} className="shrink-0 text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-0.5 transition-colors">
             <X className="w-3 h-3" /> Xóa

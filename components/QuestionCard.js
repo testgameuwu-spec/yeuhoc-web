@@ -7,7 +7,7 @@ import ImageModal from './ImageModal';
 import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
 import { getQuestionResultState } from '@/lib/questionResult';
 
-const TYPE_LABEL = { MCQ: 'Trắc nghiệm', TF: 'Đúng / Sai', SA: 'Trả lời ngắn' };
+const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', TF: 'Đúng/Sai', SA: 'Trả lời ngắn' };
 
 export default function QuestionCard({
     question,
@@ -299,8 +299,8 @@ function TFTable({ statements, tfAnswer, tfSelected, showResult, disabled, onCha
 }
 
 function TFRadio({ selected, correct, wrong, onClick, disabled }) {
-    const bg = correct ? 'var(--et-green)' : wrong ? 'var(--et-red)' : selected ? 'var(--et-blue)' : '#fff';
-    const border = correct ? 'var(--et-green)' : wrong ? 'var(--et-red)' : selected ? 'var(--et-blue)' : '#ccc';
+    const bg = correct ? 'var(--et-green)' : wrong ? 'var(--et-red)' : selected ? 'var(--et-blue)' : 'var(--app-surface)';
+    const border = correct ? 'var(--et-green)' : wrong ? 'var(--et-red)' : selected ? 'var(--et-blue)' : 'var(--app-border-strong)';
     return (
         <button
             onClick={!disabled ? onClick : undefined}

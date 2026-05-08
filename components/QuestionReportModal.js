@@ -166,7 +166,7 @@ export default function QuestionReportModal({
             placeholder="Mô tả chi tiết vấn đề bạn gặp..."
             rows={3}
             className="w-full px-4 py-3 rounded-xl border-1.5 border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 resize-none"
-            style={{ border: '1.5px solid #e5e7eb' }}
+            style={{ border: '1.5px solid var(--app-border)' }}
           />
         </div>
 

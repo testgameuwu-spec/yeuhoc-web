@@ -8,6 +8,7 @@ import UserProfile from './UserProfile';
 import { supabase } from '@/lib/supabase';
 import { countUnseenResolvedReports } from '@/lib/reportSeenStorage';
 import LogoIcon from './LogoIcon';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -98,8 +99,8 @@ export default function Navbar() {
   const linkClass = (active, extra = '') => (
     `${extra} flex shrink-0 items-center gap-1.5 px-2 sm:px-3 py-1.5 min-h-9 rounded-lg text-sm font-medium transition-all no-underline ${
       active
-        ? 'text-indigo-600 bg-indigo-50'
-        : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
+        ? 'text-indigo-600 bg-indigo-50 [html[data-theme=dark]_&]:bg-black [html[data-theme=dark]_&]:text-indigo-200'
+        : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 [html[data-theme=dark]_&]:text-gray-300 [html[data-theme=dark]_&]:hover:bg-black [html[data-theme=dark]_&]:hover:text-indigo-200 [html[data-theme=dark]_&]:active:bg-black'
     }`
   );
 
@@ -140,7 +141,7 @@ export default function Navbar() {
             <span className="hidden sm:inline">Hồ sơ</span>
             {unseenResolvedReports > 0 && (
               <span
-                className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm"
+                className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white"
                 title="Báo cáo đã xử lý"
               >
                 {unseenResolvedReports > 9 ? '9+' : unseenResolvedReports}
@@ -151,6 +152,7 @@ export default function Navbar() {
 
         {/* ─── Right: Auth State ─── */}
         <div className="flex shrink-0 items-center gap-2">
+          <ThemeToggle />
           <UserProfile />
         </div>
       </div>

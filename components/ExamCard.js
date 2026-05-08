@@ -5,25 +5,49 @@ import Link from 'next/link';
 import { Clock, Play, LockKey } from '@phosphor-icons/react';
 
 const SUBJECT_META = {
-  'Toán':               { color: 'text-indigo-700',  bg: 'bg-indigo-50'  },
-  'Vật Lý':             { color: 'text-blue-700',    bg: 'bg-blue-50'    },
-  'Hoá Học':            { color: 'text-emerald-700', bg: 'bg-emerald-50' },
-  'Tiếng Anh':          { color: 'text-amber-700',   bg: 'bg-amber-50'   },
-  'Tư duy định lượng':  { color: 'text-violet-700',  bg: 'bg-violet-50'  },
-  'Tư duy định tính':   { color: 'text-pink-700',    bg: 'bg-pink-50'    },
-  'Khác':               { color: 'text-gray-600',    bg: 'bg-gray-100'   },
+  'Toán':               { bg: '#eef2ff', color: '#3730a3', border: '#c7d2fe', dark: '#a5b4fc' },
+  'Vật Lý':             { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', dark: '#93c5fd' },
+  'Hoá Học':            { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', dark: '#86efac' },
+  'Tiếng Anh':          { bg: '#fffbeb', color: '#b45309', border: '#fde68a', dark: '#fcd34d' },
+  'Tư duy định lượng':  { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', dark: '#c4b5fd' },
+  'Tư duy định tính':   { bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8', dark: '#f9a8d4' },
+  'Khác':               { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', dark: '#cbd5e1' },
 };
 
 const TYPE_META = {
-  THPT:  { color: 'text-indigo-700', bg: 'bg-indigo-50',  label: 'THPT QG' },
-  HSA:   { color: 'text-sky-700',    bg: 'bg-sky-50',     label: 'HSA'     },
-  TSA:   { color: 'text-violet-700', bg: 'bg-violet-50',  label: 'TSA'     },
-  Other: { color: 'text-gray-600',   bg: 'bg-gray-100',   label: 'Khác'    },
+  THPT:  { bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd', dark: '#7dd3fc', label: 'THPT QG' },
+  HSA:   { bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc', dark: '#67e8f9', label: 'HSA'     },
+  TSA:   { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', dark: '#c4b5fd', label: 'TSA'     },
+  Other: { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', dark: '#cbd5e1', label: 'Khác'    },
 };
 
-function QBadge({ label, className }) {
+const QUESTION_META = {
+  MCQ: { bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe', dark: '#a5b4fc' },
+  TF:  { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', dark: '#c4b5fd' },
+  SA:  { bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc', dark: '#67e8f9' },
+};
+
+const QUESTION_LABEL = {
+  MCQ: 'Trắc Nghiệm',
+  TF: 'Đúng/Sai',
+  SA: 'Trả lời ngắn',
+};
+
+function getBadgeStyle(meta) {
+  return {
+    '--home-badge-bg': meta.bg,
+    '--home-badge-border': meta.border,
+    '--home-badge-color': meta.color,
+    '--home-badge-dark-color': meta.dark,
+  };
+}
+
+function QBadge({ label, tone }) {
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${className}`}>
+    <span
+      className="home-theme-badge rounded border px-1.5 py-0.5 text-[10px] font-bold"
+      style={getBadgeStyle(QUESTION_META[tone])}
+    >
       {label}
     </span>
   );
@@ -41,7 +65,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
   const totalQ = exam.totalQ || (exam.questions || []).length || 0;
 
   const cardClassName = `
-    bg-white rounded-2xl border flex flex-col gap-3.5 p-5
+    home-box bg-white rounded-2xl border flex flex-col gap-3.5 p-5
     transition-all duration-200 no-underline
     ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
     ${hov && !isLocked
@@ -68,10 +92,16 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
       {/* Badges */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-wrap gap-1.5">
-          <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${sm.bg} ${sm.color}`}>
+          <span
+            className="home-theme-badge rounded-md border px-2 py-0.5 text-[11px] font-bold"
+            style={getBadgeStyle(sm)}
+          >
             {exam.subject}
           </span>
-          <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${tm.bg} ${tm.color}`}>
+          <span
+            className="home-theme-badge rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+            style={getBadgeStyle(tm)}
+          >
             {tm.label}
           </span>
         </div>
@@ -90,9 +120,9 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
         </span>
         <span className="text-xs text-gray-500">{totalQ} câu</span>
         <div className="flex flex-wrap gap-1.5 sm:ml-auto">
-          {mcqCount > 0 && <QBadge label={`${mcqCount} MCQ`} className="bg-indigo-100 text-indigo-700" />}
-          {tfCount  > 0 && <QBadge label={`${tfCount} TF`}   className="bg-violet-100 text-violet-700" />}
-          {saCount  > 0 && <QBadge label={`${saCount} SA`}   className="bg-cyan-100 text-cyan-700" />}
+          {mcqCount > 0 && <QBadge label={`${mcqCount} ${QUESTION_LABEL.MCQ}`} tone="MCQ" />}
+          {tfCount  > 0 && <QBadge label={`${tfCount} ${QUESTION_LABEL.TF}`}   tone="TF" />}
+          {saCount  > 0 && <QBadge label={`${saCount} ${QUESTION_LABEL.SA}`}   tone="SA" />}
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import LogoIcon from './LogoIcon';
+import ThemeToggle from './ThemeToggle';
 
 export default function AuthHeader({ active = 'login' }) {
   return (
@@ -15,6 +16,7 @@ export default function AuthHeader({ active = 'login' }) {
         </Link>
 
         <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <ThemeToggle />
           <Link
             href="/login/"
             prefetch={false}

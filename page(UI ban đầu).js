@@ -158,7 +158,7 @@ export default function Home() {
             {/* Features */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto pt-8">
               {[
-                { icon: FileQuestion, title: 'Trắc nghiệm & Tự luận', desc: 'Hỗ trợ MCQ và Short Answer' },
+                { icon: FileQuestion, title: 'Trắc nghiệm & Tự luận', desc: 'Hỗ trợ Trắc Nghiệm và Trả lời ngắn' },
                 { icon: Sparkles, title: 'Công thức LaTeX', desc: 'Render toán học chuyên nghiệp' },
                 { icon: Clock, title: 'Đếm giờ tự động', desc: 'Hẹn giờ và tự nộp bài' },
               ].map(({ icon: Icon, title, desc }) => (

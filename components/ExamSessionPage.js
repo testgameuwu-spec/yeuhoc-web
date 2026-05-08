@@ -12,9 +12,49 @@ import PracticeAIChatbox from '@/components/PracticeAIChatbox';
 import MathRenderer from '@/components/MathRenderer';
 import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
+import ThemeToggle from '@/components/ThemeToggle';
 import { supabase } from '@/lib/supabase';
 import { checkSAEquivalent } from '@/lib/mathUtils';
 import { getQuestionResultState } from '@/lib/questionResult';
+
+const PRACTICE_BUTTON_TONES = {
+  nav: { bg: '#0f172a', color: '#bfdbfe', shadow: 'rgba(96, 165, 250, .18)' },
+  hint: { bg: '#0f172a', color: '#c4b5fd', shadow: 'rgba(167, 139, 250, .18)' },
+  answer: { bg: '#0f172a', color: '#86efac', shadow: 'rgba(74, 222, 128, .18)' },
+};
+
+const PREVIEW_BADGE_TONES = {
+  subject: { bg: 'var(--et-blue-lt)', color: 'var(--et-blue)', dark: '#60a5fa' },
+  duration: { bg: 'var(--et-amber-lt)', color: 'var(--et-amber)', dark: '#fcd34d' },
+  questions: { bg: 'var(--et-green-lt)', color: 'var(--et-green)', dark: '#86efac' },
+  meta: { bg: 'var(--et-gray-100)', color: 'var(--et-gray-600)', dark: '#bfdbfe' },
+  fullscreen: { bg: '#fce7f3', color: '#9d174d', dark: '#f9a8d4' },
+  calm: { bg: '#ede9fe', color: '#5b21b6', dark: '#c4b5fd' },
+};
+
+function getPracticeButtonStyle(toneKey, disabled = false) {
+  const tone = PRACTICE_BUTTON_TONES[toneKey] || PRACTICE_BUTTON_TONES.nav;
+  const color = disabled ? '#94a3b8' : tone.color;
+
+  return {
+    background: tone.bg,
+    color,
+    border: `1.5px solid ${color}`,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    boxShadow: disabled ? 'none' : `0 8px 20px ${tone.shadow}`,
+    opacity: disabled ? .68 : 1,
+  };
+}
+
+function getPreviewBadgeStyle(toneKey) {
+  const tone = PREVIEW_BADGE_TONES[toneKey] || PREVIEW_BADGE_TONES.meta;
+
+  return {
+    '--preview-badge-bg': tone.bg,
+    '--preview-badge-color': tone.color,
+    '--preview-badge-dark-color': tone.dark,
+  };
+}
 
 // ── Topbar (exam-tool style) ──
 const Topbar = ({ activeExam, handleReset, children }) => (
@@ -34,6 +74,7 @@ const Topbar = ({ activeExam, handleReset, children }) => (
     </div>
     <div className="flex items-center gap-3 shrink-0 ml-auto">
       {children}
+      <ThemeToggle />
       <UserProfile />
       <button className="et-btn-outline desktop-only" onClick={handleReset} style={{ fontSize: 12, padding: '5px 11px' }}>
         <ArrowLeft style={{ width: 13, height: 13 }} /> Quay lại
@@ -1075,7 +1116,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     } : null;
 
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset}>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs font-bold">
             📖 Chế độ ôn luyện
@@ -1191,12 +1232,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                             }}
                             disabled={isRev}
                             className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                            style={{
-                              background: isRev ? '#f1f5f9' : '#eef2ff',
-                              color: isRev ? '#94a3b8' : '#4f46e5',
-                              border: 'none',
-                              cursor: isRev ? 'not-allowed' : 'pointer',
-                            }}
+                            style={getPracticeButtonStyle('hint', isRev)}
                             type="button"
                           >
                             <Robot weight="duotone" className="w-4 h-4" /> Xem gợi ý
@@ -1210,13 +1246,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                               }}
                               disabled={!hasAns}
                               className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                              style={{
-                                background: hasAns ? 'linear-gradient(135deg, #10b981, #059669)' : '#e2e8f0',
-                                color: hasAns ? '#fff' : '#94a3b8',
-                                border: 'none',
-                                cursor: hasAns ? 'pointer' : 'not-allowed',
-                                boxShadow: hasAns ? '0 4px 14px rgba(16,185,129,.3)' : 'none',
-                              }}
+                              style={getPracticeButtonStyle('answer', !hasAns)}
                             >
                               <Eye className="w-4 h-4" /> Xem đáp án
                             </button>
@@ -1260,12 +1290,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 }}
                 disabled={firstIndex === 0}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
-                style={{
-                  background: firstIndex === 0 ? '#f1f5f9' : '#fff',
-                  color: firstIndex === 0 ? '#94a3b8' : '#4b5563',
-                  border: '1.5px solid ' + (firstIndex === 0 ? '#e2e8f0' : '#d1d5db'),
-                  cursor: firstIndex === 0 ? 'not-allowed' : 'pointer',
-                }}
+                style={getPracticeButtonStyle('nav', firstIndex === 0)}
               >
                 <CaretLeft weight="bold" className="w-4 h-4" /> <span className="hidden sm:inline">Câu trước</span>
               </button>
@@ -1278,12 +1303,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   }}
                   disabled={isRevealed}
                   className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                  style={{
-                    background: isRevealed ? '#f1f5f9' : '#eef2ff',
-                    color: isRevealed ? '#94a3b8' : '#4f46e5',
-                    border: 'none',
-                    cursor: isRevealed ? 'not-allowed' : 'pointer',
-                  }}
+                  style={getPracticeButtonStyle('hint', isRevealed)}
                   type="button"
                 >
                   <Robot weight="duotone" className="w-4 h-4" /> Xem gợi ý
@@ -1293,13 +1313,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     onClick={handlePracticeReveal}
                     disabled={!hasAnswered}
                     className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                    style={{
-                      background: hasAnswered ? 'linear-gradient(135deg, #10b981, #059669)' : '#e2e8f0',
-                      color: hasAnswered ? '#fff' : '#94a3b8',
-                      border: 'none',
-                      cursor: hasAnswered ? 'pointer' : 'not-allowed',
-                      boxShadow: hasAnswered ? '0 4px 14px rgba(16,185,129,.3)' : 'none',
-                    }}
+                    style={getPracticeButtonStyle('answer', !hasAnswered)}
                   >
                     <Eye className="w-4 h-4" /> Xem đáp án
                   </button>
@@ -1315,13 +1329,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 }}
                 disabled={lastIndex === realQuestions.length - 1}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
-                style={{
-                  background: lastIndex === realQuestions.length - 1 ? '#f1f5f9' : 'var(--et-blue)',
-                  color: lastIndex === realQuestions.length - 1 ? '#94a3b8' : '#fff',
-                  border: 'none',
-                  cursor: lastIndex === realQuestions.length - 1 ? 'not-allowed' : 'pointer',
-                  boxShadow: lastIndex === realQuestions.length - 1 ? 'none' : '0 4px 14px rgba(59,111,212,.3)',
-                }}
+                style={getPracticeButtonStyle('nav', lastIndex === realQuestions.length - 1)}
               >
                 <span className="hidden sm:inline">Câu tiếp</span> <CaretRight weight="bold" className="w-4 h-4" />
               </button>
@@ -1383,15 +1391,15 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // ── PREVIEW ──
   if (quizPhase === 'preview' && activeExam) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className="flex-1 overflow-y-auto w-full p-4 sm:p-8">
           <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center shadow-sm">
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-              <span className="et-tag et-tag-blue">📚 {activeExam.subject}</span>
-              <span className="et-tag et-tag-amber">⏱ {activeExam.duration} phút</span>
-              <span className="et-tag et-tag-green">📝 {questions.length} câu</span>
-              {activeExam.examType && <span className="et-tag">{activeExam.examType} · {activeExam.year}</span>}
+              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('subject')}>📚 {activeExam.subject}</span>
+              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('duration')}>⏱ {activeExam.duration} phút</span>
+              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('questions')}>📝 {questions.length} câu</span>
+              {activeExam.examType && <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('meta')}>{activeExam.examType} · {activeExam.year}</span>}
             </div>
             <h1 className="text-xl sm:text-2xl font-bold mb-2 text-gray-800">{activeExam.title}</h1>
             <p className="text-xs sm:text-sm text-gray-500 mb-6">
@@ -1402,7 +1410,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap', maxWidth: 560, margin: '0 auto 24px' }}>
               {/* Exam mode card */}
               <div style={{
-                flex: '1 1 240px', maxWidth: 270, background: '#fff', border: '2px solid #e0e7ff',
+                flex: '1 1 240px', maxWidth: 270, background: 'var(--app-surface)', border: '2px solid #e0e7ff',
                 borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
                 transition: 'all .2s', position: 'relative'
               }}
@@ -1411,23 +1419,23 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 onMouseOut={e => { e.currentTarget.style.borderColor = '#e0e7ff'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 <div style={{ fontSize: 32, marginBottom: 8 }}>{isAntiCheatEnabled ? '🔒' : '📝'}</div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: '#1e2533', marginBottom: 6 }}>Làm bài thi</div>
-                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--app-text)', marginBottom: 6 }}>Làm bài thi</div>
+                <p style={{ fontSize: 12, color: 'var(--app-muted)', lineHeight: 1.6, margin: 0 }}>
                   {isAntiCheatEnabled
                     ? 'Tính thời gian, toàn màn hình, chống gian lận. Kết quả được lưu lại.'
                     : 'Tính thời gian, không chống gian lận. Kết quả được lưu lại.'}
                 </p>
                 <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>⏱ Giới hạn thời gian</span>
+                  <span className="preview-theme-badge" style={getPreviewBadgeStyle('duration')}>⏱ Giới hạn thời gian</span>
                   {isAntiCheatEnabled && (
-                    <span style={{ fontSize: 10, background: '#fce7f3', color: '#9d174d', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>🔒 Fullscreen</span>
+                    <span className="preview-theme-badge" style={getPreviewBadgeStyle('fullscreen')}>🔒 Fullscreen</span>
                   )}
                 </div>
               </div>
 
               {/* Practice mode card */}
               <div style={{
-                flex: '1 1 240px', maxWidth: 270, background: '#fff', border: '2px solid #d1fae5',
+                flex: '1 1 240px', maxWidth: 270, background: 'var(--app-surface)', border: '2px solid #d1fae5',
                 borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
                 transition: 'all .2s', position: 'relative'
               }}
@@ -1436,13 +1444,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 onMouseOut={e => { e.currentTarget.style.borderColor = '#d1fae5'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: '#1e2533', marginBottom: 6 }}>Ôn luyện</div>
-                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--app-text)', marginBottom: 6 }}>Ôn luyện</div>
+                <p style={{ fontSize: 12, color: 'var(--app-muted)', lineHeight: 1.6, margin: 0 }}>
                   Từng câu một, xem đáp án ngay. Không giới hạn thời gian, thoải mái học.
                 </p>
                 <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>✅ Đáp án tức thì</span>
-                  <span style={{ fontSize: 10, background: '#ede9fe', color: '#5b21b6', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>🧘 Không áp lực</span>
+                  <span className="preview-theme-badge" style={getPreviewBadgeStyle('questions')}>✅ Đáp án tức thì</span>
+                  <span className="preview-theme-badge" style={getPreviewBadgeStyle('calm')}>🧘 Không áp lực</span>
                 </div>
               </div>
             </div>
@@ -1579,10 +1587,11 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const getQuizNavClass = (q, i) => {
       const isAnswered = hasPracticeAnswer(answers[q.id]);
       const isBookmarked = bookmarks.has(q.id);
-      if (i === currentQ) return 'current';
-      if (isBookmarked) return 'bookmarked';
-      if (isAnswered) return 'answered';
-      return '';
+      return [
+        isAnswered ? 'quiz-answered' : 'quiz-unanswered',
+        isBookmarked ? 'quiz-bookmarked' : '',
+        i === currentQ ? 'current' : '',
+      ].filter(Boolean).join(' ');
     };
     const confirmSubmit = () => {
       const msg = unansweredCount > 0
@@ -1592,7 +1601,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     };
 
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={() => {
           showConfirm(
             'Xác nhận thoát',
@@ -1606,7 +1615,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             () => handleExitQuiz()
           );
         }}>
-          <div className="mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
+          <div className="exam-status-panel mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
             <Clock weight="duotone" className="w-4 h-4 text-indigo-600" />
             <Timer compact initialMinutes={activeExam.duration || 90} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
           </div>
@@ -1719,21 +1728,21 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     {isFirstMCQ && (
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
-                        <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
+                        <div className="et-section-hd-badge">Phần I: Trắc Nghiệm</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
                     {isFirstTF && (
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
-                        <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
+                        <div className="et-section-hd-badge">Phần II: Đúng/Sai</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
                     {isFirstSA && (
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
-                        <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
+                        <div className="et-section-hd-badge">Phần III: Trả lời ngắn</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
@@ -1858,7 +1867,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </button>
             </div>
 
-            <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 mb-4">
+            <div className="exam-status-panel rounded-xl bg-indigo-50 border border-indigo-100 p-4 mb-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Thời gian</div>
@@ -1897,9 +1906,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </div>
 
             <div className="et-nav-legend flex-row justify-center gap-5 mt-0 mb-4">
-              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#e0e7ff', border: '1.5px solid #4f46e5' }} />Đã trả lời</div>
-              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fef3c7', border: '1.5px solid #d97706' }} />Đánh dấu</div>
-              <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fff', border: '1.5px solid #d1d5db' }} />Chưa làm</div>
+              <div className="et-legend-item"><div className="et-legend-dot is-answered" />Đã trả lời</div>
+              <div className="et-legend-item"><div className="et-legend-dot is-bookmarked" />Đánh dấu</div>
+              <div className="et-legend-item"><div className="et-legend-dot is-unanswered" />Chưa làm</div>
             </div>
 
             <div className="mb-4">
@@ -1928,7 +1937,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </button>
             </div>
 
-            <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-3 m-[17px] mb-2">
+            <div className="exam-status-panel rounded-xl bg-indigo-50 border border-indigo-100 p-3 m-[17px] mb-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Thời gian</div>
@@ -1975,9 +1984,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 );
               })}
               <div className="et-nav-legend mt-4">
-                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#e0e7ff', border: '1.5px solid #4f46e5' }} />Đã trả lời</div>
-                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fef3c7', border: '1.5px solid #d97706' }} />Đánh dấu</div>
-                <div className="et-legend-item"><div className="et-legend-dot" style={{ background: '#fff', border: '1.5px solid #d1d5db' }} />Chưa làm</div>
+                <div className="et-legend-item"><div className="et-legend-dot is-answered" />Đã trả lời</div>
+                <div className="et-legend-item"><div className="et-legend-dot is-bookmarked" />Đánh dấu</div>
+                <div className="et-legend-item"><div className="et-legend-dot is-unanswered" />Chưa làm</div>
               </div>
             </div>
           </div>
@@ -1991,7 +2000,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // ── RESULTS SUMMARY ──
   if (quizPhase === 'results' && activeExam) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-sm text-center animate-fadeIn">
@@ -2027,7 +2036,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const pct = realQuestions.length > 0 ? Math.round((correctCount / realQuestions.length) * 100) : 0;
 
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8f9fb] flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
+      <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className={`et-screen ${isSidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ position: 'relative' }}>
           <div className="et-main">
@@ -2052,21 +2061,21 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     {isFirstMCQ && (
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
-                        <div className="et-section-hd-badge">Phần I: Câu hỏi trắc nghiệm nhiều phương án lựa chọn</div>
+                        <div className="et-section-hd-badge">Phần I: Trắc Nghiệm</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
                     {isFirstTF && (
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
-                        <div className="et-section-hd-badge">Phần II: Câu hỏi trắc nghiệm đúng sai</div>
+                        <div className="et-section-hd-badge">Phần II: Đúng/Sai</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
                     {isFirstSA && (
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
-                        <div className="et-section-hd-badge">Phần III: Câu hỏi trắc nghiệm trả lời ngắn</div>
+                        <div className="et-section-hd-badge">Phần III: Trả lời ngắn</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
