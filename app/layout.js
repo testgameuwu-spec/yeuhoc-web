@@ -17,7 +17,7 @@ const outfit = Outfit({
 });
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://yeuhoc.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://yeuhoc.site"),
   title: "YeuHoc",
   description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
   keywords: ["trắc nghiệm", "luyện thi", "THPT", "HSA", "TSA", "toán", "yeuhoc"],
