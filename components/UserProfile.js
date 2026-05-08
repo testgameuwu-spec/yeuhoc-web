@@ -21,6 +21,7 @@ export default function UserProfile() {
   const dropdownRef = useRef(null);
 
   const dataLoadedRef = useRef(false);
+  const currentUserRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,6 +31,7 @@ export default function UserProfile() {
       dataLoadedRef.current = true; // Chống double fetch
 
       setUser(sessionUser);
+      currentUserRef.current = sessionUser;
 
       try {
         const { data: profileData } = await supabase
@@ -80,6 +82,8 @@ export default function UserProfile() {
       
       if (event === 'SIGNED_OUT' || !session?.user) {
         setUser(null);
+        currentUserRef.current = null;
+        dataLoadedRef.current = false;
         setProfile(null);
         setLoading(false);
       } else if (session?.user) {
@@ -88,11 +92,12 @@ export default function UserProfile() {
     });
 
     const handleProfileUpdate = async () => {
-      if (!user) return;
+      const currentUser = currentUserRef.current;
+      if (!currentUser) return;
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .single();
       if (profileData && isMounted) setProfile(profileData);
     };
