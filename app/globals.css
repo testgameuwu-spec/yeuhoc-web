@@ -1360,6 +1360,10 @@ html[data-theme='dark'] .home-tone-badge.is-active {
   transition: all 0.25s ease;
 }
 
+.auth-btn-google svg {
+  flex-shrink: 0;
+}
+
 .auth-btn-google:hover:not(:disabled) {
   background: #f8f9fb;
   border-color: #c7ccd5;
@@ -1954,6 +1958,28 @@ html[data-theme='dark'] .auth-input {
 html[data-theme='dark'] .auth-input-wrap:focus-within {
   border-color: #818cf8;
   box-shadow: 0 0 0 3px rgba(129, 140, 248, .18);
+}
+
+html[data-theme='dark'] .auth-btn-google {
+  background: var(--app-surface-2);
+  border-color: var(--app-border-strong);
+  color: var(--app-text);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+}
+
+html[data-theme='dark'] .auth-btn-google:hover:not(:disabled) {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, .55);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .28);
+}
+
+html[data-theme='dark'] .auth-btn-google:disabled {
+  opacity: .72;
+}
+
+html[data-theme='dark'] .auth-btn-google .auth-spinner {
+  border-color: rgba(255, 255, 255, .24) !important;
+  border-top-color: #4285f4 !important;
 }
 
 /* Exam-tool theme */
