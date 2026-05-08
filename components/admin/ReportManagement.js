@@ -180,43 +180,52 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
   const handleDeleteQuestion = async (report) => {
     showConfirm('Cảnh báo nguy hiểm', `Bạn có chắc chắn muốn XÓA câu hỏi "${report.question_content}..." khỏi đề thi "${report.exam_title}"?\n\nHành động này KHÔNG THỂ hoàn tác!`, async () => {
       setActionLoading(true);
-    try {
-      // Get the exam to modify its questions array
-      const { data: examData, error: fetchError } = await supabase
-        .from('exams')
-        .select('questions')
-        .eq('id', report.exam_id)
-        .single();
+      try {
+        const { error: childDeleteError } = await supabase
+          .from('questions')
+          .delete()
+          .eq('exam_id', report.exam_id)
+          .eq('parent_id', report.question_id);
 
-      if (fetchError) throw fetchError;
+        if (childDeleteError) throw childDeleteError;
 
-      // Remove the question from the array
-      const updatedQuestions = (examData.questions || []).filter(q => q.id !== report.question_id);
+        const { error: questionDeleteError } = await supabase
+          .from('questions')
+          .delete()
+          .eq('exam_id', report.exam_id)
+          .eq('id', report.question_id);
 
-      // Also remove any child questions linked to this question (if it's a TEXT block)
-      const finalQuestions = updatedQuestions.filter(q => q.linkedTo !== report.question_id);
+        if (questionDeleteError) throw questionDeleteError;
 
-      const { error: updateError } = await supabase
-        .from('exams')
-        .update({ questions: finalQuestions })
-        .eq('id', report.exam_id);
+        const { count, error: countError } = await supabase
+          .from('questions')
+          .select('id', { count: 'exact', head: true })
+          .eq('exam_id', report.exam_id);
 
-      if (updateError) throw updateError;
+        if (countError) throw countError;
 
-      // Mark report as resolved
-      await supabase
-        .from('question_reports')
-        .update({ status: 'resolved', resolved_at: new Date().toISOString() })
-        .eq('id', report.id);
+        const { error: updateTotalError } = await supabase
+          .from('exams')
+          .update({ total_q: count || 0 })
+          .eq('id', report.exam_id);
 
-      await fetchReports();
-      setSelectedReport(null);
-      showAlert('Thành công', 'Đã xóa câu hỏi và đánh dấu báo cáo đã xử lý.');
-    } catch (err) {
-      console.error('Error deleting question:', err);
-      showAlert('Lỗi', err.message);
-    }
-    setActionLoading(false);
+        if (updateTotalError) throw updateTotalError;
+
+        // Mark report as resolved
+        await supabase
+          .from('question_reports')
+          .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+          .eq('id', report.id);
+
+        await fetchReports();
+        setSelectedReport(null);
+        showAlert('Thành công', 'Đã xóa câu hỏi và đánh dấu báo cáo đã xử lý.');
+      } catch (err) {
+        console.error('Error deleting question:', err);
+        showAlert('Lỗi', err.message);
+      } finally {
+        setActionLoading(false);
+      }
     });
   };
 
