@@ -17,7 +17,7 @@ const outfit = Outfit({
 });
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.yeuhoc.site"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://yeuhoc.vercel.app"),
   title: "YeuHoc",
   description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
   keywords: ["trắc nghiệm", "luyện thi", "THPT", "HSA", "TSA", "toán", "yeuhoc"],
@@ -27,21 +27,11 @@ export const metadata = {
     siteName: "YeuHoc",
     locale: "vi_VN",
     type: "website",
-    url: "https://www.yeuhoc.site",
-    images: [
-      {
-        url: "https://www.yeuhoc.site/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "YeuHoc Banner",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "YeuHoc",
     description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
-    images: ["https://www.yeuhoc.site/og-image.png"],
   },
 };
 
