@@ -18,9 +18,9 @@ import { checkSAEquivalent } from '@/lib/mathUtils';
 import { getQuestionResultState } from '@/lib/questionResult';
 
 const PRACTICE_BUTTON_TONES = {
-  nav: { bg: '#0f172a', color: '#bfdbfe', shadow: 'rgba(96, 165, 250, .18)' },
-  hint: { bg: '#0f172a', color: '#c4b5fd', shadow: 'rgba(167, 139, 250, .18)' },
-  answer: { bg: '#0f172a', color: '#86efac', shadow: 'rgba(74, 222, 128, .18)' },
+  nav: { bg: 'var(--practice-nav-bg)', color: 'var(--practice-nav-text)', border: 'var(--practice-nav-border)', shadow: 'var(--practice-nav-shadow)' },
+  hint: { bg: 'var(--practice-hint-bg)', color: 'var(--practice-hint-text)', border: 'var(--practice-hint-border)', shadow: 'var(--practice-hint-shadow)' },
+  answer: { bg: 'var(--practice-answer-bg)', color: 'var(--practice-answer-text)', border: 'var(--practice-answer-border)', shadow: 'var(--practice-answer-shadow)' },
 };
 
 const PREVIEW_BADGE_TONES = {
@@ -34,12 +34,13 @@ const PREVIEW_BADGE_TONES = {
 
 function getPracticeButtonStyle(toneKey, disabled = false) {
   const tone = PRACTICE_BUTTON_TONES[toneKey] || PRACTICE_BUTTON_TONES.nav;
-  const color = disabled ? '#94a3b8' : tone.color;
+  const color = disabled ? 'var(--practice-button-disabled-text)' : tone.color;
+  const borderColor = disabled ? 'var(--practice-button-disabled-border)' : tone.border;
 
   return {
-    background: tone.bg,
+    background: disabled ? 'var(--practice-button-disabled-bg)' : tone.bg,
     color,
-    border: `1.5px solid ${color}`,
+    border: `1.5px solid ${borderColor}`,
     cursor: disabled ? 'not-allowed' : 'pointer',
     boxShadow: disabled ? 'none' : `0 8px 20px ${tone.shadow}`,
     opacity: disabled ? .68 : 1,

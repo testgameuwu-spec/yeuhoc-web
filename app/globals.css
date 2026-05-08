@@ -37,6 +37,21 @@
   --et-sh-sm: 0 1px 4px rgba(0, 0, 0, .07);
   --et-sh: 0 2px 12px rgba(0, 0, 0, .09);
   --et-r: 10px;
+  --practice-nav-bg: #eff6ff;
+  --practice-nav-text: #1d4ed8;
+  --practice-nav-border: #bfdbfe;
+  --practice-nav-shadow: rgba(37, 99, 235, .12);
+  --practice-hint-bg: #f5f3ff;
+  --practice-hint-text: #6d28d9;
+  --practice-hint-border: #ddd6fe;
+  --practice-hint-shadow: rgba(109, 40, 217, .12);
+  --practice-answer-bg: #ecfdf5;
+  --practice-answer-text: #047857;
+  --practice-answer-border: #a7f3d0;
+  --practice-answer-shadow: rgba(5, 150, 105, .12);
+  --practice-button-disabled-bg: #f1f5f9;
+  --practice-button-disabled-text: #64748b;
+  --practice-button-disabled-border: #cbd5e1;
 }
 
 html[data-theme='dark'] {
@@ -68,6 +83,21 @@ html[data-theme='dark'] {
   --et-gray-800: #f8fafc;
   --et-sh-sm: 0 1px 4px rgba(0, 0, 0, .35);
   --et-sh: 0 10px 28px rgba(0, 0, 0, .38);
+  --practice-nav-bg: #0f172a;
+  --practice-nav-text: #bfdbfe;
+  --practice-nav-border: #bfdbfe;
+  --practice-nav-shadow: rgba(96, 165, 250, .18);
+  --practice-hint-bg: #0f172a;
+  --practice-hint-text: #c4b5fd;
+  --practice-hint-border: #c4b5fd;
+  --practice-hint-shadow: rgba(167, 139, 250, .18);
+  --practice-answer-bg: #0f172a;
+  --practice-answer-text: #86efac;
+  --practice-answer-border: #86efac;
+  --practice-answer-shadow: rgba(74, 222, 128, .18);
+  --practice-button-disabled-bg: #0f172a;
+  --practice-button-disabled-text: #94a3b8;
+  --practice-button-disabled-border: #94a3b8;
 }
 
 html[data-theme='light'] {
