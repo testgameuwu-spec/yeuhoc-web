@@ -17,9 +17,22 @@ const outfit = Outfit({
 });
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://yeuhoc.vercel.app"),
   title: "YeuHoc",
   description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
   keywords: ["trắc nghiệm", "luyện thi", "THPT", "HSA", "TSA", "toán", "yeuhoc"],
+  openGraph: {
+    title: "YeuHoc",
+    description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
+    siteName: "YeuHoc",
+    locale: "vi_VN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "YeuHoc",
+    description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
+  },
 };
 
 export default function RootLayout({ children }) {
