@@ -330,10 +330,28 @@ function ProfilePageInner() {
         .getPublicUrl(filePath);
 
       setAvatarUrl(publicUrl);
-      setMessage({ type: 'success', text: 'Đã tải ảnh lên! Hãy nhấn Cập nhật để lưu lại.' });
+      
+      // Auto-save the avatar to the profile immediately
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+        
+      if (profileUpdateError) {
+        throw profileUpdateError;
+      }
+      
+      // Update local profile state as well
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      setMessage({ type: 'success', text: 'Đã cập nhật ảnh đại diện thành công!' });
+      
+      // Force a custom event so Navbar can also update if we implement listening to it,
+      // or just let it update on next reload.
+      window.dispatchEvent(new Event('yeuhoc-profile-updated'));
+      
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      setMessage({ type: 'error', text: 'Lỗi tải ảnh lên: ' + error.message });
+      setMessage({ type: 'error', text: 'Lỗi cập nhật ảnh: ' + error.message });
     } finally {
       setUploadingAvatar(false);
     }

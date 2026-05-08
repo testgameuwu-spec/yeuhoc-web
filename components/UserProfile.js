@@ -87,9 +87,22 @@ export default function UserProfile() {
       }
     });
 
+    const handleProfileUpdate = async () => {
+      if (!user) return;
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (profileData && isMounted) setProfile(profileData);
+    };
+
+    window.addEventListener('yeuhoc-profile-updated', handleProfileUpdate);
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      window.removeEventListener('yeuhoc-profile-updated', handleProfileUpdate);
     };
   }, []);
 
