@@ -1118,6 +1118,92 @@ select {
   animation: spin 0.6s linear infinite;
 }
 
+.auth-btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 20px;
+  border: 1.5px solid var(--et-gray-200);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--et-gray-800);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s ease;
+}
+
+.auth-btn-google:hover:not(:disabled) {
+  background: #f8f9fb;
+  border-color: #c7ccd5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.auth-btn-google:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--et-gray-200);
+}
+
+.auth-divider span {
+  font-size: 12px;
+  color: var(--et-gray-400);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.auth-btn-outline {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border: 1.5px solid var(--et-gray-200);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--et-gray-600);
+  background: #fff;
+  transition: all 0.25s ease;
+}
+
+.auth-btn-outline:hover:not(:disabled) {
+  background: #f8f9fb;
+  border-color: #818cf8;
+  color: #6366f1;
+}
+
+.auth-btn-outline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ─── Landscape Mobile (phone rotated) ─── */
 @media (max-width: 950px) and (orientation: landscape) {
   .et-topbar {

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Envelope as Mail, Camera, SignOut as LogOut, FloppyDisk as Save, Shield, BookOpen, CalendarBlank as CalendarDays,
   WarningCircle as AlertCircle, CheckCircle as CheckCircle2, CircleNotch as Loader2, FileText, ClockCounterClockwise as History, ActivityIcon as Activity, Flag,
-  CaretRight as ChevronRight
+  CaretRight as ChevronRight, Lock, Eye, EyeSlash, LockKey
 } from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
@@ -79,6 +79,18 @@ function ProfilePageInner() {
   const [coverGradient, setCoverGradient] = useState('');
   const [showCoverPicker, setShowCoverPicker] = useState(false);
 
+  // Change password state
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [pwMessage, setPwMessage] = useState({ type: '', text: '' });
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
+
   const dataLoadedRef = useRef(false);
   const avatarFileInputRef = useRef(null);
 
@@ -97,6 +109,11 @@ function ProfilePageInner() {
 
       setUser(sessionUser);
       setContinueLoading(true);
+
+      // Detect if user signed in via OAuth (e.g. Google) - they can't change password
+      const identities = sessionUser.identities || [];
+      const hasOAuthOnly = identities.length > 0 && identities.every(id => id.provider !== 'email');
+      if (hasOAuthOnly) setIsOAuthUser(true);
 
       try {
         const profilePromise = supabase
@@ -377,6 +394,60 @@ function ProfilePageInner() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwMessage({ type: '', text: '' });
+
+    if (!currentPassword) {
+      setPwMessage({ type: 'error', text: 'Vui lòng nhập mật khẩu hiện tại.' });
+      return;
+    }
+    if (!newPassword) {
+      setPwMessage({ type: 'error', text: 'Vui lòng nhập mật khẩu mới.' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwMessage({ type: 'error', text: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPwMessage({ type: 'error', text: 'Mật khẩu xác nhận không khớp.' });
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          accessToken: session?.access_token,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setPwMessage({ type: 'error', text: result.error || 'Không thể đổi mật khẩu.' });
+      } else {
+        setPwMessage({ type: 'success', text: 'Đã đổi mật khẩu thành công!' });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setShowChangePassword(false);
+      }
+    } catch {
+      setPwMessage({ type: 'error', text: 'Lỗi hệ thống. Vui lòng thử lại.' });
+    } finally {
+      setChangingPassword(false);
+      setTimeout(() => setPwMessage({ type: '', text: '' }), 4000);
+    }
   };
 
   const handleCoverChange = async (gradientCss) => {
@@ -1001,6 +1072,164 @@ function ProfilePageInner() {
                   )}
                 </button>
               </form>
+
+              {/* ── Change Password Section ── */}
+              {!isOAuthUser && (
+                <div className="mt-8 pt-8 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <LockKey weight="duotone" className="w-[18px] h-[18px] text-indigo-500" />
+                        Đổi mật khẩu
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Thay đổi mật khẩu đăng nhập của bạn</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowChangePassword(!showChangePassword);
+                        setPwMessage({ type: '', text: '' });
+                        setCurrentPassword('');
+                        setNewPassword('');
+                        setConfirmNewPassword('');
+                      }}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors bg-transparent border-0 cursor-pointer"
+                    >
+                      {showChangePassword ? 'Đóng' : 'Thay đổi'}
+                    </button>
+                  </div>
+
+                  {/* Password change message */}
+                  {pwMessage.text && (
+                    <div
+                      className={`flex items-start gap-2.5 p-3.5 mb-4 rounded-xl text-sm animate-fadeIn ${
+                        pwMessage.type === 'success'
+                          ? 'bg-green-50 border border-green-200 text-green-700'
+                          : 'bg-red-50 border border-red-200 text-red-700'
+                      }`}
+                    >
+                      {pwMessage.type === 'success' ? (
+                        <CheckCircle2 weight="fill" className="w-[18px] h-[18px] mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle weight="fill" className="w-[18px] h-[18px] mt-0.5 flex-shrink-0" />
+                      )}
+                      <span>{pwMessage.text}</span>
+                    </div>
+                  )}
+
+                  {showChangePassword && (
+                    <form onSubmit={handleChangePassword} className="space-y-4 animate-fadeIn">
+                      {/* Current Password */}
+                      <div>
+                        <label className="auth-label">Mật khẩu hiện tại</label>
+                        <div className="auth-input-wrap">
+                          <Lock weight="duotone" className="w-[18px] h-[18px] text-gray-400" />
+                          <input
+                            type={showCurrentPw ? 'text' : 'password'}
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="Nhập mật khẩu hiện tại"
+                            className="auth-input"
+                            autoComplete="current-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPw(!showCurrentPw)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                            tabIndex={-1}
+                          >
+                            {showCurrentPw ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* New Password */}
+                      <div>
+                        <label className="auth-label">Mật khẩu mới</label>
+                        <div className="auth-input-wrap">
+                          <Lock weight="duotone" className="w-[18px] h-[18px] text-gray-400" />
+                          <input
+                            type={showNewPw ? 'text' : 'password'}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Tối thiểu 6 ký tự"
+                            className="auth-input"
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPw(!showNewPw)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                            tabIndex={-1}
+                          >
+                            {showNewPw ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        {/* Strength indicator */}
+                        {newPassword && (
+                          <div className="mt-2 flex gap-1">
+                            {[1, 2, 3, 4].map((i) => {
+                              const strength = newPassword.length >= 12 ? 4 : newPassword.length >= 8 ? 3 : newPassword.length >= 6 ? 2 : 1;
+                              const colors = ['bg-red-400', 'bg-amber-400', 'bg-blue-400', 'bg-green-400'];
+                              return (
+                                <div
+                                  key={i}
+                                  className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= strength ? colors[strength - 1] : 'bg-gray-200'}`}
+                                />
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Confirm New Password */}
+                      <div>
+                        <label className="auth-label">Xác nhận mật khẩu mới</label>
+                        <div className="auth-input-wrap">
+                          <Lock weight="duotone" className="w-[18px] h-[18px] text-gray-400" />
+                          <input
+                            type={showConfirmPw ? 'text' : 'password'}
+                            value={confirmNewPassword}
+                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            placeholder="Nhập lại mật khẩu mới"
+                            className="auth-input"
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPw(!showConfirmPw)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-0 p-0"
+                            tabIndex={-1}
+                          >
+                            {showConfirmPw ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        {confirmNewPassword && newPassword !== confirmNewPassword && (
+                          <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                            <AlertCircle weight="fill" className="w-3 h-3" /> Mật khẩu không khớp
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Submit */}
+                      <button
+                        type="submit"
+                        disabled={changingPassword}
+                        className="auth-btn-primary"
+                      >
+                        {changingPassword ? (
+                          <div className="auth-spinner" />
+                        ) : (
+                          <>
+                            <LockKey weight="fill" className="w-[18px] h-[18px]" />
+                            Đổi mật khẩu
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
             </div>
             ) : null}
           </div>
