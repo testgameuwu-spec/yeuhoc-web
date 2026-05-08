@@ -30,7 +30,7 @@ export const metadata = {
     url: "https://www.yeuhoc.site",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://www.yeuhoc.site/og-image.png",
         width: 1200,
         height: 630,
         alt: "YeuHoc Banner",
@@ -41,7 +41,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "YeuHoc",
     description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
-    images: ["/og-image.png"],
+    images: ["https://www.yeuhoc.site/og-image.png"],
   },
 };
 
