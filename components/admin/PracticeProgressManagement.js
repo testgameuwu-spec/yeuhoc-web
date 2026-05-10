@@ -425,7 +425,7 @@ const StudentCell = ({ row }) => (
         alt=""
         width={44}
         height={44}
-        unoptimized
+        sizes="44px"
         className="w-11 h-11 rounded-full object-cover ring-2 ring-white/10 shrink-0"
       />
     ) : (

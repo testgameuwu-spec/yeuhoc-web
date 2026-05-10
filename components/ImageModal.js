@@ -42,6 +42,7 @@ export default function ImageModal({ isOpen, onClose, src, alt }) {
                     alt={alt}
                     width={1200}
                     height={800}
+                    sizes="(max-width: 1024px) 90vw, 1024px"
                     className="max-h-[85vh] w-auto rounded-xl object-contain"
                 />
             </div>

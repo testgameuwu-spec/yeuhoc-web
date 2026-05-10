@@ -134,6 +134,7 @@ export default function QuestionCard({
                                 alt={`Hình minh họa câu ${index + 1}`}
                                 width={700}
                                 height={400}
+                                sizes="(max-width: 768px) 100vw, 700px"
                                 style={{ maxHeight: 220, maxWidth: '100%', objectFit: 'contain', display: 'block' }}
                                 onError={e => { e.target.style.display = 'none'; }}
                             />

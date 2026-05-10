@@ -566,6 +566,7 @@ function ProfilePageInner() {
                     alt={displayName}
                     width={144}
                     height={144}
+                    sizes="(max-width: 640px) 128px, 160px"
                     className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white bg-white shadow-lg"
                   />
                 ) : (
@@ -1056,6 +1057,7 @@ function ProfilePageInner() {
                           alt="Preview"
                           width={64}
                           height={64}
+                          sizes="64px"
                           className="w-16 h-16 rounded-full object-cover border border-gray-200 shadow-sm"
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />

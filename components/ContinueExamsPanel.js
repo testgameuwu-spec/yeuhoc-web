@@ -91,6 +91,7 @@ function ContinueExamItem({ item }) {
   return (
     <Link
       href={item.href}
+      prefetch={false}
       className="home-box group block rounded-xl border border-gray-100 bg-white p-3.5 transition-all hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-sm"
     >
       <div className="flex flex-col gap-3 min-w-0">

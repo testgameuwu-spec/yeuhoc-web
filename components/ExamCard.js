@@ -138,6 +138,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
     return (
       <Link
         href={href}
+        prefetch={false}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         className={cardClassName}

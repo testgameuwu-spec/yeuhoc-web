@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, CaretRight, CaretLeft, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk } from '@phosphor-icons/react';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
 import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
-import PracticeAIChatbox from '@/components/PracticeAIChatbox';
 import MathRenderer from '@/components/MathRenderer';
 import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
@@ -31,6 +31,8 @@ const PREVIEW_BADGE_TONES = {
   fullscreen: { bg: '#fce7f3', color: '#9d174d', dark: '#f9a8d4' },
   calm: { bg: '#ede9fe', color: '#5b21b6', dark: '#c4b5fd' },
 };
+
+const PracticeAIChatbox = dynamic(() => import('@/components/PracticeAIChatbox'), { ssr: false });
 
 function getPracticeButtonStyle(toneKey, disabled = false) {
   const tone = PRACTICE_BUTTON_TONES[toneKey] || PRACTICE_BUTTON_TONES.nav;
@@ -183,6 +185,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [aiChatMounted, setAiChatMounted] = useState(false);
 
   // Preview Stats
   const [examStats, setExamStats] = useState(null);
@@ -215,6 +218,11 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   const getProgressKey = useCallback((examId) => `yeuhoc_progress_${user?.id}_${examId}`, [user?.id]);
   const getPracticeProgressKey = useCallback((examId) => `yeuhoc_practice_progress_${user?.id}_${examId}`, [user?.id]);
+
+  const openAIChat = useCallback(() => {
+    setAiChatMounted(true);
+    setIsAIChatOpen(true);
+  }, []);
 
   // Fetch preview stats
   useEffect(() => {
@@ -1190,7 +1198,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           alt=""
                           width={900}
                           height={500}
-                          unoptimized
+                          sizes="(max-width: 1024px) 100vw, 50vw"
                           className="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
                         />
                       </div>
@@ -1229,7 +1237,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                             onClick={() => {
                               if (isRev) return;
                               setCurrentQ(rqIndex);
-                              setIsAIChatOpen(true);
+                              openAIChat();
                             }}
                             disabled={isRev}
                             className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all"
@@ -1300,7 +1308,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 <button
                   onClick={() => {
                     if (isRevealed) return;
-                    setIsAIChatOpen(true);
+                    openAIChat();
                   }}
                   disabled={isRevealed}
                   className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all"
@@ -1376,13 +1384,15 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             )}
           </div>
         </div>
-        <PracticeAIChatbox
-          isOpen={isAIChatOpen}
-          onClose={() => setIsAIChatOpen(false)}
-          questionKey={q ? `${activeExam.id}-${q.id}` : ''}
-          questionData={aiQuestionData}
-          questionNumber={currentQ + 1}
-        />
+        {aiChatMounted && (
+          <PracticeAIChatbox
+            isOpen={isAIChatOpen}
+            onClose={() => setIsAIChatOpen(false)}
+            questionKey={q ? `${activeExam.id}-${q.id}` : ''}
+            questionData={aiQuestionData}
+            questionNumber={currentQ + 1}
+          />
+        )}
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
       </div>
@@ -1539,7 +1549,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                         alt="Avatar"
                                         width={48}
                                         height={48}
-                                        unoptimized
+                                        sizes="48px"
                                         className="w-12 h-12 rounded-full mx-auto object-cover ring-2 ring-gray-100 aspect-square shrink-0"
                                         style={{ minWidth: '48px', minHeight: '48px' }}
                                       />
@@ -1773,7 +1783,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     alt="Context image"
                                     width={900}
                                     height={500}
-                                    unoptimized
+                                    sizes="(max-width: 1024px) 100vw, 50vw"
                                     className="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
                                   />
                                 </div>
@@ -2106,7 +2116,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     alt="Context image"
                                     width={900}
                                     height={500}
-                                    unoptimized
+                                    sizes="(max-width: 1024px) 100vw, 50vw"
                                     className="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
                                   />
                                 </div>
