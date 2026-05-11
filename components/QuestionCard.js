@@ -77,7 +77,7 @@ export default function QuestionCard({
                             <AlertTriangle width={17} height={17} />
                         </button>
                     )}
-                    {!showResult && onToggleBookmark && (
+                    {onToggleBookmark && (
                         <button
                             onClick={onToggleBookmark}
                             title="Đánh dấu câu hỏi này"

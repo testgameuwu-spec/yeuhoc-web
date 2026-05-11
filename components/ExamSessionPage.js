@@ -1224,12 +1224,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           showResult={isRev}
                           disabled={isRev}
                           isBookmarked={bookmarks.has(gq.id)}
-                          onToggleBookmark={!isRev ? () => {
+                          onToggleBookmark={() => {
                             const next = new Set(bookmarks);
                             if (next.has(gq.id)) next.delete(gq.id);
                             else next.add(gq.id);
                             setBookmarks(next);
-                          } : null}
+                          }}
                           onReport={handleOpenReport}
                         />
                         <div className="px-6 pb-6 pt-2 flex items-center justify-between gap-3 border-t border-gray-50 mt-4">
@@ -1277,12 +1277,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     showResult={isRevealed}
                     disabled={isRevealed}
                     isBookmarked={bookmarks.has(q.id)}
-                    onToggleBookmark={!isRevealed ? () => {
+                    onToggleBookmark={() => {
                       const next = new Set(bookmarks);
                       if (next.has(q.id)) next.delete(q.id);
                       else next.add(q.id);
                       setBookmarks(next);
-                    } : null}
+                    }}
                     onReport={handleOpenReport}
                   />
                 </div>
