@@ -123,7 +123,7 @@ export default function RegisterPage() {
       if (msg.includes('user already registered')) {
         friendlyMsg = 'Email này đã được sử dụng.';
       } else if (msg.includes('rate limit') || msg.includes('email rate limit')) {
-        friendlyMsg = 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi vài phút rồi thử lại.';
+        friendlyMsg = 'Hệ thống gửi email xác thực đang tạm giới hạn. Vui lòng thử lại sau hoặc đăng ký bằng Google.';
       } else if (msg.includes('signup is disabled')) {
         friendlyMsg = 'Chức năng đăng ký đang tạm thời bị tắt.';
       }
@@ -246,7 +246,7 @@ export default function RegisterPage() {
     if (resendError) {
       const msg = resendError.message.toLowerCase();
       if (msg.includes('rate limit') || msg.includes('email rate limit')) {
-        setOtpError('Bạn đã gửi quá nhiều yêu cầu. Vui lòng đợi vài phút rồi thử lại.');
+        setOtpError('Hệ thống gửi email xác thực đang tạm giới hạn. Vui lòng thử lại sau hoặc đăng ký bằng Google.');
       } else {
         setOtpError('Không thể gửi lại mã. Vui lòng thử lại sau.');
       }
