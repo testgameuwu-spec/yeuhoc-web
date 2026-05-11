@@ -450,7 +450,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
             >
               <ImageIcon className={`w-6 h-6 transition-transform ${isDragging ? '-translate-y-1' : ''}`} />
               <span className="text-xs font-medium text-center">
-                {isDragging ? 'Thả ảnh vào đây...' : (q.image ? 'Kéo thả hoặc click để đổi ảnh khác' : 'Kéo thả hoặc click để tải ảnh minh hoạ lên')}
+                {isDragging ? 'Thả ảnh vào đây...' : (q.image ? 'Kéo thả, click hoặc Ctrl+V để đổi ảnh khác' : 'Kéo thả, click hoặc Ctrl+V để tải ảnh minh hoạ lên')}
               </span>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                 const file = e.target.files?.[0];
