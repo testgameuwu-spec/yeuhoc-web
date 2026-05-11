@@ -149,7 +149,7 @@ export default function FilterBar({
               type="text"
               value={search}
               onChange={e => onSearch(e.target.value)}
-              placeholder="Tìm theo tên đề thi..."
+              placeholder="Tìm theo tên thư mục..."
               className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all"
             />
           </div>

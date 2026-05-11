@@ -22,6 +22,10 @@ const VISIBILITY_CONFIG = {
   locked: { icon: Lock, label: 'Khóa', color: 'text-rose-400' }
 };
 
+const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
+const EXAM_TYPES = ['THPT', 'HSA', 'TSA', 'Other'];
+const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+
 export default function ExamList({ 
   exams, folders = [], onEdit, onDelete, onTogglePublish, onCreateNew, onUpdateOrder,
   onCreateFolder, onUpdateFolder, onDeleteFolder, onUpdateFoldersOrder, onSaveExam
@@ -150,6 +154,9 @@ export default function ExamList({
     const formData = new FormData(e.target);
     const data = {
       name: formData.get('name'),
+      subject: formData.get('subject') || null,
+      examType: formData.get('examType') || null,
+      year: formData.get('year') || null,
       visibility: formData.get('visibility'),
     };
     if (folderModal.data) {
@@ -333,13 +340,16 @@ export default function ExamList({
           onDragEnd={handleDragEnd}
           className={`flex items-center justify-between px-4 sm:px-6 py-3 bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${isDragged ? 'opacity-50' : ''} ${draggedItem?.type === 'exam' ? 'border-2 border-transparent hover:border-indigo-500/50 hover:bg-indigo-500/10' : ''}`}
         >
-          <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => toggleFolder(folder.id)}>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3 cursor-pointer" onClick={() => toggleFolder(folder.id)}>
             {isEditingOrder && <GripVertical className="w-5 h-5 text-white/30 cursor-grab" />}
             <button className="p-1 rounded-md hover:bg-white/10 text-white/60">
               {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
             <Folder className="w-5 h-5 text-indigo-400" fill="currentColor" fillOpacity={0.2} />
-            <span className="font-bold text-white text-sm sm:text-base">{folder.name}</span>
+            <span className="min-w-0 truncate font-bold text-white text-sm sm:text-base">{folder.name}</span>
+            {folder.subject && <span className="text-xs text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">{folder.subject}</span>}
+            {folder.examType && <span className="text-xs text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">{folder.examType}</span>}
+            {folder.year && <span className="text-xs text-white/50">{folder.year}</span>}
             <span className="text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded-full">{folderExams.length} đề</span>
             <VisIcon className={`w-3.5 h-3.5 ml-2 ${visColor}`} title={VISIBILITY_CONFIG[folder.visibility || 'public'].label} />
           </div>
@@ -509,7 +519,7 @@ export default function ExamList({
       {/* Folder Modal */}
       {folderModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-[#14142a] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-scaleIn">
+          <div className="bg-[#14142a] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-scaleIn">
             <div className="flex justify-between items-center p-5 border-b border-white/10 bg-white/[0.02]">
               <h3 className="text-lg font-bold text-white">{folderModal.data ? 'Chỉnh sửa thư mục' : 'Tạo thư mục mới'}</h3>
               <button onClick={() => setFolderModal({ isOpen: false, data: null })} className="text-white/40 hover:text-white">
@@ -522,6 +532,38 @@ export default function ExamList({
                 <input required type="text" name="name" defaultValue={folderModal.data?.name || ''}
                   className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 outline-none"
                   placeholder="Ví dụ: Đề thi THPT Quốc gia..." />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-1.5">Môn học</label>
+                  <select name="subject" defaultValue={folderModal.data?.subject || ''}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#14142a] border border-white/10 text-white focus:border-indigo-500 outline-none">
+                    <option value="">Không chọn</option>
+                    {SUBJECTS.map(subject => (
+                      <option key={subject} value={subject}>{subject}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-1.5">Kì thi</label>
+                  <select name="examType" defaultValue={folderModal.data?.examType || ''}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#14142a] border border-white/10 text-white focus:border-indigo-500 outline-none">
+                    <option value="">Không chọn</option>
+                    {EXAM_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-1.5">Năm</label>
+                  <select name="year" defaultValue={folderModal.data?.year || ''}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#14142a] border border-white/10 text-white focus:border-indigo-500 outline-none">
+                    <option value="">Không chọn</option>
+                    {YEARS.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-1.5">Quyền truy cập</label>

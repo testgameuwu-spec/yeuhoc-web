@@ -15,13 +15,29 @@ import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/t
 import { findNearestTargetExam, formatTargetExamDate, getCountdownSentence, getRandomWish } from '@/lib/targetExamDisplay';
 import { supabase } from '@/lib/supabase';
 
-const ITEMS_PER_PAGE = 9;
 const FOLDERS_PER_PAGE = 5;
 const HOME_BADGE_TONES = {
   default: { dark: '#cbd5e1' },
   target: { dark: '#a5b4fc' },
   count: { dark: '#93c5fd' },
   lock: { dark: '#fcd34d' },
+};
+
+const FOLDER_SUBJECT_META = {
+  'Toán': { bg: '#eef2ff', color: '#3730a3', border: '#c7d2fe', dark: '#a5b4fc' },
+  'Vật Lý': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', dark: '#93c5fd' },
+  'Hoá Học': { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', dark: '#86efac' },
+  'Tiếng Anh': { bg: '#fffbeb', color: '#b45309', border: '#fde68a', dark: '#fcd34d' },
+  'Tư duy định lượng': { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', dark: '#c4b5fd' },
+  'Tư duy định tính': { bg: '#fdf2f8', color: '#be185d', border: '#fbcfe8', dark: '#f9a8d4' },
+  'Khác': { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', dark: '#cbd5e1' },
+};
+
+const FOLDER_TYPE_META = {
+  THPT: { bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd', dark: '#7dd3fc', label: 'THPT QG' },
+  HSA: { bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc', dark: '#67e8f9', label: 'HSA' },
+  TSA: { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', dark: '#c4b5fd', label: 'TSA' },
+  Other: { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', dark: '#cbd5e1', label: 'Khác' },
 };
 
 function getHomeBadgeStyle(toneKey = 'default') {
@@ -32,11 +48,20 @@ function getHomeBadgeStyle(toneKey = 'default') {
   };
 }
 
+function getFolderBadgeStyle(meta) {
+  return {
+    '--home-badge-bg': meta.bg,
+    '--home-badge-border': meta.border,
+    '--home-badge-color': meta.color,
+    '--home-badge-dark-color': meta.dark,
+  };
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [allExams, setAllExams] = useState([]);
   const [allFolders, setAllFolders] = useState([]);
-  const [expandedFolders, setExpandedFolders] = useState({ root: true });
+  const [expandedFolders, setExpandedFolders] = useState({});
   const [savedExams, setSavedExams] = useState(new Set());
   const [continueItems, setContinueItems] = useState([]);
   const [continueLoading, setContinueLoading] = useState(true);
@@ -67,12 +92,7 @@ export default function HomePage() {
       ]);
       setAllExams(exams);
       setAllFolders(folders || []);
-
-      const initialExpanded = { root: true };
-      (folders || []).forEach((folder) => {
-        if (folder.visibility !== 'private') initialExpanded[folder.id] = true;
-      });
-      setExpandedFolders(initialExpanded);
+      setExpandedFolders({});
     }
     init();
   }, []);
@@ -184,25 +204,13 @@ export default function HomePage() {
   const handleSubject = (value) => { setSelSubject(value); resetBrowsePage(); };
   const handleSortOrder = (value) => { setSortOrder(value); resetBrowsePage(); };
 
-  const filteredExams = allExams.filter((exam) => {
-    if (searchQuery && !exam.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (selYear && String(exam.year) !== String(selYear)) return false;
-    if (selType && exam.examType !== selType) return false;
-    if (selSubject && exam.subject !== selSubject) return false;
-    return true;
-  }).sort((a, b) => {
-    if (sortOrder === 'default') return 0;
-    if (sortOrder === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    if (sortOrder === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
-    if (sortOrder === 'az') return a.title.localeCompare(b.title);
-    return 0;
-  });
-
-  const isFiltering = searchQuery || selYear || selType || selSubject || sortOrder !== 'default';
+  const renderableFolders = getRenderableFolders(allExams, allFolders);
+  const filteredFolders = sortFolders(
+    renderableFolders.filter((folder) => matchesFolderFilters(folder, { searchQuery, selYear, selType, selSubject })),
+    sortOrder
+  );
   const lockedFolderIds = new Set(allFolders.filter((folder) => folder.visibility === 'locked').map((folder) => folder.id));
-  const browseTotalPages = isFiltering
-    ? Math.ceil(filteredExams.length / ITEMS_PER_PAGE)
-    : Math.ceil(getRenderableFolders(filteredExams, allFolders).length / FOLDERS_PER_PAGE);
+  const browseTotalPages = Math.ceil(filteredFolders.length / FOLDERS_PER_PAGE);
 
   const handleClearFilters = () => {
     setSearchQuery('');
@@ -255,17 +263,7 @@ export default function HomePage() {
   );
 
   const renderContent = () => {
-    if (isFiltering) {
-      const visibleExams = filteredExams.slice((browsePage - 1) * ITEMS_PER_PAGE, browsePage * ITEMS_PER_PAGE);
-
-      return visibleExams.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {visibleExams.map((exam) => renderExamCard(exam, lockedFolderIds.has(exam.folderId)))}
-        </div>
-      ) : null;
-    }
-
-    const visibleFolders = getRenderableFolders(filteredExams, allFolders)
+    const visibleFolders = filteredFolders
       .slice((browsePage - 1) * FOLDERS_PER_PAGE, browsePage * FOLDERS_PER_PAGE);
 
     return visibleFolders.length > 0 ? (
@@ -292,6 +290,25 @@ export default function HomePage() {
                     <Folder className="w-5 h-5 shrink-0 text-indigo-500" fill="currentColor" fillOpacity={0.2} />
                   )}
                   <h2 className="min-w-0 max-w-full truncate text-base sm:text-lg font-bold text-gray-800">{folder.name}</h2>
+                  {folder.subject && (
+                    <span
+                      className="home-theme-badge shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-bold"
+                      style={getFolderBadgeStyle(FOLDER_SUBJECT_META[folder.subject] || FOLDER_SUBJECT_META['Khác'])}
+                    >
+                      {folder.subject}
+                    </span>
+                  )}
+                  {folder.examType && (
+                    <span
+                      className="home-theme-badge shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                      style={getFolderBadgeStyle(FOLDER_TYPE_META[folder.examType] || FOLDER_TYPE_META.Other)}
+                    >
+                      {(FOLDER_TYPE_META[folder.examType] || FOLDER_TYPE_META.Other).label}
+                    </span>
+                  )}
+                  {folder.year && (
+                    <span className="shrink-0 text-xs font-semibold text-gray-400">{folder.year}</span>
+                  )}
                   <span
                     className="home-dark-badge shrink-0 rounded-full border border-gray-200 bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-500"
                     style={getHomeBadgeStyle('count')}
@@ -362,8 +379,8 @@ export default function HomePage() {
             selYear={selYear} onYear={handleYear}
             selType={selType} onType={handleType}
             selSubject={selSubject} onSubject={handleSubject}
-            resultCount={filteredExams.length}
-            totalCount={allExams.length}
+            resultCount={filteredFolders.length}
+            totalCount={renderableFolders.length}
             onClear={handleClearFilters}
             sortOrder={sortOrder} onSortOrder={handleSortOrder}
           />
@@ -527,6 +544,24 @@ function TargetExamSetupModal({ targetExams, selectedIds, onToggle, onSave, savi
   );
 }
 
+function matchesFolderFilters(folder, filters) {
+  const { searchQuery, selYear, selType, selSubject } = filters;
+  const query = searchQuery.trim().toLowerCase();
+
+  if (query && !folder.name.toLowerCase().includes(query)) return false;
+  if (selYear && String(folder.year || '') !== String(selYear)) return false;
+  if (selType && folder.examType !== selType) return false;
+  if (selSubject && folder.subject !== selSubject) return false;
+  return true;
+}
+
+function sortFolders(folders, sortOrder) {
+  if (sortOrder === 'az') return [...folders].sort((a, b) => a.name.localeCompare(b.name));
+  if (sortOrder === 'newest') return [...folders].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  if (sortOrder === 'oldest') return [...folders].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  return folders;
+}
+
 function getRenderableFolders(exams, folders) {
   const publicFolders = folders
     .filter((folder) => folder.visibility !== 'private')
@@ -558,6 +593,9 @@ function getRenderableFolders(exams, folders) {
       isRoot: true,
       exams: rootExams,
       visibility: 'public',
+      subject: null,
+      examType: null,
+      year: null,
     });
   }
 
