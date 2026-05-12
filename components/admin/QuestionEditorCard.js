@@ -8,7 +8,7 @@ import {
   ToggleLeft, AlertCircle, BookOpen, ArrowUpDown
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
-import { normalizeMAAnswer } from '@/lib/questionResult';
+import { getDragBlankIds, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
 
 const TYPE_STYLES = {
   MCQ: { label: 'Trắc nghiệm', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', icon: CheckCircle2 },
@@ -31,6 +31,17 @@ const LEVEL_COLORS = {
 
 const OPTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+function serializeDragAnswer(answerMap, blankIds = []) {
+  const keys = blankIds.length > 0 ? blankIds : Object.keys(answerMap || {});
+  return keys
+    .map((key) => {
+      const value = answerMap?.[key];
+      return value && /^[A-Z]$/.test(value) ? `${key}-${value}` : '';
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
 export default function QuestionEditorCard({ question, index, totalQuestions, allQuestions, onUpdate, onDelete, onReorder, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [expanded, setExpanded] = useState(true);
   const [showSolution, setShowSolution] = useState(false);
@@ -41,6 +52,8 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
   const typeStyle = TYPE_STYLES[q.type] || TYPE_STYLES.MCQ;
   const TypeIcon = typeStyle.icon;
   const maAnswerLetters = normalizeMAAnswer(q.answer);
+  const dragBlankIds = q.type === 'DRAG' ? getDragBlankIds(q.content) : [];
+  const dragAnswerMap = q.type === 'DRAG' ? parseDragAnswer(q.answer) : {};
 
   // ── Generic field updater ──
   const update = useCallback((field, value) => {
@@ -81,6 +94,14 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
         letters.push(answerIndex > i ? OPTION_LETTERS[answerIndex - 1] : letter);
         return letters;
       }, []).sort().join(',');
+    } else if (q.type === 'DRAG') {
+      const nextAnswerMap = Object.entries(dragAnswerMap).reduce((map, [blankId, letter]) => {
+        const answerIndex = OPTION_LETTERS.indexOf(letter);
+        if (answerIndex === i) return map;
+        map[blankId] = answerIndex > i ? OPTION_LETTERS[answerIndex - 1] : letter;
+        return map;
+      }, {});
+      newAnswer = serializeDragAnswer(nextAnswerMap, dragBlankIds);
     }
     onUpdate({ ...q, options: newOpts, answer: newAnswer });
   };
@@ -90,6 +111,13 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
     if (next.has(letter)) next.delete(letter);
     else next.add(letter);
     update('answer', [...next].sort().join(','));
+  };
+
+  const handleDragAnswerChange = (blankId, letter) => {
+    const nextAnswerMap = { ...dragAnswerMap };
+    if (letter) nextAnswerMap[blankId] = letter;
+    else delete nextAnswerMap[blankId];
+    update('answer', serializeDragAnswer(nextAnswerMap, dragBlankIds));
   };
 
   // ── TF helpers ──
@@ -471,11 +499,45 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
 
               <div>
                 <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">
-                  Đáp án đúng <span className="text-white/15 normal-case">(VD: 1-A, 2-C, 3-D; không lặp chữ cái đáp án; ô thả trong nội dung viết dạng [[1]])</span>
+                  Đáp án đúng <span className="text-white/15 normal-case">(lấy tự động từ các ô [[1]], [[2]] trong nội dung)</span>
                 </label>
-                <input type="text" value={q.answer || ''} onChange={e => update('answer', e.target.value)}
-                  placeholder="1-A, 2-C"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all" />
+                {dragBlankIds.length > 0 ? (
+                  <div className="space-y-2">
+                    {dragBlankIds.map((blankId) => {
+                      const selectedLetter = dragAnswerMap[blankId] || '';
+                      return (
+                        <div key={blankId} className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                          <span className="inline-flex w-fit items-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-xs font-bold text-cyan-300">
+                            [[{blankId}]]
+                          </span>
+                          <select
+                            value={selectedLetter}
+                            onChange={e => handleDragAnswerChange(blankId, e.target.value)}
+                            className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-[#10182a] border border-white/10 text-white/80 text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all cursor-pointer"
+                          >
+                            <option value="" className="bg-[#14142a]">Chưa chọn đáp án</option>
+                            {(q.options || []).map((opt, i) => {
+                              const letter = OPTION_LETTERS[i];
+                              const usedByOtherBlank = Object.entries(dragAnswerMap).some(([key, value]) => key !== blankId && value === letter);
+                              return (
+                                <option key={letter} value={letter} disabled={usedByOtherBlank} className="bg-[#14142a]">
+                                  {letter} - {opt || 'Chưa nhập nội dung đáp án'}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      );
+                    })}
+                    <div className="text-[11px] text-white/25">
+                      Đang lưu dạng: <span className="font-mono text-cyan-300/80">{serializeDragAnswer(dragAnswerMap, dragBlankIds) || 'Chưa chọn'}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                    Thêm ô thả vào nội dung câu hỏi bằng cú pháp [[1]], [[2]] để chọn đáp án đúng tại đây.
+                  </div>
+                )}
               </div>
             </div>
           )}
