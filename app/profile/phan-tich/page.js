@@ -210,7 +210,14 @@ function normalizeAttempt(attempt) {
     ? attempt.user_answers
     : {};
   const questions = Array.isArray(exam?.questions)
-    ? exam.questions.map(normalizeQuestion)
+    ? [...exam.questions]
+      .sort((a, b) => {
+        const orderA = Number.isFinite(Number(a.order_index)) ? Number(a.order_index) : 0;
+        const orderB = Number.isFinite(Number(b.order_index)) ? Number(b.order_index) : 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      })
+      .map(normalizeQuestion)
     : [];
   const baseAttempt = {
     id: attempt.id,
@@ -898,7 +905,7 @@ export default function PersonalAnalysisPage() {
 
       const attemptsResult = await supabase
         .from('exam_attempts')
-        .select('id, score, correct_answers, total_questions, time_spent, created_at, violation_count, user_answers, exams(title, subject, exam_type, year, scoring_config, questions(id, type, answer, tf_sub_questions))')
+        .select('id, score, correct_answers, total_questions, time_spent, created_at, violation_count, user_answers, exams(title, subject, exam_type, year, scoring_config, questions(id, order_index, type, answer, tf_sub_questions))')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
 

@@ -253,11 +253,20 @@ export default function UserManagement() {
       .from('exams')
       .select('*, questions(*)')
       .eq('id', attempt.exam_id)
+      .order('order_index', { referencedTable: 'questions', ascending: true })
       .single();
     
     if (examData) {
+      const orderedQuestions = Array.isArray(examData.questions)
+        ? [...examData.questions].sort((a, b) => {
+            const orderA = Number.isFinite(Number(a.order_index)) ? Number(a.order_index) : 0;
+            const orderB = Number.isFinite(Number(b.order_index)) ? Number(b.order_index) : 0;
+            if (orderA !== orderB) return orderA - orderB;
+            return String(a.id || '').localeCompare(String(b.id || ''));
+          })
+        : [];
       setAttemptDetails({
-        exam: examData,
+        exam: { ...examData, questions: orderedQuestions },
         answers: attempt.user_answers || {}
       });
     } else {

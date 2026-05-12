@@ -21,9 +21,18 @@ import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionRes
 import { getTsaSectionIndex, isTsaExam, TSA_SECTIONS } from '@/lib/examScoring';
 
 function mapExamQuestions(examData) {
+  const questions = Array.isArray(examData.questions)
+    ? [...examData.questions].sort((a, b) => {
+        const orderA = Number.isFinite(Number(a.order_index)) ? Number(a.order_index) : 0;
+        const orderB = Number.isFinite(Number(b.order_index)) ? Number(b.order_index) : 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      })
+    : [];
+
   return {
     ...examData,
-    questions: (examData.questions || []).map(q => {
+    questions: questions.map(q => {
       const tfSubs = q.tf_sub_questions || undefined;
       const stmts = q.statements || undefined;
       let answer = q.answer;
@@ -115,6 +124,7 @@ export default function AttemptHistoryDetailPage() {
           .from('exams')
           .select('*, questions(*)')
           .eq('id', attemptData.exam_id)
+          .order('order_index', { referencedTable: 'questions', ascending: true })
           .single();
 
         if (examError) throw examError;
