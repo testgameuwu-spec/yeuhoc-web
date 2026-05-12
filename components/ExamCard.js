@@ -25,12 +25,14 @@ const QUESTION_META = {
   MCQ: { bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe', dark: '#a5b4fc' },
   TF:  { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', dark: '#c4b5fd' },
   SA:  { bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc', dark: '#67e8f9' },
+  DRAG: { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4', dark: '#5eead4' },
 };
 
 const QUESTION_LABEL = {
   MCQ: 'Trắc Nghiệm',
   TF: 'Đúng/Sai',
   SA: 'Trả lời ngắn',
+  DRAG: 'Kéo thả',
 };
 
 function getBadgeStyle(meta) {
@@ -62,6 +64,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
   const mcqCount = exam.mcq ?? (exam.questions || []).filter(q => q.type === 'MCQ').length;
   const tfCount = exam.tf ?? (exam.questions || []).filter(q => q.type === 'TF').length;
   const saCount = exam.sa ?? (exam.questions || []).filter(q => q.type === 'SA').length;
+  const dragCount = exam.drag ?? (exam.questions || []).filter(q => q.type === 'DRAG').length;
   const totalQ = exam.totalQ ?? (exam.questions || []).filter(q => q.type !== 'TEXT').length;
 
   const cardClassName = `
@@ -123,6 +126,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
           {mcqCount > 0 && <QBadge label={`${mcqCount} ${QUESTION_LABEL.MCQ}`} tone="MCQ" />}
           {tfCount  > 0 && <QBadge label={`${tfCount} ${QUESTION_LABEL.TF}`}   tone="TF" />}
           {saCount  > 0 && <QBadge label={`${saCount} ${QUESTION_LABEL.SA}`}   tone="SA" />}
+          {dragCount > 0 && <QBadge label={`${dragCount} ${QUESTION_LABEL.DRAG}`} tone="DRAG" />}
         </div>
       </div>
 

@@ -805,6 +805,184 @@ html[data-theme='dark'] .home-tone-badge.is-active {
   background: #fffbeb;
 }
 
+/* Drag/drop questions */
+.et-drag-question {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.et-drag-content {
+  font-size: 14.5px;
+  line-height: 1.9;
+  color: var(--et-gray-800);
+}
+
+.et-drag-content .markdown-content,
+.et-drag-content .markdown-content p,
+.et-drag-blank .markdown-content,
+.et-drag-blank .markdown-content p,
+.et-drag-chip-text .markdown-content,
+.et-drag-chip-text .markdown-content p,
+.et-drag-correct .markdown-content,
+.et-drag-correct .markdown-content p {
+  display: inline;
+  margin: 0;
+}
+
+.et-drag-blank-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  vertical-align: middle;
+  flex-wrap: wrap;
+}
+
+.et-drag-blank {
+  min-width: 104px;
+  min-height: 34px;
+  margin: 0 4px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1.5px dashed #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .18s, background .18s, color .18s, box-shadow .18s;
+}
+
+.et-drag-blank:hover {
+  border-color: var(--et-blue);
+  box-shadow: 0 0 0 3px rgba(59, 111, 212, .10);
+}
+
+.et-drag-blank.drop-target {
+  border-color: var(--et-blue);
+  background: #dbeafe;
+  box-shadow: 0 0 0 3px rgba(59, 111, 212, .14);
+}
+
+.et-drag-blank.filled {
+  border-style: solid;
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  color: #075985;
+}
+
+.et-drag-blank.correct {
+  border-style: solid;
+  background: var(--et-green-lt);
+  border-color: var(--et-green);
+  color: var(--et-green);
+}
+
+.et-drag-blank.wrong {
+  border-style: solid;
+  background: var(--et-red-lt);
+  border-color: var(--et-red);
+  color: var(--et-red);
+}
+
+.et-drag-blank.unanswered {
+  background: #fffbeb;
+  border-color: var(--et-amber);
+  color: var(--et-amber);
+}
+
+.et-drag-blank:disabled {
+  cursor: default;
+}
+
+.et-drag-placeholder {
+  letter-spacing: 1px;
+  color: var(--et-gray-400);
+}
+
+.et-drag-correct {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--et-green);
+}
+
+.et-drag-bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.et-drag-chip {
+  min-height: 38px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1.5px solid #7dd3fc;
+  background: #cffafe;
+  color: #155e75;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  touch-action: none;
+  user-select: none;
+  transition: transform .16s, border-color .16s, box-shadow .16s, opacity .16s;
+}
+
+.et-drag-chip:active {
+  cursor: grabbing;
+  transform: scale(.98);
+}
+
+.et-drag-chip.active {
+  border-color: var(--et-blue);
+  box-shadow: 0 0 0 3px rgba(59, 111, 212, .12);
+}
+
+.et-drag-chip.used {
+  opacity: .48;
+}
+
+.et-drag-chip:disabled {
+  cursor: default;
+}
+
+.et-drag-chip-letter {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .8);
+  color: #0e7490;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.et-drag-chip-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.et-drag-ghost {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  max-width: min(84vw, 360px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, .22);
+  opacity: .96;
+}
+
 /* Submit button */
 .et-btn-submit {
   width: calc(100% - 34px);
@@ -2021,6 +2199,8 @@ html[data-theme='dark'] .et-mc-opt,
 html[data-theme='dark'] .et-ds-tbl,
 html[data-theme='dark'] .et-ds-tbl td,
 html[data-theme='dark'] .et-short-inp,
+html[data-theme='dark'] .et-drag-blank,
+html[data-theme='dark'] .et-drag-chip,
 html[data-theme='dark'] .et-btn-outline {
   background: var(--app-surface);
   border-color: var(--app-border);
@@ -2028,9 +2208,20 @@ html[data-theme='dark'] .et-btn-outline {
 }
 
 html[data-theme='dark'] .et-btn-outline:hover,
-html[data-theme='dark'] .et-mc-opt:hover {
+html[data-theme='dark'] .et-mc-opt:hover,
+html[data-theme='dark'] .et-drag-blank:hover,
+html[data-theme='dark'] .et-drag-blank.drop-target {
   background: var(--app-indigo-soft);
   border-color: rgba(129, 140, 248, .55);
+}
+
+html[data-theme='dark'] .et-drag-chip-letter {
+  background: var(--app-surface-2);
+  color: #67e8f9;
+}
+
+html[data-theme='dark'] .et-drag-chip.used {
+  opacity: .42;
 }
 
 html[data-theme='dark'] .theme-page .exam-status-panel :is(.text-indigo-400, .text-indigo-500, .text-indigo-600, .text-indigo-700) {

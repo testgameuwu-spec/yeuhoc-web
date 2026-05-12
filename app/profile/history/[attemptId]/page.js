@@ -17,7 +17,7 @@ import Navbar from '@/components/Navbar';
 import QuestionCard from '@/components/QuestionCard';
 import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
 import { supabase } from '@/lib/supabase';
-import { getQuestionResultState } from '@/lib/questionResult';
+import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
 
 function mapExamQuestions(examData) {
   return {
@@ -50,7 +50,7 @@ function formatDuration(seconds) {
 }
 
 function isAnswerCorrect(question, answers) {
-  const fallbackAnswer = question.type === 'TF' ? {} : '';
+  const fallbackAnswer = getEmptyAnswerForType(question.type);
   return getQuestionResultState(question, answers?.[question.id] ?? fallbackAnswer) === 'correct';
 }
 
@@ -149,7 +149,7 @@ export default function AttemptHistoryDetailPage() {
   ), [answers, realQuestions]);
   const unansweredCount = useMemo(() => (
     realQuestions.reduce((count, question) => {
-      const resultState = getQuestionResultState(question, answers?.[question.id] ?? (question.type === 'TF' ? {} : ''));
+      const resultState = getQuestionResultState(question, answers?.[question.id] ?? getEmptyAnswerForType(question.type));
       return count + (resultState === 'unanswered' ? 1 : 0);
     }, 0)
   ), [answers, realQuestions]);
@@ -171,10 +171,12 @@ export default function AttemptHistoryDetailPage() {
     const part1 = [];
     const part2 = [];
     const part3 = [];
+    const part4 = [];
     realQuestions.forEach((question, index) => {
       if (question.type === 'MCQ') part1.push({ question, index });
       else if (question.type === 'TF') part2.push({ question, index });
       else if (question.type === 'SA') part3.push({ question, index });
+      else if (question.type === 'DRAG') part4.push({ question, index });
     });
 
     return (
@@ -195,6 +197,12 @@ export default function AttemptHistoryDetailPage() {
           <div>
             <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần III</div>
             <div className="et-nav-grid">{part3.map(({ question, index }) => renderBtn(question, index))}</div>
+          </div>
+        )}
+        {part4.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Kéo thả</div>
+            <div className="et-nav-grid">{part4.map(({ question, index }) => renderBtn(question, index))}</div>
           </div>
         )}
       </div>
@@ -285,7 +293,7 @@ export default function AttemptHistoryDetailPage() {
                         <QuestionCard
                           question={question}
                           index={index}
-                          selectedAnswer={answers[question.id] ?? (question.type === 'TF' ? {} : '')}
+                          selectedAnswer={answers[question.id] ?? getEmptyAnswerForType(question.type)}
                           onAnswerChange={() => {}}
                           onReport={handleOpenReport}
                           showResult
@@ -339,7 +347,7 @@ export default function AttemptHistoryDetailPage() {
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
               {renderNavButtons((question, index) => {
-                const resultState = getQuestionResultState(question, answers?.[question.id] ?? (question.type === 'TF' ? {} : ''));
+                const resultState = getQuestionResultState(question, answers?.[question.id] ?? getEmptyAnswerForType(question.type));
                 return (
                   <button
                     key={question.id || index}
@@ -392,7 +400,7 @@ export default function AttemptHistoryDetailPage() {
 
             <div className="mb-4">
               {renderNavButtons((question, index) => {
-                const resultState = getQuestionResultState(question, answers?.[question.id] ?? (question.type === 'TF' ? {} : ''));
+                const resultState = getQuestionResultState(question, answers?.[question.id] ?? getEmptyAnswerForType(question.type));
                 return (
                   <button
                     key={question.id || index}

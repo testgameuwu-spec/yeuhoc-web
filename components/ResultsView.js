@@ -1,8 +1,19 @@
 'use client';
 
 import { AlertTriangle, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
-import { checkSAEquivalent } from '@/lib/mathUtils';
 import { getQuestionResultState } from '@/lib/questionResult';
+
+function getPointValue(value, fallback) {
+    if (Number.isFinite(Number(value))) return Number(value);
+    if (Number.isFinite(Number(value?.pointsPerQuestion))) return Number(value.pointsPerQuestion);
+    return fallback;
+}
+
+function getTfScale(value, fallback) {
+    if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
+    if (Array.isArray(value?.scale)) return value.scale.map(Number).filter(Number.isFinite);
+    return fallback;
+}
 
 // Score ring component
 function ScoreRing({ score, maxScore }) {
@@ -46,17 +57,20 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
     let maxScore = 0;
 
     realQs.forEach(q => {
-        const ua = answers[q.id] ?? (q.type === 'TF' ? {} : '');
-        if (getQuestionResultState(q, ua) === 'unanswered') unanswered++;
+        const ua = answers[q.id] ?? ((q.type === 'TF' || q.type === 'DRAG') ? {} : '');
+        const resultState = getQuestionResultState(q, ua);
+        if (resultState === 'unanswered') unanswered++;
         
         if (q.type === 'MCQ') {
-            maxScore += scoringConfig ? scoringConfig.mcq : 1;
-            if (ua === q.answer) {
+            const point = getPointValue(scoringConfig?.mcq, 1);
+            maxScore += point;
+            if (resultState === 'correct') {
                 correct++;
-                score += scoringConfig ? scoringConfig.mcq : 1;
+                score += point;
             }
         } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-            maxScore += scoringConfig ? scoringConfig.tf[3] : 1;
+            const tfScale = getTfScale(scoringConfig?.tf, [0.25, 0.25, 0.25, 1]);
+            maxScore += tfScale[3] || 1;
             const tfSel = typeof ua === 'object' ? ua : {};
             let subCorrect = 0;
             const keys = Object.keys(q.answer);
@@ -65,15 +79,16 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
             });
             if (subCorrect === keys.length) correct++;
             if (scoringConfig && subCorrect > 0) {
-                score += scoringConfig.tf[subCorrect - 1];
+                score += tfScale[subCorrect - 1] || 0;
             } else if (!scoringConfig && subCorrect === keys.length) {
                 score += 1;
             }
         } else {
-            maxScore += scoringConfig ? scoringConfig.sa : 1;
-            if (checkSAEquivalent(ua, q.answer)) {
+            const point = getPointValue(scoringConfig?.sa, 1);
+            maxScore += point;
+            if (resultState === 'correct') {
                 correct++;
-                score += scoringConfig ? scoringConfig.sa : 1;
+                score += point;
             }
         }
     });

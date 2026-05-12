@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/lib/supabase';
-import { checkSAEquivalent } from '@/lib/mathUtils';
+import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
 
 const SCORE_MAX = 10;
 const PERCENT_MAX = 100;
@@ -42,6 +42,12 @@ const THPT_PARTS = [
     name: 'Phần III',
     label: 'Trả lời ngắn',
     scoring: 'Toán: 0,5đ/câu; môn khác: 0,25đ/câu',
+  },
+  {
+    key: 'drag',
+    name: 'Kéo thả',
+    label: 'Kéo thả',
+    scoring: 'Tính như trả lời ngắn trong v1',
   },
 ];
 
@@ -323,21 +329,13 @@ function getThptPartLabel(question) {
   if (question.type === 'MCQ') return THPT_PARTS[0].name;
   if (question.type === 'TF') return THPT_PARTS[1].name;
   if (question.type === 'SA') return THPT_PARTS[2].name;
+  if (question.type === 'DRAG') return THPT_PARTS[3].name;
   return UNKNOWN_GROUP;
 }
 
 function isQuestionCorrect(question, userAnswers) {
-  const userAnswer = userAnswers?.[question.id];
-
-  if (question.type === 'MCQ') return userAnswer === question.answer;
-
-  if (question.type === 'TF' && question.answer && typeof question.answer === 'object') {
-    const selected = userAnswer && typeof userAnswer === 'object' ? userAnswer : {};
-    const keys = Object.keys(question.answer);
-    return keys.length > 0 && keys.every((key) => selected[key] === question.answer[key]);
-  }
-
-  return checkSAEquivalent(userAnswer, question.answer);
+  const userAnswer = userAnswers?.[question.id] ?? getEmptyAnswerForType(question.type);
+  return getQuestionResultState(question, userAnswer) === 'correct';
 }
 
 function getQuestionScore(question, userAnswers, scoringConfig, attempt) {

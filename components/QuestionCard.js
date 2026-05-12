@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
-import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
-import { getQuestionResultState } from '@/lib/questionResult';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
+import { getDragBlankIds, getQuestionResultState, parseDragAnswer } from '@/lib/questionResult';
 
-const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', TEXT: 'Ngữ liệu' };
+const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', DRAG: 'Kéo thả', TEXT: 'Ngữ liệu' };
 
 export default function QuestionCard({
     question,
@@ -22,6 +22,7 @@ export default function QuestionCard({
 }) {
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [showSolution, setShowSolution] = useState(false);
+    const [activeDragLetter, setActiveDragLetter] = useState(null);
     const { id, type, content, options, answer, solution, image } = question;
     const isTextBlock = type === 'TEXT';
     const shouldShowResultStatus = showResult && !isTextBlock;
@@ -32,6 +33,18 @@ export default function QuestionCard({
     const handleTFChange = (stmtKey, val) => {
         if (disabled) return;
         onAnswerChange({ ...tfSelected, [stmtKey]: val });
+    };
+
+    const dragAnswer = type === 'DRAG' ? parseDragAnswer(answer) : {};
+    const dragSelected = (type === 'DRAG' && selectedAnswer && typeof selectedAnswer === 'object') ? selectedAnswer : {};
+    const handleDragChange = (blankId, letter) => {
+        if (disabled) return;
+        const next = { ...dragSelected };
+        const previousBlank = Object.entries(next).find(([key, value]) => key !== blankId && value === letter)?.[0];
+        if (previousBlank) delete next[previousBlank];
+        if (letter) next[blankId] = letter;
+        else delete next[blankId];
+        onAnswerChange(next);
     };
 
     const resultState = shouldShowResultStatus ? getQuestionResultState(question, selectedAnswer) : '';
@@ -107,9 +120,23 @@ export default function QuestionCard({
             {/* ── Body ── */}
             <div className="et-q-card-body">
                 {/* Question text */}
-                <div className="et-q-text">
-                    <MathRenderer text={content} />
-                </div>
+                {type === 'DRAG' ? (
+                    <DragQuestion
+                        content={content}
+                        options={options || []}
+                        selected={dragSelected}
+                        answer={dragAnswer}
+                        activeLetter={activeDragLetter}
+                        setActiveLetter={setActiveDragLetter}
+                        showResult={showResult}
+                        disabled={disabled}
+                        onChange={handleDragChange}
+                    />
+                ) : (
+                    <div className="et-q-text">
+                        <MathRenderer text={content} />
+                    </div>
+                )}
 
                 {isUnanswered && (
                     <div className="et-result-note unanswered">
@@ -240,6 +267,247 @@ export default function QuestionCard({
                     src={image}
                     alt={`Hình minh họa câu ${index + 1}`}
                 />
+            )}
+        </div>
+    );
+}
+
+function DragQuestion({
+    content,
+    options,
+    selected,
+    answer,
+    activeLetter,
+    setActiveLetter,
+    showResult,
+    disabled,
+    onChange,
+}) {
+    const blanks = getDragBlankIds(content);
+    const usedLetters = new Set(Object.values(selected || {}).filter(Boolean));
+    const touchDragRef = useRef(null);
+    const suppressClickRef = useRef(false);
+    const [touchDrag, setTouchDrag] = useState(null);
+
+    const optionText = (letter) => {
+        const index = letter ? letter.charCodeAt(0) - 65 : -1;
+        return index >= 0 ? (options[index] || letter) : '';
+    };
+
+    const handleOptionClick = (letter) => {
+        if (disabled) return;
+        if (suppressClickRef.current) {
+            suppressClickRef.current = false;
+            return;
+        }
+        setActiveLetter(activeLetter === letter ? null : letter);
+    };
+
+    const handleBlankClick = (blankId) => {
+        if (disabled) return;
+        if (activeLetter) {
+            onChange(blankId, activeLetter);
+            setActiveLetter(null);
+            return;
+        }
+        if (selected?.[blankId]) onChange(blankId, '');
+    };
+
+    const handleDrop = (event, blankId) => {
+        if (disabled) return;
+        event.preventDefault();
+        const letter = event.dataTransfer.getData('text/plain');
+        if (letter) onChange(blankId, letter);
+        setActiveLetter(null);
+    };
+
+    const finishTouchDrag = () => {
+        touchDragRef.current = null;
+        setTouchDrag(null);
+        setActiveLetter(null);
+    };
+
+    const getDropBlankId = (x, y) => {
+        const target = document.elementFromPoint(x, y);
+        return target?.closest('[data-drag-blank-id]')?.dataset.dragBlankId || '';
+    };
+
+    const handlePointerDown = (event, letter) => {
+        if (disabled || event.pointerType === 'mouse') return;
+        touchDragRef.current = {
+            letter,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            x: event.clientX,
+            y: event.clientY,
+            dragging: false,
+            overBlankId: '',
+        };
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+    };
+
+    const handlePointerMove = (event) => {
+        const drag = touchDragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+
+        const dx = event.clientX - drag.startX;
+        const dy = event.clientY - drag.startY;
+        const dragging = drag.dragging || Math.hypot(dx, dy) > 6;
+        const next = {
+            ...drag,
+            x: event.clientX,
+            y: event.clientY,
+            dragging,
+            overBlankId: dragging ? getDropBlankId(event.clientX, event.clientY) : '',
+        };
+
+        touchDragRef.current = next;
+        if (dragging) {
+            event.preventDefault();
+            setActiveLetter(next.letter);
+            setTouchDrag(next);
+        }
+    };
+
+    const handlePointerUp = (event) => {
+        const drag = touchDragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
+        const overBlankId = drag.dragging ? getDropBlankId(event.clientX, event.clientY) || drag.overBlankId : '';
+        if (drag.dragging) {
+            event.preventDefault();
+            suppressClickRef.current = true;
+            window.setTimeout(() => {
+                suppressClickRef.current = false;
+            }, 0);
+            if (overBlankId) onChange(overBlankId, drag.letter);
+        }
+        finishTouchDrag();
+    };
+
+    const handlePointerCancel = (event) => {
+        const drag = touchDragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
+        finishTouchDrag();
+    };
+
+    const parts = [];
+    const regex = /\[\[([^\]\s]+)\]\]/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(content || '')) !== null) {
+        if (match.index > lastIndex) {
+            parts.push({ type: 'text', text: content.slice(lastIndex, match.index) });
+        }
+        parts.push({ type: 'blank', id: match[1].trim() });
+        lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < (content || '').length) {
+        parts.push({ type: 'text', text: content.slice(lastIndex) });
+    }
+
+    return (
+        <div className="et-drag-question">
+            <div className="et-drag-content">
+                {parts.map((part, index) => {
+                    if (part.type === 'text') {
+                        return (
+                            <span key={`text-${index}`} className="et-drag-text">
+                                <MathRenderer text={part.text} />
+                            </span>
+                        );
+                    }
+
+                    const selectedLetter = selected?.[part.id] || '';
+                    const correctLetter = answer?.[part.id] || '';
+                    const isCorrectBlank = showResult && selectedLetter && selectedLetter === correctLetter;
+                    const isWrongBlank = showResult && selectedLetter && correctLetter && selectedLetter !== correctLetter;
+                    const isUnansweredBlank = showResult && !selectedLetter;
+                    const label = optionText(selectedLetter);
+                    const cls = isCorrectBlank ? 'correct' : isWrongBlank ? 'wrong' : isUnansweredBlank ? 'unanswered' : selectedLetter ? 'filled' : '';
+                    const isTouchDropTarget = touchDrag?.overBlankId === part.id;
+
+                    return (
+                        <span key={`blank-${part.id}-${index}`} className="et-drag-blank-wrap">
+                            <button
+                                type="button"
+                                className={`et-drag-blank ${cls} ${isTouchDropTarget ? 'drop-target' : ''}`}
+                                data-drag-blank-id={part.id}
+                                onClick={() => handleBlankClick(part.id)}
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) => handleDrop(event, part.id)}
+                                disabled={disabled}
+                                title={selectedLetter && !disabled ? 'Bấm để xoá đáp án' : 'Thả đáp án vào đây'}
+                            >
+                                {label ? (
+                                    <MathRenderer text={label} />
+                                ) : (
+                                    <span className="et-drag-placeholder">____</span>
+                                )}
+                            </button>
+                            {showResult && correctLetter && selectedLetter !== correctLetter && (
+                                <span className="et-drag-correct">
+                                    Đúng: <MathRenderer text={optionText(correctLetter)} />
+                                </span>
+                            )}
+                        </span>
+                    );
+                })}
+                {parts.length === 0 && <MathRenderer text={content} />}
+            </div>
+
+            <div className="et-drag-bank" aria-label="Ngân hàng đáp án kéo thả">
+                {(options || []).map((option, index) => {
+                    const letter = String.fromCharCode(65 + index);
+                    const isActive = activeLetter === letter;
+                    const isUsed = usedLetters.has(letter);
+                    return (
+                        <button
+                            key={letter}
+                            type="button"
+                            className={`et-drag-chip ${isActive ? 'active' : ''} ${isUsed ? 'used' : ''}`}
+                            draggable={!disabled}
+                            disabled={disabled}
+                            onClick={() => handleOptionClick(letter)}
+                            onPointerDown={(event) => handlePointerDown(event, letter)}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={handlePointerUp}
+                            onPointerCancel={handlePointerCancel}
+                            onDragStart={(event) => {
+                                event.dataTransfer.effectAllowed = 'move';
+                                event.dataTransfer.setData('text/plain', letter);
+                                setActiveLetter(letter);
+                            }}
+                            onDragEnd={() => setActiveLetter(null)}
+                            title={disabled ? '' : 'Kéo hoặc bấm để chọn'}
+                        >
+                            <span className="et-drag-chip-letter">{letter}</span>
+                            <span className="et-drag-chip-text"><MathRenderer text={option} /></span>
+                        </button>
+                    );
+                })}
+                {blanks.length === 0 && (
+                    <div className="et-result-note unanswered">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <div>Chưa tìm thấy ô thả dạng [[1]] trong nội dung câu hỏi.</div>
+                    </div>
+                )}
+            </div>
+
+            {touchDrag?.dragging && (
+                <div
+                    className="et-drag-chip et-drag-ghost"
+                    style={{ left: touchDrag.x, top: touchDrag.y }}
+                    aria-hidden="true"
+                >
+                    <span className="et-drag-chip-letter">{touchDrag.letter}</span>
+                    <span className="et-drag-chip-text"><MathRenderer text={optionText(touchDrag.letter)} /></span>
+                </div>
             )}
         </div>
     );

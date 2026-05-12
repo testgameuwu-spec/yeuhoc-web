@@ -14,8 +14,7 @@ import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
 import ThemeToggle from '@/components/ThemeToggle';
 import { supabase } from '@/lib/supabase';
-import { checkSAEquivalent } from '@/lib/mathUtils';
-import { getQuestionResultState } from '@/lib/questionResult';
+import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
 
 const PRACTICE_BUTTON_TONES = {
   nav: { bg: 'var(--practice-nav-bg)', color: 'var(--practice-nav-text)', border: 'var(--practice-nav-border)', shadow: 'var(--practice-nav-shadow)' },
@@ -57,6 +56,18 @@ function getPreviewBadgeStyle(toneKey) {
     '--preview-badge-color': tone.color,
     '--preview-badge-dark-color': tone.dark,
   };
+}
+
+function getPointValue(value, fallback) {
+  if (Number.isFinite(Number(value))) return Number(value);
+  if (Number.isFinite(Number(value?.pointsPerQuestion))) return Number(value.pointsPerQuestion);
+  return fallback;
+}
+
+function getTfScale(value, fallback) {
+  if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
+  if (Array.isArray(value?.scale)) return value.scale.map(Number).filter(Number.isFinite);
+  return fallback;
 }
 
 // ── Topbar (exam-tool style) ──
@@ -420,6 +431,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i - 1].type !== 'MCQ');
     q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || realQuestions[i - 1].type !== 'TF');
     q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || realQuestions[i - 1].type !== 'SA');
+    q._isFirstDRAG = isTHPT && q.type === 'DRAG' && (i === 0 || realQuestions[i - 1].type !== 'DRAG');
   });
 
   const answeredCount = realQuestions.filter(q => {
@@ -766,13 +778,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
       const realQs = activeExam.questions.filter(q => q.type !== 'TEXT');
       realQs.forEach(q => {
-        const ua = answers[q.id] || '';
+        const ua = answers[q.id] ?? getEmptyAnswerForType(q.type);
         const config = activeExam.scoringConfig;
+        const resultState = getQuestionResultState(q, ua);
         
         if (q.type === 'MCQ') {
-          if (ua === q.answer) {
+          if (resultState === 'correct') {
             correctCount++;
-            score += config ? config.mcq : 1;
+            score += config ? getPointValue(config.mcq, 1) : 1;
           }
         } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
           const s = typeof ua === 'object' ? ua : {};
@@ -782,15 +795,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
              if (s[k] === q.answer[k]) subCorrect++;
           });
           if (subCorrect === keys.length) correctCount++;
+          const tfScale = getTfScale(config?.tf, [0.25, 0.25, 0.25, 1]);
           if (config && subCorrect > 0) {
-             score += config.tf[subCorrect - 1];
+             score += tfScale[subCorrect - 1] || 0;
           } else if (!config && subCorrect === keys.length) {
              score += 1;
           }
         } else {
-          if (checkSAEquivalent(ua, q.answer)) {
+          if (resultState === 'correct') {
             correctCount++;
-            score += config ? config.sa : 1;
+            score += config ? getPointValue(config.sa, 1) : 1;
           }
         }
       });
@@ -1034,11 +1048,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       );
     }
 
-    let p1 = [], p2 = [], p3 = [];
+    let p1 = [], p2 = [], p3 = [], p4 = [];
     realQuestions.forEach((q, i) => {
       if (q.type === 'MCQ') p1.push({ q, i });
       else if (q.type === 'TF') p2.push({ q, i });
       else if (q.type === 'SA') p3.push({ q, i });
+      else if (q.type === 'DRAG') p4.push({ q, i });
     });
 
     return (
@@ -1059,6 +1074,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           <div>
             <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần III</div>
             <div className="et-nav-grid">{p3.map(({ q, i }) => renderBtn(q, i))}</div>
+          </div>
+        )}
+        {p4.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Kéo thả</div>
+            <div className="et-nav-grid">{p4.map(({ q, i }) => renderBtn(q, i))}</div>
           </div>
         )}
       </div>
@@ -1084,13 +1105,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const checkCorrect = (qItem, idx) => {
       const rev = practiceRevealed[idx];
       if (!rev || !qItem) return null; // null = not revealed yet
-      const a = answers[qItem.id];
-      if (qItem.type === 'MCQ') return a === qItem.answer;
-      if (qItem.type === 'TF' && qItem.answer && typeof qItem.answer === 'object') {
-        const s = typeof a === 'object' ? a : {};
-        return Object.keys(qItem.answer).every(k => s[k] === qItem.answer[k]);
-      }
-      return checkSAEquivalent(a, qItem.answer);
+      const a = answers[qItem.id] ?? getEmptyAnswerForType(qItem.type);
+      return getQuestionResultState(qItem, a) === 'correct';
     };
 
     let isCorrect = checkCorrect(q, currentQ);
@@ -1219,7 +1235,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         <QuestionCard
                           question={gq}
                           index={rqIndex}
-                          selectedAnswer={answers[gq.id] ?? (gq.type === 'TF' ? {} : '')}
+                          selectedAnswer={answers[gq.id] ?? getEmptyAnswerForType(gq.type)}
                           onAnswerChange={(val) => !isRev && handleAnswerChange(gq.id, val)}
                           showResult={isRev}
                           disabled={isRev}
@@ -1272,7 +1288,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   <QuestionCard
                     question={q}
                     index={currentQ}
-                    selectedAnswer={answers[q.id] ?? (q.type === 'TF' ? {} : '')}
+                    selectedAnswer={answers[q.id] ?? getEmptyAnswerForType(q.type)}
                     onAnswerChange={(val) => !isRevealed && handleAnswerChange(q.id, val)}
                     showResult={isRevealed}
                     disabled={isRevealed}
@@ -1733,6 +1749,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 const isFirstMCQ = firstChild?._isFirstMCQ;
                 const isFirstTF = firstChild?._isFirstTF;
                 const isFirstSA = firstChild?._isFirstSA;
+                const isFirstDRAG = firstChild?._isFirstDRAG;
 
                 const sectionHeader = (
                   <>
@@ -1754,6 +1771,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
                         <div className="et-section-hd-badge">Phần III: Trả lời ngắn</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstDRAG && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Kéo thả</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
@@ -1800,7 +1824,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                   <QuestionCard
                                     question={childQ}
                                     index={currentI}
-                                    selectedAnswer={answers[childQ.id] ?? (childQ.type === 'TF' ? {} : '')}
+                                    selectedAnswer={answers[childQ.id] ?? getEmptyAnswerForType(childQ.type)}
                                     onAnswerChange={(val) => handleAnswerChange(childQ.id, val)}
                                     isBookmarked={bookmarks.has(childQ.id)}
                                     onToggleBookmark={() => {
@@ -1837,7 +1861,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <QuestionCard
                         question={firstChild}
                         index={currentI}
-                        selectedAnswer={answers[firstChild.id] ?? (firstChild.type === 'TF' ? {} : '')}
+                        selectedAnswer={answers[firstChild.id] ?? getEmptyAnswerForType(firstChild.type)}
                         onAnswerChange={(val) => handleAnswerChange(firstChild.id, val)}
                         isBookmarked={bookmarks.has(firstChild.id)}
                         onToggleBookmark={() => {
@@ -2040,7 +2064,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     let correctCount = 0;
     let unansweredCount = 0;
     realQuestions.forEach(q => {
-      const resultState = getQuestionResultState(q, answers[q.id] ?? (q.type === 'TF' ? {} : ''));
+      const resultState = getQuestionResultState(q, answers[q.id] ?? getEmptyAnswerForType(q.type));
       if (resultState === 'correct') correctCount++;
       if (resultState === 'unanswered') unansweredCount++;
     });
@@ -2066,6 +2090,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 const isFirstMCQ = firstChild?._isFirstMCQ;
                 const isFirstTF = firstChild?._isFirstTF;
                 const isFirstSA = firstChild?._isFirstSA;
+                const isFirstDRAG = firstChild?._isFirstDRAG;
 
                 const sectionHeader = (
                   <>
@@ -2087,6 +2112,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
                         <div className="et-section-hd-badge">Phần III: Trả lời ngắn</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstDRAG && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Kéo thả</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
@@ -2133,7 +2165,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                   <QuestionCard
                                     question={childQ}
                                     index={currentI}
-                                    selectedAnswer={answers[childQ.id] ?? (childQ.type === 'TF' ? {} : '')}
+                                    selectedAnswer={answers[childQ.id] ?? getEmptyAnswerForType(childQ.type)}
                                     onAnswerChange={() => { }}
                                     showResult
                                     disabled
@@ -2165,7 +2197,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <QuestionCard
                         question={firstChild}
                         index={currentI}
-                        selectedAnswer={answers[firstChild.id] ?? (firstChild.type === 'TF' ? {} : '')}
+                        selectedAnswer={answers[firstChild.id] ?? getEmptyAnswerForType(firstChild.type)}
                         onAnswerChange={() => { }}
                         showResult
                         disabled
@@ -2217,7 +2249,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
             <div className="mb-4">
               {renderNavButtons((q, i) => {
-                const resultState = getQuestionResultState(q, answers[q.id] ?? (q.type === 'TF' ? {} : ''));
+                const resultState = getQuestionResultState(q, answers[q.id] ?? getEmptyAnswerForType(q.type));
                 return (
                   <button key={i} className={`et-nav-btn ${resultState}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
                     {i + 1}
@@ -2267,7 +2299,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
               {renderNavButtons((q, i) => {
-                const resultState = getQuestionResultState(q, answers[q.id] ?? (q.type === 'TF' ? {} : ''));
+                const resultState = getQuestionResultState(q, answers[q.id] ?? getEmptyAnswerForType(q.type));
                 return (
                   <button key={i} className={`et-nav-btn ${resultState}`} onClick={() => scrollToQ(i)}>
                     {i + 1}

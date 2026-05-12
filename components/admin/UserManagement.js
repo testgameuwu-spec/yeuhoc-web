@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import QuestionCard from '@/components/QuestionCard';
 import Pagination from '@/components/Pagination';
+import { getEmptyAnswerForType } from '@/lib/questionResult';
 
 const ROLE_STYLES = {
   admin: {
@@ -597,7 +598,7 @@ export default function UserManagement() {
                               <QuestionCard
                                 question={q}
                                 index={displayIndex}
-                                selectedAnswer={attemptDetails.answers[q.id] ?? (q.type === 'TF' ? {} : '')}
+                                selectedAnswer={attemptDetails.answers[q.id] ?? getEmptyAnswerForType(q.type)}
                                 onAnswerChange={() => {}}
                                 showResult
                                 disabled

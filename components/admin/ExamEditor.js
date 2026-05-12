@@ -394,6 +394,19 @@ D. Đáp án D
 [ANSWER] A
 [SOL] Lời giải chi tiết
 [IMAGE] url_hoặc_mô_tả
+====END====
+
+====START====
+[ID] DRAG_001
+[TYPE] DRAG
+[LEVEL] Trung bình
+[CONTENT] Nội dung có ô kéo thả dạng [[1]], [[2]]
+[OPTIONS]
+A. Đáp án kéo thả A
+B. Đáp án kéo thả B
+C. Đáp án kéo thả C
+[ANSWER] 1-A, 2-C
+[SOL] Lời giải chi tiết
 ====END====`}</pre>
             </div>
           </div>

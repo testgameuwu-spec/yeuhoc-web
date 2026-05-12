@@ -4,8 +4,8 @@ import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Trash2, ChevronDown, ChevronUp, GripVertical, Plus, X,
-  Image as ImageIcon, FileText, CheckCircle2, XCircle, Type,
-  ToggleLeft, Hash, AlertCircle, BookOpen, ArrowUpDown
+  Image as ImageIcon, FileText, CheckCircle2, Type,
+  ToggleLeft, AlertCircle, BookOpen, ArrowUpDown
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
 
@@ -13,6 +13,7 @@ const TYPE_STYLES = {
   MCQ: { label: 'Trắc nghiệm', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', icon: CheckCircle2 },
   TF:  { label: 'Đúng / Sai',  color: 'bg-amber-500/15 text-amber-400 border-amber-500/30',   icon: ToggleLeft },
   SA:  { label: 'Tự luận ngắn', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', icon: Type },
+  DRAG: { label: 'Kéo thả', color: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30', icon: ArrowUpDown },
   TEXT: { label: 'Ngữ cảnh', color: 'bg-slate-500/15 text-slate-400 border-slate-500/30', icon: FileText },
 };
 
@@ -64,10 +65,12 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
     // Adjust answer if needed
     const removedLetter = OPTION_LETTERS[i];
     let newAnswer = q.answer;
-    if (q.answer === removedLetter) {
-      newAnswer = 'A';
-    } else if (OPTION_LETTERS.indexOf(q.answer) > i) {
-      newAnswer = OPTION_LETTERS[OPTION_LETTERS.indexOf(q.answer) - 1];
+    if (q.type === 'MCQ') {
+      if (q.answer === removedLetter) {
+        newAnswer = 'A';
+      } else if (OPTION_LETTERS.indexOf(q.answer) > i) {
+        newAnswer = OPTION_LETTERS[OPTION_LETTERS.indexOf(q.answer) - 1];
+      }
     }
     onUpdate({ ...q, options: newOpts, answer: newAnswer });
   };
@@ -111,6 +114,15 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
     }
     if (newType === 'SA') {
       base.answer = q.answer || '';
+    }
+    if (newType === 'DRAG') {
+      if (!q.options || q.options.length === 0) {
+        base.options = ['', '', '', '', ''];
+      }
+      base.answer = q.answer || '1-A';
+      if (!q.content) {
+        base.content = 'Kéo thả đáp án vào ô trống: [[1]]';
+      }
     }
     onUpdate(base);
   };
@@ -350,6 +362,51 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
                 className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors border border-transparent hover:border-indigo-500/20">
                 <Plus className="w-3 h-3" /> Thêm đáp án
               </button>
+            </div>
+          )}
+
+          {/* ── DRAG Options ── */}
+          {q.type === 'DRAG' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">
+                  Ngân hàng đáp án kéo thả
+                </label>
+                <div className="space-y-2">
+                  {(q.options || []).map((opt, i) => {
+                    const letter = OPTION_LETTERS[i];
+                    return (
+                      <div key={i} className="flex items-center gap-2 group">
+                        <span className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border bg-cyan-500/10 text-cyan-300 border-cyan-500/30 flex-shrink-0">
+                          {letter}
+                        </span>
+                        <input type="text" value={opt} onChange={e => handleOptionChange(i, e.target.value)}
+                          placeholder={`Đáp án kéo thả ${letter}...`}
+                          className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm placeholder-white/20 focus:outline-none focus:border-cyan-500/50 transition-all" />
+                        {(q.options || []).length > 1 && (
+                          <button onClick={() => handleRemoveOption(i)}
+                            className="p-1.5 rounded-lg text-white/15 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <button onClick={handleAddOption}
+                  className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors border border-transparent hover:border-cyan-500/20">
+                  <Plus className="w-3 h-3" /> Thêm đáp án kéo thả
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">
+                  Đáp án đúng <span className="text-white/15 normal-case">(VD: 1-A, 2-C, 3-D; ô thả trong nội dung viết dạng [[1]])</span>
+                </label>
+                <input type="text" value={q.answer || ''} onChange={e => update('answer', e.target.value)}
+                  placeholder="1-A, 2-C"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all" />
+              </div>
             </div>
           )}
 
