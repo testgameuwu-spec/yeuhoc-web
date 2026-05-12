@@ -57,12 +57,12 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
     let maxScore = 0;
 
     realQs.forEach(q => {
-        const ua = answers[q.id] ?? ((q.type === 'TF' || q.type === 'DRAG') ? {} : '');
+        const ua = answers[q.id] ?? (q.type === 'MA' ? [] : ((q.type === 'TF' || q.type === 'DRAG') ? {} : ''));
         const resultState = getQuestionResultState(q, ua);
         if (resultState === 'unanswered') unanswered++;
         
-        if (q.type === 'MCQ') {
-            const point = getPointValue(scoringConfig?.mcq, 1);
+        if (q.type === 'MCQ' || q.type === 'MA') {
+            const point = getPointValue(q.type === 'MA' ? (scoringConfig?.ma ?? scoringConfig?.mcq) : scoringConfig?.mcq, 1);
             maxScore += point;
             if (resultState === 'correct') {
                 correct++;

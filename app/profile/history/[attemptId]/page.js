@@ -169,11 +169,13 @@ export default function AttemptHistoryDetailPage() {
     }
 
     const part1 = [];
+    const partMA = [];
     const part2 = [];
     const part3 = [];
     const part4 = [];
     realQuestions.forEach((question, index) => {
       if (question.type === 'MCQ') part1.push({ question, index });
+      else if (question.type === 'MA') partMA.push({ question, index });
       else if (question.type === 'TF') part2.push({ question, index });
       else if (question.type === 'SA') part3.push({ question, index });
       else if (question.type === 'DRAG') part4.push({ question, index });
@@ -185,6 +187,12 @@ export default function AttemptHistoryDetailPage() {
           <div>
             <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần I</div>
             <div className="et-nav-grid">{part1.map(({ question, index }) => renderBtn(question, index))}</div>
+          </div>
+        )}
+        {partMA.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Chọn nhiều đáp án</div>
+            <div className="et-nav-grid">{partMA.map(({ question, index }) => renderBtn(question, index))}</div>
           </div>
         )}
         {part2.length > 0 && (

@@ -32,6 +32,12 @@ const THPT_PARTS = [
     scoring: '0,25 điểm/câu',
   },
   {
+    key: 'ma',
+    name: 'Chọn nhiều đáp án',
+    label: 'Chọn nhiều đáp án',
+    scoring: 'Đúng tuyệt đối, tính như trắc nghiệm',
+  },
+  {
     key: 'part2',
     name: 'Phần II',
     label: 'Đúng/Sai',
@@ -327,9 +333,10 @@ function getTsaSectionByIndex(index, totalQuestions) {
 
 function getThptPartLabel(question) {
   if (question.type === 'MCQ') return THPT_PARTS[0].name;
-  if (question.type === 'TF') return THPT_PARTS[1].name;
-  if (question.type === 'SA') return THPT_PARTS[2].name;
-  if (question.type === 'DRAG') return THPT_PARTS[3].name;
+  if (question.type === 'MA') return THPT_PARTS[1].name;
+  if (question.type === 'TF') return THPT_PARTS[2].name;
+  if (question.type === 'SA') return THPT_PARTS[3].name;
+  if (question.type === 'DRAG') return THPT_PARTS[4].name;
   return UNKNOWN_GROUP;
 }
 
@@ -341,16 +348,22 @@ function isQuestionCorrect(question, userAnswers) {
 function getQuestionScore(question, userAnswers, scoringConfig, attempt) {
   const defaultConfig = {
     mcq: attempt.examKey === 'THPT' ? 0.25 : 1,
+    ma: attempt.examKey === 'THPT' ? 0.25 : 1,
     sa: attempt.examKey === 'THPT' && getKnownThptSubjectLabel(attempt.subject) === 'Toán' ? 0.5 : 0.25,
     tf: attempt.examKey === 'THPT' ? [0.1, 0.25, 0.5, 1] : [0.25, 0.25, 0.25, 0.25],
   };
   const mcqPoint = getPointValue(scoringConfig?.mcq, defaultConfig.mcq);
+  const maPoint = getPointValue(scoringConfig?.ma ?? scoringConfig?.mcq, defaultConfig.ma);
   const saPoint = getPointValue(scoringConfig?.sa, defaultConfig.sa);
   const tfScale = getTfScale(scoringConfig?.tf, defaultConfig.tf);
   const correct = isQuestionCorrect(question, userAnswers);
 
   if (question.type === 'MCQ') {
     return { correct, correctCount: correct ? 1 : 0, totalCount: 1, score: correct ? mcqPoint : 0, maxScore: mcqPoint };
+  }
+
+  if (question.type === 'MA') {
+    return { correct, correctCount: correct ? 1 : 0, totalCount: 1, score: correct ? maPoint : 0, maxScore: maPoint };
   }
 
   if (question.type === 'TF' && question.answer && typeof question.answer === 'object') {

@@ -14,9 +14,9 @@ const EXAM_TYPES = ['THPT', 'HSA', 'TSA', 'Other'];
 const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
 const SCORING_PRESETS = {
-  'THPT Toán': { mcq: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] },
-  'THPT Lý & Hoá': { mcq: 0.25, sa: 0.25, tf: [0.1, 0.25, 0.5, 1.0] },
-  'HSA / TSA': { mcq: 1, sa: 1, tf: [0.25, 0.25, 0.25, 0.25] },
+  'THPT Toán': { mcq: 0.25, ma: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] },
+  'THPT Lý & Hoá': { mcq: 0.25, ma: 0.25, sa: 0.25, tf: [0.1, 0.25, 0.5, 1.0] },
+  'HSA / TSA': { mcq: 1, ma: 1, sa: 1, tf: [0.25, 0.25, 0.25, 0.25] },
   'Tuỳ chỉnh': null,
 };
 
@@ -137,7 +137,7 @@ export default function ExamEditor({
       setHasUnsavedChanges(true);
     } else if (preset === 'Tuỳ chỉnh') {
       if (!scoringConfig) {
-        setScoringConfig({ mcq: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] });
+        setScoringConfig({ mcq: 0.25, ma: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] });
       }
       setHasUnsavedChanges(true);
     }
@@ -397,6 +397,20 @@ D. Đáp án D
 ====END====
 
 ====START====
+[ID] MA_001
+[TYPE] MA
+[LEVEL] Trung bình
+[CONTENT] Chọn tất cả đáp án đúng.
+[OPTIONS]
+A. Đáp án A
+B. Đáp án B
+C. Đáp án C
+D. Đáp án D
+[ANSWER] A,C
+[SOL] Lời giải chi tiết
+====END====
+
+====START====
 [ID] DRAG_001
 [TYPE] DRAG
 [LEVEL] Trung bình
@@ -503,11 +517,17 @@ C. Đáp án kéo thả C
             {/* Config table */}
             {scoringConfig && (
               <div className="rounded-xl border border-white/10 overflow-hidden">
-                <div className="grid grid-cols-3 gap-px bg-white/5">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/5">
                   <div className="p-4 bg-[#0e0e22]">
                     <p className="text-xs text-white/30 uppercase tracking-wider mb-1">MCQ (điểm/câu)</p>
                     <input type="number" step={0.05} value={scoringConfig.mcq}
                       onChange={e => { setScoringPreset('Tuỳ chỉnh'); setScoringConfig(prev => ({ ...prev, mcq: Number(e.target.value) })); setHasUnsavedChanges(true); }}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
+                  </div>
+                  <div className="p-4 bg-[#0e0e22]">
+                    <p className="text-xs text-white/30 uppercase tracking-wider mb-1">MA (điểm/câu)</p>
+                    <input type="number" step={0.05} value={scoringConfig.ma ?? scoringConfig.mcq ?? 1}
+                      onChange={e => { setScoringPreset('Tuỳ chỉnh'); setScoringConfig(prev => ({ ...prev, ma: Number(e.target.value) })); setHasUnsavedChanges(true); }}
                       className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
                   </div>
                   <div className="p-4 bg-[#0e0e22]">

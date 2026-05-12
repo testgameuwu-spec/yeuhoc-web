@@ -1,0 +1,44 @@
+====START====
+[ID] MA_001
+[TYPE] MA
+[LEVEL] Trung bình
+[CONTENT] Chọn tất cả các mệnh đề đúng về hàm số $y = x^2 - 2x$.
+[OPTIONS]
+A. Đồ thị là một parabol có bề lõm hướng lên.
+B. Hàm số nghịch biến trên khoảng $(1; +\infty)$.
+C. Đỉnh của đồ thị có tọa độ $I(1; -1)$.
+D. Đồ thị cắt trục hoành tại hai điểm có hoành độ $0$ và $2$.
+[ANSWER] A,C,D
+[SOL]
+Ta có $y = x^2 - 2x = (x - 1)^2 - 1$ nên parabol hướng lên và đỉnh là $I(1; -1)$.
+Hàm số nghịch biến trên $(-\infty; 1)$ và đồng biến trên $(1; +\infty)$.
+Giải $x^2 - 2x = 0$ được $x = 0$ hoặc $x = 2$.
+====END====
+
+====START====
+[ID] MCQ_001
+[TYPE] MCQ
+[LEVEL] Dễ
+[CONTENT] Giá trị của $2^3$ bằng bao nhiêu?
+[OPTIONS]
+A. $6$
+B. $8$
+C. $9$
+D. $12$
+[ANSWER] B
+[SOL] Ta có $2^3 = 2 \cdot 2 \cdot 2 = 8$.
+====END====
+
+====START====
+[ID] DRAG_001
+[TYPE] DRAG
+[LEVEL] Trung bình
+[CONTENT] Kéo đáp án vào ô trống: Hàm số $y = x^2$ có giá trị nhỏ nhất bằng [[1]] tại $x = [[2]]$.
+[OPTIONS]
+A. $0$
+B. $1$
+C. $-1$
+D. $2$
+[ANSWER] 1-A, 2-A
+[SOL] Với mọi $x$, ta có $x^2 \ge 0$. Giá trị nhỏ nhất là $0$ tại $x = 0$.
+====END====

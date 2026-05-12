@@ -16,11 +16,13 @@ const PRESETS = [
     description: '12 MCQ + 4 TF (×4 lệnh) + 6 SA = 10đ',
     config: {
       mcq: { pointsPerQuestion: 0.25 },
+      ma:  { pointsPerQuestion: 0.25 },
       sa:  { pointsPerQuestion: 0.5 },
       tf:  { scale: [0.1, 0.25, 0.5, 1.0] },  // 1/4 correct → 0.1, 2/4 → 0.25, ...
     },
     breakdown: [
       { type: 'MCQ', count: 12, perQ: '0.25đ', total: '3đ' },
+      { type: 'MA',  count: 'Tuỳ đề', perQ: '0.25đ/câu', total: '—' },
       { type: 'TF',  count: '4 câu × 4 lệnh', perQ: '0.1 / 0.25 / 0.5 / 1.0đ', total: '4đ' },
       { type: 'SA',  count: 6, perQ: '0.5đ', total: '3đ' },
     ],
@@ -34,11 +36,13 @@ const PRESETS = [
     description: '18 MCQ + 4 TF (×4 lệnh) + 6 SA = 10đ',
     config: {
       mcq: { pointsPerQuestion: 0.25 },
+      ma:  { pointsPerQuestion: 0.25 },
       sa:  { pointsPerQuestion: 0.25 },
       tf:  { scale: [0.1, 0.25, 0.5, 1.0] },
     },
     breakdown: [
       { type: 'MCQ', count: 18, perQ: '0.25đ', total: '4.5đ' },
+      { type: 'MA',  count: 'Tuỳ đề', perQ: '0.25đ/câu', total: '—' },
       { type: 'TF',  count: '4 câu × 4 lệnh', perQ: '0.1 / 0.25 / 0.5 / 1.0đ', total: '4đ' },
       { type: 'SA',  count: 6, perQ: '0.25đ', total: '1.5đ' },
     ],
@@ -52,11 +56,13 @@ const PRESETS = [
     description: 'Mỗi câu đúng tính điểm riêng, TF tính theo lệnh hỏi',
     config: {
       mcq: { pointsPerQuestion: 1 },
+      ma:  { pointsPerQuestion: 1 },
       sa:  { pointsPerQuestion: 1 },
       tf:  { scale: [0.25, 0.25, 0.25, 0.25] },  // independent per sub-question
     },
     breakdown: [
       { type: 'MCQ', count: 'Tuỳ đề', perQ: '1đ/câu', total: '—' },
+      { type: 'MA',  count: 'Tuỳ đề', perQ: '1đ/câu', total: '—' },
       { type: 'TF',  count: 'Tuỳ đề', perQ: '0.25đ/lệnh hỏi', total: '—' },
       { type: 'SA',  count: 'Tuỳ đề', perQ: '1đ/câu', total: '—' },
     ],
@@ -194,7 +200,7 @@ export default function ScoringConfig() {
             </div>
             {/* Rows */}
             {selectedPreset.breakdown.map((row, i) => {
-              const TypeIcon = row.type === 'MCQ' ? CheckCircle2 : row.type === 'TF' ? ToggleLeft : Type;
+              const TypeIcon = (row.type === 'MCQ' || row.type === 'MA') ? CheckCircle2 : row.type === 'TF' ? ToggleLeft : Type;
               return (
                 <div key={i} className="grid grid-cols-4 gap-px bg-white/5">
                   <div className="px-5 py-3 bg-[#0c0c20] flex items-center gap-2">
@@ -226,7 +232,7 @@ export default function ScoringConfig() {
           <GraduationCap className="w-4 h-4 text-indigo-400" /> Tuỳ chỉnh điểm số
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* MCQ */}
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-white/70">
@@ -237,6 +243,20 @@ export default function ScoringConfig() {
               <input type="number" step={0.05} min={0}
                 value={activeConfig.mcq.pointsPerQuestion}
                 onChange={e => handleConfigChange('mcq', 'pointsPerQuestion', Number(e.target.value))}
+                className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
+            </div>
+          </div>
+
+          {/* MA */}
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white/70">
+              <CheckCircle2 className="w-4 h-4 text-sky-400" /> Chọn nhiều đáp án (MA)
+            </div>
+            <div>
+              <label className="block text-[10px] text-white/30 uppercase tracking-wider mb-1">Điểm / câu</label>
+              <input type="number" step={0.05} min={0}
+                value={activeConfig.ma?.pointsPerQuestion ?? activeConfig.mcq.pointsPerQuestion}
+                onChange={e => handleConfigChange('ma', 'pointsPerQuestion', Number(e.target.value))}
                 className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
             </div>
           </div>

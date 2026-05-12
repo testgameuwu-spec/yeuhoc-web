@@ -8,9 +8,11 @@ import {
   ToggleLeft, AlertCircle, BookOpen, ArrowUpDown
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
+import { normalizeMAAnswer } from '@/lib/questionResult';
 
 const TYPE_STYLES = {
   MCQ: { label: 'Trắc nghiệm', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', icon: CheckCircle2 },
+  MA:  { label: 'Chọn nhiều đáp án', color: 'bg-sky-500/15 text-sky-300 border-sky-500/30', icon: CheckCircle2 },
   TF:  { label: 'Đúng / Sai',  color: 'bg-amber-500/15 text-amber-400 border-amber-500/30',   icon: ToggleLeft },
   SA:  { label: 'Tự luận ngắn', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', icon: Type },
   DRAG: { label: 'Kéo thả', color: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30', icon: ArrowUpDown },
@@ -38,6 +40,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
   const q = question;
   const typeStyle = TYPE_STYLES[q.type] || TYPE_STYLES.MCQ;
   const TypeIcon = typeStyle.icon;
+  const maAnswerLetters = normalizeMAAnswer(q.answer);
 
   // ── Generic field updater ──
   const update = useCallback((field, value) => {
@@ -71,8 +74,22 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
       } else if (OPTION_LETTERS.indexOf(q.answer) > i) {
         newAnswer = OPTION_LETTERS[OPTION_LETTERS.indexOf(q.answer) - 1];
       }
+    } else if (q.type === 'MA') {
+      newAnswer = maAnswerLetters.reduce((letters, letter) => {
+        const answerIndex = OPTION_LETTERS.indexOf(letter);
+        if (answerIndex === i) return letters;
+        letters.push(answerIndex > i ? OPTION_LETTERS[answerIndex - 1] : letter);
+        return letters;
+      }, []).sort().join(',');
     }
     onUpdate({ ...q, options: newOpts, answer: newAnswer });
+  };
+
+  const handleMAToggleAnswer = (letter) => {
+    const next = new Set(maAnswerLetters);
+    if (next.has(letter)) next.delete(letter);
+    else next.add(letter);
+    update('answer', [...next].sort().join(','));
   };
 
   // ── TF helpers ──
@@ -100,9 +117,17 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
   // ── Type change ──
   const handleTypeChange = (newType) => {
     const base = { ...q, type: newType };
-    if (newType === 'MCQ' && (!q.options || q.options.length === 0)) {
-      base.options = ['', '', '', ''];
-      base.answer = 'A';
+    if (newType === 'MCQ') {
+      if (!q.options || q.options.length === 0) {
+        base.options = ['', '', '', ''];
+      }
+      base.answer = normalizeMAAnswer(q.answer)[0] || 'A';
+    }
+    if (newType === 'MA') {
+      if (!q.options || q.options.length === 0) {
+        base.options = ['', '', '', ''];
+      }
+      base.answer = normalizeMAAnswer(q.answer).join(',');
     }
     if (newType === 'TF' && (!q.tfSubQuestions || q.tfSubQuestions.length === 0)) {
       base.tfSubQuestions = [
@@ -360,6 +385,51 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
               </div>
               <button onClick={handleAddOption}
                 className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors border border-transparent hover:border-indigo-500/20">
+                <Plus className="w-3 h-3" /> Thêm đáp án
+              </button>
+            </div>
+          )}
+
+          {/* ── MA Options ── */}
+          {q.type === 'MA' && (
+            <div>
+              <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">
+                Đáp án <span className="text-white/15 normal-case">(có thể chọn nhiều đáp án đúng)</span>
+              </label>
+              <div className="space-y-2">
+                {(q.options || []).map((opt, i) => {
+                  const letter = OPTION_LETTERS[i];
+                  const isCorrect = maAnswerLetters.includes(letter);
+                  return (
+                    <div key={i} className="flex items-center gap-2 group">
+                      <button onClick={() => handleMAToggleAnswer(letter)}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border transition-all flex-shrink-0 ${
+                          isCorrect
+                            ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-sm shadow-sky-500/20'
+                            : 'bg-white/5 text-white/30 border-white/10 hover:text-white/60 hover:border-white/20'
+                        }`}
+                        title={isCorrect ? 'Đáp án đúng' : 'Chọn làm đáp án đúng'}>
+                        {letter}
+                      </button>
+                      <input type="text" value={opt} onChange={e => handleOptionChange(i, e.target.value)}
+                        placeholder={`Nhập đáp án ${letter}...`}
+                        className={`flex-1 px-3 py-2 rounded-xl text-sm border focus:outline-none transition-all ${
+                          isCorrect
+                            ? 'bg-sky-500/5 border-sky-500/20 text-white focus:border-sky-500/40'
+                            : 'bg-white/5 border-white/10 text-white/80 placeholder-white/20 focus:border-indigo-500/50'
+                        }`} />
+                      {(q.options || []).length > 2 && (
+                        <button onClick={() => handleRemoveOption(i)}
+                          className="p-1.5 rounded-lg text-white/15 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <button onClick={handleAddOption}
+                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-sky-300 hover:bg-sky-500/10 transition-colors border border-transparent hover:border-sky-500/20">
                 <Plus className="w-3 h-3" /> Thêm đáp án
               </button>
             </div>

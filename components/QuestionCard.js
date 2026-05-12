@@ -5,9 +5,9 @@ import Image from 'next/image';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
-import { getDragBlankIds, getQuestionResultState, parseDragAnswer } from '@/lib/questionResult';
+import { getDragBlankIds, getQuestionResultState, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
 
-const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', DRAG: 'Kéo thả', TEXT: 'Ngữ liệu' };
+const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', MA: 'Chọn nhiều đáp án', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', DRAG: 'Kéo thả', TEXT: 'Ngữ liệu' };
 
 export default function QuestionCard({
     question,
@@ -33,6 +33,16 @@ export default function QuestionCard({
     const handleTFChange = (stmtKey, val) => {
         if (disabled) return;
         onAnswerChange({ ...tfSelected, [stmtKey]: val });
+    };
+
+    const maAnswer = type === 'MA' ? normalizeMAAnswer(answer) : [];
+    const maSelected = type === 'MA' ? normalizeMAAnswer(selectedAnswer) : [];
+    const handleMAChange = (letter) => {
+        if (disabled) return;
+        const selectedSet = new Set(maSelected);
+        if (selectedSet.has(letter)) selectedSet.delete(letter);
+        else selectedSet.add(letter);
+        onAnswerChange([...selectedSet].sort());
     };
 
     const dragAnswer = type === 'DRAG' ? parseDragAnswer(answer) : {};
@@ -197,6 +207,49 @@ export default function QuestionCard({
                                     />
                                     <span className={`et-mc-ltr`}>{letter}</span>
                                     <div className="et-mc-text"><MathRenderer text={opt} /></div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* ── MA options ── */}
+                {type === 'MA' && Array.isArray(options) && options.length > 0 && (
+                    <div className="et-mc-opts">
+                        {options.map((opt, i) => {
+                            const letter = String.fromCharCode(65 + i);
+                            const isSelected = maSelected.includes(letter);
+                            const hasAnswerKey = showResult && maAnswer.length > 0;
+                            const isCorrectOpt = hasAnswerKey && maAnswer.includes(letter);
+                            const isWrongSelection = hasAnswerKey && isSelected && !isCorrectOpt;
+                            const cls = hasAnswerKey ? (isCorrectOpt ? (isSelected ? 'correct' : 'missed-correct') : isWrongSelection ? 'wrong' : '') : isSelected ? 'sel' : '';
+                            const resultLabel = !hasAnswerKey
+                                ? ''
+                                : `${isSelected ? 'Bạn chọn' : 'Bạn không chọn'} / ${isCorrectOpt ? 'Đáp án đúng' : 'Đáp án sai'}`;
+                            return (
+                                <label
+                                    key={i}
+                                    className={`et-mc-opt ${cls}`}
+                                    style={{ cursor: disabled ? 'default' : 'pointer' }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        name={`question-${id}`}
+                                        value={letter}
+                                        checked={isSelected}
+                                        onChange={() => handleMAChange(letter)}
+                                        disabled={disabled}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <span className="et-mc-ltr">{letter}</span>
+                                    <div className="et-mc-text with-tag">
+                                        <div className="et-mc-text-main"><MathRenderer text={opt} /></div>
+                                        {resultLabel && (
+                                            <span className={`et-option-tag ${isCorrectOpt ? 'correct' : 'wrong'}`}>
+                                                {resultLabel}
+                                            </span>
+                                        )}
+                                    </div>
                                 </label>
                             );
                         })}

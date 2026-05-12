@@ -429,6 +429,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const isAntiCheatEnabled = activeExam?.antiCheatEnabled !== false;
   realQuestions.forEach((q, i) => {
     q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i - 1].type !== 'MCQ');
+    q._isFirstMA = isTHPT && q.type === 'MA' && (i === 0 || realQuestions[i - 1].type !== 'MA');
     q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || realQuestions[i - 1].type !== 'TF');
     q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || realQuestions[i - 1].type !== 'SA');
     q._isFirstDRAG = isTHPT && q.type === 'DRAG' && (i === 0 || realQuestions[i - 1].type !== 'DRAG');
@@ -782,10 +783,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         const config = activeExam.scoringConfig;
         const resultState = getQuestionResultState(q, ua);
         
-        if (q.type === 'MCQ') {
+        if (q.type === 'MCQ' || q.type === 'MA') {
           if (resultState === 'correct') {
             correctCount++;
-            score += config ? getPointValue(config.mcq, 1) : 1;
+            score += config ? getPointValue(q.type === 'MA' ? (config.ma ?? config.mcq) : config.mcq, 1) : 1;
           }
         } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
           const s = typeof ua === 'object' ? ua : {};
@@ -1048,12 +1049,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       );
     }
 
-    let p1 = [], p2 = [], p3 = [], p4 = [];
+    let p1 = [], p2 = [], p3 = [], p4 = [], p5 = [];
     realQuestions.forEach((q, i) => {
       if (q.type === 'MCQ') p1.push({ q, i });
-      else if (q.type === 'TF') p2.push({ q, i });
-      else if (q.type === 'SA') p3.push({ q, i });
-      else if (q.type === 'DRAG') p4.push({ q, i });
+      else if (q.type === 'MA') p2.push({ q, i });
+      else if (q.type === 'TF') p3.push({ q, i });
+      else if (q.type === 'SA') p4.push({ q, i });
+      else if (q.type === 'DRAG') p5.push({ q, i });
     });
 
     return (
@@ -1066,20 +1068,26 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         )}
         {p2.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần II</div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Chọn nhiều đáp án</div>
             <div className="et-nav-grid">{p2.map(({ q, i }) => renderBtn(q, i))}</div>
           </div>
         )}
         {p3.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần III</div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần II</div>
             <div className="et-nav-grid">{p3.map(({ q, i }) => renderBtn(q, i))}</div>
           </div>
         )}
         {p4.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Kéo thả</div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Phần III</div>
             <div className="et-nav-grid">{p4.map(({ q, i }) => renderBtn(q, i))}</div>
+          </div>
+        )}
+        {p5.length > 0 && (
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Kéo thả</div>
+            <div className="et-nav-grid">{p5.map(({ q, i }) => renderBtn(q, i))}</div>
           </div>
         )}
       </div>
@@ -1747,6 +1755,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               return groupedQuestions.map((group, gIdx) => {
                 const firstChild = group.children[0];
                 const isFirstMCQ = firstChild?._isFirstMCQ;
+                const isFirstMA = firstChild?._isFirstMA;
                 const isFirstTF = firstChild?._isFirstTF;
                 const isFirstSA = firstChild?._isFirstSA;
                 const isFirstDRAG = firstChild?._isFirstDRAG;
@@ -1757,6 +1766,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
                         <div className="et-section-hd-badge">Phần I: Trắc Nghiệm</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstMA && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Chọn nhiều đáp án</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
@@ -2088,6 +2104,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               return groupedQuestions.map((group, gIdx) => {
                 const firstChild = group.children[0];
                 const isFirstMCQ = firstChild?._isFirstMCQ;
+                const isFirstMA = firstChild?._isFirstMA;
                 const isFirstTF = firstChild?._isFirstTF;
                 const isFirstSA = firstChild?._isFirstSA;
                 const isFirstDRAG = firstChild?._isFirstDRAG;
@@ -2098,6 +2115,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="et-section-hd">
                         <div className="et-section-hd-line" />
                         <div className="et-section-hd-badge">Phần I: Trắc Nghiệm</div>
+                        <div className="et-section-hd-line" />
+                      </div>
+                    )}
+                    {isFirstMA && (
+                      <div className="et-section-hd">
+                        <div className="et-section-hd-line" />
+                        <div className="et-section-hd-badge">Chọn nhiều đáp án</div>
                         <div className="et-section-hd-line" />
                       </div>
                     )}
