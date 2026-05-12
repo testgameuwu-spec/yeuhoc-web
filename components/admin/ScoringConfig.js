@@ -5,6 +5,7 @@ import {
   Trophy, Save, RotateCcw, Info, ChevronDown, ChevronRight,
   GraduationCap, Calculator, CheckCircle2, ToggleLeft, Type
 } from 'lucide-react';
+import { TSA_TOTAL_DURATION_MINUTES, TSA_TOTAL_QUESTIONS } from '@/lib/examScoring';
 
 // ── Scoring presets matching the product spec ──
 const PRESETS = [
@@ -67,6 +68,26 @@ const PRESETS = [
       { type: 'SA',  count: 'Tuỳ đề', perQ: '1đ/câu', total: '—' },
     ],
     totalScore: null,
+  },
+  {
+    id: 'tsa',
+    name: 'TSA',
+    examType: 'TSA',
+    subject: 'Chung',
+    description: `${TSA_TOTAL_QUESTIONS} câu / ${TSA_TOTAL_DURATION_MINUTES} phút, chấm 1 điểm/câu`,
+    config: {
+      mcq: { pointsPerQuestion: 1 },
+      ma:  { pointsPerQuestion: 1 },
+      sa:  { pointsPerQuestion: 1 },
+      tf:  { scale: [1, 1, 1, 1] },
+    },
+    breakdown: [
+      { type: 'MCQ', count: 'Theo đề', perQ: '1đ/câu', total: '—' },
+      { type: 'MA',  count: 'Theo đề', perQ: '1đ/câu đúng toàn bộ', total: '—' },
+      { type: 'TF',  count: 'Có thể khác 4 ý/câu', perQ: '1đ nếu đúng toàn bộ', total: '—' },
+      { type: 'DRAG', count: 'Theo đề', perQ: '1đ nếu đúng toàn bộ', total: '—' },
+    ],
+    totalScore: 100,
   },
 ];
 
@@ -139,7 +160,7 @@ export default function ScoringConfig() {
       {/* Preset selector */}
       <div className="space-y-3">
         <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider">Chọn preset</label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {PRESETS.map(preset => {
             const isActive = selectedPreset.id === preset.id && !isCustom;
             return (
@@ -300,14 +321,20 @@ export default function ScoringConfig() {
 
       {/* TF scoring explanation */}
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-        <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">📖 Giải thích thang điểm TF (THPT)</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {['1/4 lệnh đúng → 0.1đ', '2/4 lệnh đúng → 0.25đ', '3/4 lệnh đúng → 0.5đ', '4/4 lệnh đúng → 1.0đ'].map((text, i) => (
-            <div key={i} className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-white/40 text-center">
-              {text}
-            </div>
-          ))}
-        </div>
+        <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">📖 Giải thích thang điểm TF</p>
+        {selectedPreset.examType === 'TSA' ? (
+          <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-white/40 text-center">
+            TSA: đúng toàn bộ ý trong câu TF mới được 1 điểm; sai hoặc thiếu một ý là 0 điểm.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {['1/4 lệnh đúng → 0.1đ', '2/4 lệnh đúng → 0.25đ', '3/4 lệnh đúng → 0.5đ', '4/4 lệnh đúng → 1.0đ'].map((text, i) => (
+              <div key={i} className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-white/40 text-center">
+                {text}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Action bar */}

@@ -6,8 +6,9 @@ import AIExamGenerator from '@/components/admin/AIExamGenerator';
 import QuestionEditorCard from '@/components/admin/QuestionEditorCard';
 import {
   Save, Eye, EyeOff, Clock, GraduationCap, Calendar,
-  BookOpen, Plus, Upload, Settings, ChevronDown, FileText, ShieldAlert, Shuffle
+  BookOpen, Plus, Upload, Settings, ChevronDown, FileText, ShieldAlert, Shuffle, AlertTriangle
 } from 'lucide-react';
+import { TSA_TOTAL_DURATION_MINUTES, TSA_TOTAL_QUESTIONS } from '@/lib/examScoring';
 
 const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
 const EXAM_TYPES = ['THPT', 'HSA', 'TSA', 'Other'];
@@ -16,7 +17,8 @@ const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 const SCORING_PRESETS = {
   'THPT Toán': { mcq: 0.25, ma: 0.25, sa: 0.5, tf: [0.1, 0.25, 0.5, 1.0] },
   'THPT Lý & Hoá': { mcq: 0.25, ma: 0.25, sa: 0.25, tf: [0.1, 0.25, 0.5, 1.0] },
-  'HSA / TSA': { mcq: 1, ma: 1, sa: 1, tf: [0.25, 0.25, 0.25, 0.25] },
+  'HSA': { mcq: 1, ma: 1, sa: 1, tf: [0.25, 0.25, 0.25, 0.25] },
+  'TSA': { mcq: 1, ma: 1, sa: 1, tf: [1, 1, 1, 1] },
   'Tuỳ chỉnh': null,
 };
 
@@ -52,8 +54,10 @@ export default function ExamEditor({
 
   const updatePreset = useCallback((subj, type) => {
     let preset = 'Tuỳ chỉnh';
-    if (type === 'HSA' || type === 'TSA') {
-      preset = 'HSA / TSA';
+    if (type === 'HSA') {
+      preset = 'HSA';
+    } else if (type === 'TSA') {
+      preset = 'TSA';
     } else if (type === 'THPT') {
       if (subj === 'Toán') preset = 'THPT Toán';
       else if (subj === 'Vật Lý' || subj === 'Hoá Học') preset = 'THPT Lý & Hoá';
@@ -134,6 +138,10 @@ export default function ExamEditor({
     setScoringPreset(preset);
     if (SCORING_PRESETS[preset]) {
       setScoringConfig({ ...SCORING_PRESETS[preset] });
+      if (preset === 'TSA') {
+        setExamType('TSA');
+        setDuration(TSA_TOTAL_DURATION_MINUTES);
+      }
       setHasUnsavedChanges(true);
     } else if (preset === 'Tuỳ chỉnh') {
       if (!scoringConfig) {
@@ -155,6 +163,7 @@ export default function ExamEditor({
   const handleExamTypeChange = (e) => {
     const newType = e.target.value;
     setExamType(newType);
+    if (newType === 'TSA') setDuration(TSA_TOTAL_DURATION_MINUTES);
     setHasUnsavedChanges(true);
     updatePreset(subject, newType);
   };
@@ -329,6 +338,9 @@ export default function ExamEditor({
     setActiveSection('questions');
   };
 
+  const isTsaExam = examType === 'TSA';
+  const showTsaCountWarning = isTsaExam && realQuestionCount !== TSA_TOTAL_QUESTIONS;
+
   return (
     <div className="space-y-6 w-full">
       {/* Tab Navigation */}
@@ -495,6 +507,14 @@ C. Đáp án kéo thả C
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
               </div>
             </div>
+            {showTsaCountWarning && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Preset TSA chuẩn cần {TSA_TOTAL_QUESTIONS} câu theo thứ tự 40/20/40. Đề hiện có {realQuestionCount} câu; hệ thống vẫn cho lưu nhưng khi thi sẽ chia phần theo thứ tự câu hiện có.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Scoring Config */}
@@ -556,6 +576,11 @@ C. Đáp án kéo thả C
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+            {isTsaExam && (
+              <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-3 text-xs text-violet-200">
+                TSA luôn chấm 1 điểm/câu trên thang 100. TF, MA và DRAG phải đúng toàn bộ ý mới được tính điểm.
               </div>
             )}
           </div>

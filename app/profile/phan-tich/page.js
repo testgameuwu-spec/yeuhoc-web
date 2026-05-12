@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/lib/supabase';
-import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
+import { getEmptyAnswerForType } from '@/lib/questionResult';
+import { getQuestionScore as getSharedQuestionScore, getTsaSectionIndex, TSA_SECTIONS } from '@/lib/examScoring';
 
 const SCORE_MAX = 10;
 const PERCENT_MAX = 100;
@@ -84,33 +85,6 @@ const HSA_SECTIONS = [
   },
 ];
 
-const TSA_SECTIONS = [
-  {
-    key: 'tsa-math',
-    name: 'Tư duy Toán học',
-    label: 'M1:M2:M3 = 4:3:3',
-    target: '40 câu',
-    duration: '60 phút',
-    scoring: '40 điểm tối đa',
-  },
-  {
-    key: 'tsa-reading',
-    name: 'Tư duy Đọc hiểu',
-    label: 'M1:M2:M3 = 4:3:3',
-    target: '20 câu',
-    duration: '30 phút',
-    scoring: '20 điểm tối đa',
-  },
-  {
-    key: 'tsa-science',
-    name: 'Tư duy Khoa học/Giải quyết vấn đề',
-    label: 'M1:M2:M3 = 4:3:3',
-    target: '40 câu',
-    duration: '60 phút',
-    scoring: '40 điểm tối đa',
-  },
-];
-
 const EXAM_TABS = [
   {
     key: 'THPT',
@@ -162,23 +136,11 @@ function getTabMeta(examKey) {
   return EXAM_TABS.find((tab) => tab.key === examKey) || EXAM_TABS[0];
 }
 
-function getPointValue(value, fallback) {
-  if (Number.isFinite(Number(value))) return Number(value);
-  if (Number.isFinite(Number(value?.pointsPerQuestion))) return Number(value.pointsPerQuestion);
-  return fallback;
-}
-
-function getTfScale(value, fallback) {
-  if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
-  if (Array.isArray(value?.scale)) return value.scale.map(Number).filter(Number.isFinite);
-  return fallback;
-}
-
 function buildTfAnswerFromSubs(tfSubs) {
   if (!Array.isArray(tfSubs) || !tfSubs.length) return null;
 
   return tfSubs.reduce((answer, sub, index) => {
-    answer[String.fromCharCode(97 + index)] = sub?.answer ? 'D' : 'S';
+    answer[index < 26 ? String.fromCharCode(97 + index) : String(index + 1)] = sub?.answer ? 'D' : 'S';
     return answer;
   }, {});
 }
@@ -323,12 +285,8 @@ function getHsaSectionLabel(attempt) {
   return UNKNOWN_GROUP;
 }
 
-function getTsaSectionByIndex(index, totalQuestions) {
-  if (totalQuestions !== 100) return UNKNOWN_GROUP;
-  if (index < 40) return TSA_SECTIONS[0].name;
-  if (index < 60) return TSA_SECTIONS[1].name;
-  if (index < 100) return TSA_SECTIONS[2].name;
-  return UNKNOWN_GROUP;
+function getTsaSectionByIndex(index) {
+  return TSA_SECTIONS[getTsaSectionIndex(index)]?.name || UNKNOWN_GROUP;
 }
 
 function getThptPartLabel(question) {
@@ -340,50 +298,13 @@ function getThptPartLabel(question) {
   return UNKNOWN_GROUP;
 }
 
-function isQuestionCorrect(question, userAnswers) {
-  const userAnswer = userAnswers?.[question.id] ?? getEmptyAnswerForType(question.type);
-  return getQuestionResultState(question, userAnswer) === 'correct';
-}
-
 function getQuestionScore(question, userAnswers, scoringConfig, attempt) {
-  const defaultConfig = {
-    mcq: attempt.examKey === 'THPT' ? 0.25 : 1,
-    ma: attempt.examKey === 'THPT' ? 0.25 : 1,
-    sa: attempt.examKey === 'THPT' && getKnownThptSubjectLabel(attempt.subject) === 'Toán' ? 0.5 : 0.25,
-    tf: attempt.examKey === 'THPT' ? [0.1, 0.25, 0.5, 1] : [0.25, 0.25, 0.25, 0.25],
-  };
-  const mcqPoint = getPointValue(scoringConfig?.mcq, defaultConfig.mcq);
-  const maPoint = getPointValue(scoringConfig?.ma ?? scoringConfig?.mcq, defaultConfig.ma);
-  const saPoint = getPointValue(scoringConfig?.sa, defaultConfig.sa);
-  const tfScale = getTfScale(scoringConfig?.tf, defaultConfig.tf);
-  const correct = isQuestionCorrect(question, userAnswers);
-
-  if (question.type === 'MCQ') {
-    return { correct, correctCount: correct ? 1 : 0, totalCount: 1, score: correct ? mcqPoint : 0, maxScore: mcqPoint };
-  }
-
-  if (question.type === 'MA') {
-    return { correct, correctCount: correct ? 1 : 0, totalCount: 1, score: correct ? maPoint : 0, maxScore: maPoint };
-  }
-
-  if (question.type === 'TF' && question.answer && typeof question.answer === 'object') {
-    const selected = userAnswers?.[question.id] && typeof userAnswers[question.id] === 'object'
-      ? userAnswers[question.id]
-      : {};
-    const keys = Object.keys(question.answer);
-    const subCorrect = keys.reduce((count, key) => count + (selected[key] === question.answer[key] ? 1 : 0), 0);
-    const maxScore = tfScale[3] || 1;
-    const score = subCorrect > 0 ? (tfScale[subCorrect - 1] || 0) : 0;
-    return {
-      correct: keys.length > 0 && subCorrect === keys.length,
-      correctCount: keys.length > 0 && subCorrect === keys.length ? 1 : 0,
-      totalCount: 1,
-      score,
-      maxScore,
-    };
-  }
-
-  return { correct, correctCount: correct ? 1 : 0, totalCount: 1, score: correct ? saPoint : 0, maxScore: saPoint };
+  const userAnswer = userAnswers?.[question.id] ?? getEmptyAnswerForType(question.type);
+  return getSharedQuestionScore(question, userAnswer, {
+    scoringConfig,
+    examType: attempt.examKey,
+    subject: attempt.subject,
+  });
 }
 
 function getSectionOrder(examKey) {
@@ -426,7 +347,7 @@ function getAttemptBreakdown(attempt, examKey) {
         ? getThptPartLabel(question)
         : examKey === 'HSA'
           ? getHsaSectionLabel(attempt)
-          : getTsaSectionByIndex(index, realQuestions.length);
+          : getTsaSectionByIndex(index);
       const result = getQuestionScore(question, attempt.userAnswers, attempt.scoringConfig, attempt);
       addRow(section, result.correctCount, result.totalCount, result.score, result.maxScore);
     });

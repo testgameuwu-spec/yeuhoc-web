@@ -567,7 +567,9 @@ function DragQuestion({
 }
 
 /* ─── TF Table sub-component ─── */
-const STMT_LTRS = ['a', 'b', 'c', 'd'];
+function getStatementKey(index) {
+    return index < 26 ? String.fromCharCode(97 + index) : String(index + 1);
+}
 
 function TFTable({ statements, tfAnswer, tfSelected, showResult, disabled, onChange }) {
     if (!statements || statements.length === 0) return null;
@@ -582,7 +584,7 @@ function TFTable({ statements, tfAnswer, tfSelected, showResult, disabled, onCha
             </thead>
             <tbody>
                 {statements.map((stmt, i) => {
-                    const key = STMT_LTRS[i] || String(i);
+                    const key = getStatementKey(i);
                     const correctVal = tfAnswer[key]; // 'D' or 'S'
                     const selectedVal = tfSelected[key];
                     const isOk = showResult && selectedVal === correctVal;

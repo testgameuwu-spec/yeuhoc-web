@@ -1,19 +1,7 @@
 'use client';
 
 import { AlertTriangle, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
-import { getQuestionResultState } from '@/lib/questionResult';
-
-function getPointValue(value, fallback) {
-    if (Number.isFinite(Number(value))) return Number(value);
-    if (Number.isFinite(Number(value?.pointsPerQuestion))) return Number(value.pointsPerQuestion);
-    return fallback;
-}
-
-function getTfScale(value, fallback) {
-    if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
-    if (Array.isArray(value?.scale)) return value.scale.map(Number).filter(Number.isFinite);
-    return fallback;
-}
+import { calculateExamResult } from '@/lib/examScoring';
 
 // Score ring component
 function ScoreRing({ score, maxScore }) {
@@ -48,55 +36,16 @@ function ScoreRing({ score, maxScore }) {
     );
 }
 
-export default function ResultsView({ questions, answers, onReset, scoringConfig, examType }) {
-    const realQs = questions.filter(q => q.type !== 'TEXT');
-    const total = realQs.length;
-    let correct = 0;
-    let unanswered = 0;
-    let score = 0;
-    let maxScore = 0;
-
-    realQs.forEach(q => {
-        const ua = answers[q.id] ?? (q.type === 'MA' ? [] : ((q.type === 'TF' || q.type === 'DRAG') ? {} : ''));
-        const resultState = getQuestionResultState(q, ua);
-        if (resultState === 'unanswered') unanswered++;
-        
-        if (q.type === 'MCQ' || q.type === 'MA') {
-            const point = getPointValue(q.type === 'MA' ? (scoringConfig?.ma ?? scoringConfig?.mcq) : scoringConfig?.mcq, 1);
-            maxScore += point;
-            if (resultState === 'correct') {
-                correct++;
-                score += point;
-            }
-        } else if (q.type === 'TF' && q.answer && typeof q.answer === 'object') {
-            const tfScale = getTfScale(scoringConfig?.tf, [0.25, 0.25, 0.25, 1]);
-            maxScore += tfScale[3] || 1;
-            const tfSel = typeof ua === 'object' ? ua : {};
-            let subCorrect = 0;
-            const keys = Object.keys(q.answer);
-            keys.forEach(k => {
-                if (tfSel[k] === q.answer[k]) subCorrect++;
-            });
-            if (subCorrect === keys.length) correct++;
-            if (scoringConfig && subCorrect > 0) {
-                score += tfScale[subCorrect - 1] || 0;
-            } else if (!scoringConfig && subCorrect === keys.length) {
-                score += 1;
-            }
-        } else {
-            const point = getPointValue(scoringConfig?.sa, 1);
-            maxScore += point;
-            if (resultState === 'correct') {
-                correct++;
-                score += point;
-            }
-        }
-    });
-
-    if (!scoringConfig) {
-        score = total > 0 ? (correct / total) * 10 : 0;
-        maxScore = 10;
-    }
+export default function ResultsView({ questions, answers, onReset, scoringConfig, examType, subject }) {
+    const {
+        total,
+        correct,
+        unanswered,
+        wrong,
+        score,
+        maxScore,
+        percentCorrect,
+    } = calculateExamResult(questions, answers, { scoringConfig, examType, subject });
 
     const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
     const grade = pct >= 80 ? 'Giỏi' : pct >= 60 ? 'Khá' : pct >= 40 ? 'Trung bình' : 'Cần cố gắng';
@@ -140,7 +89,7 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                         <XCircle style={{ width: 16, height: 16, color: 'var(--et-red)' }} />
-                        <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--et-red)' }}>{total - correct - unanswered}</span>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--et-red)' }}>{wrong}</span>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--app-muted)', marginTop: 3 }}>Câu sai</div>
                 </div>
@@ -158,7 +107,7 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
                 <div style={{ width: 1, background: 'var(--app-border)' }} />
 
                 <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--app-text-soft)' }}>{total > 0 ? Math.round((correct / total) * 100) : 0}%</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--app-text-soft)' }}>{percentCorrect}%</div>
                     <div style={{ fontSize: 11, color: 'var(--app-muted)', marginTop: 3 }}>Tỉ lệ đúng</div>
                 </div>
             </div>

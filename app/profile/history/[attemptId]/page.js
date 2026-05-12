@@ -18,6 +18,7 @@ import QuestionCard from '@/components/QuestionCard';
 import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
 import { supabase } from '@/lib/supabase';
 import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
+import { getTsaSectionIndex, isTsaExam, TSA_SECTIONS } from '@/lib/examScoring';
 
 function mapExamQuestions(examData) {
   return {
@@ -26,13 +27,13 @@ function mapExamQuestions(examData) {
       const tfSubs = q.tf_sub_questions || undefined;
       const stmts = q.statements || undefined;
       let answer = q.answer;
-      if (q.type === 'TF' && tfSubs && Array.isArray(tfSubs)) {
-        const obj = {};
-        tfSubs.forEach((sub, i) => {
-          const letter = String.fromCharCode(97 + i);
-          obj[letter] = sub.answer ? 'D' : 'S';
-        });
-        answer = obj;
+        if (q.type === 'TF' && tfSubs && Array.isArray(tfSubs)) {
+          const obj = {};
+          tfSubs.forEach((sub, i) => {
+            const letter = i < 26 ? String.fromCharCode(97 + i) : String(i + 1);
+            obj[letter] = sub.answer ? 'D' : 'S';
+          });
+          answer = obj;
       }
       return {
         ...q,
@@ -159,7 +160,31 @@ export default function AttemptHistoryDetailPage() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
+  const scoreText = useMemo(() => {
+    const score = Number(attempt?.score) || 0;
+    return isTsaExam(exam) ? `${Math.min(score, 100).toFixed(0)}/100` : score.toFixed(1);
+  }, [attempt?.score, exam]);
+
   const renderNavButtons = useCallback((renderBtn) => {
+    if (isTsaExam(exam)) {
+      return (
+        <div className="flex flex-col gap-4">
+          {TSA_SECTIONS.map((section, sectionIndex) => {
+            const entries = realQuestions
+              .map((question, index) => ({ question, index }))
+              .filter(({ index }) => getTsaSectionIndex(index) === sectionIndex);
+            if (!entries.length) return null;
+            return (
+              <div key={section.key}>
+                <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">{section.name}</div>
+                <div className="et-nav-grid">{entries.map(({ question, index }) => renderBtn(question, index))}</div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     if (exam?.exam_type !== 'THPT') {
       return (
         <div className="et-nav-grid">
@@ -215,7 +240,7 @@ export default function AttemptHistoryDetailPage() {
         )}
       </div>
     );
-  }, [exam?.exam_type, realQuestions]);
+  }, [exam, realQuestions]);
 
   const hasResultNav = !loading && !error && attempt && exam && realQuestions.length > 0;
 
@@ -278,7 +303,7 @@ export default function AttemptHistoryDetailPage() {
                       <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center">
                         <Trophy className="w-4 h-4 text-indigo-500 mx-auto mb-1" />
                         <p className="text-[11px] font-semibold text-indigo-600 uppercase">Điểm</p>
-                        <p className="text-lg font-black text-indigo-700">{attempt.score?.toFixed(1) || 0}</p>
+                        <p className="text-lg font-black text-indigo-700">{scoreText}</p>
                       </div>
                       <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
@@ -347,7 +372,7 @@ export default function AttemptHistoryDetailPage() {
                 <div className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</div>
+                <div className="text-xl font-black text-indigo-600">{scoreText}</div>
                 <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm</div>
               </div>
             </div>
@@ -401,7 +426,7 @@ export default function AttemptHistoryDetailPage() {
                 <div className="text-xs text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</div>
+                <div className="text-2xl font-black text-indigo-600">{scoreText}</div>
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
               </div>
             </div>
