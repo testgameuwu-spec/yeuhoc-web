@@ -588,18 +588,24 @@ export default function UserManagement() {
                           )}
                         </div>
                       </div>
-                      {attemptDetails.exam.questions.map((q, i) => (
-                        <div key={q.id || i} className="bg-white rounded-xl overflow-hidden">
-                          <QuestionCard
-                            question={q}
-                            index={i}
-                            selectedAnswer={attemptDetails.answers[q.id] ?? (q.type === 'TF' ? {} : '')}
-                            onAnswerChange={() => {}}
-                            showResult
-                            disabled
-                          />
-                        </div>
-                      ))}
+                      {(() => {
+                        let realQuestionIndex = 0;
+                        return attemptDetails.exam.questions.map((q, i) => {
+                          const displayIndex = q.type === 'TEXT' ? i : realQuestionIndex++;
+                          return (
+                            <div key={q.id || i} className="bg-white rounded-xl overflow-hidden">
+                              <QuestionCard
+                                question={q}
+                                index={displayIndex}
+                                selectedAnswer={attemptDetails.answers[q.id] ?? (q.type === 'TF' ? {} : '')}
+                                onAnswerChange={() => {}}
+                                showResult
+                                disabled
+                              />
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   ) : (
                     <div className="text-center py-16 text-white/40">Không có dữ liệu chi tiết cho bài thi này.</div>

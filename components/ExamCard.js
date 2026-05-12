@@ -62,7 +62,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
   const mcqCount = exam.mcq ?? (exam.questions || []).filter(q => q.type === 'MCQ').length;
   const tfCount = exam.tf ?? (exam.questions || []).filter(q => q.type === 'TF').length;
   const saCount = exam.sa ?? (exam.questions || []).filter(q => q.type === 'SA').length;
-  const totalQ = exam.totalQ || (exam.questions || []).length || 0;
+  const totalQ = exam.totalQ ?? (exam.questions || []).filter(q => q.type !== 'TEXT').length;
 
   const cardClassName = `
     home-box bg-white rounded-2xl border flex flex-col gap-3.5 p-5

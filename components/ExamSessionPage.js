@@ -698,7 +698,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const handleBeginQuiz = () => {
-    if (!activeExam?.questions || activeExam.questions.length === 0) {
+    if (realQuestions.length === 0) {
       showAlert('Thông báo', 'Đề thi này chưa có câu hỏi.');
       return;
     }
@@ -1409,7 +1409,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
               <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('subject')}>📚 {activeExam.subject}</span>
               <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('duration')}>⏱ {activeExam.duration} phút</span>
-              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('questions')}>📝 {questions.length} câu</span>
+              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('questions')}>📝 {realQuestions.length} câu</span>
               {activeExam.examType && <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('meta')}>{activeExam.examType} · {activeExam.year}</span>}
             </div>
             <h1 className="text-xl sm:text-2xl font-bold mb-2 text-gray-800">{activeExam.title}</h1>

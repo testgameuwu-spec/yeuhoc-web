@@ -200,7 +200,8 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
         const { count, error: countError } = await supabase
           .from('questions')
           .select('id', { count: 'exact', head: true })
-          .eq('exam_id', report.exam_id);
+          .eq('exam_id', report.exam_id)
+          .neq('type', 'TEXT');
 
         if (countError) throw countError;
 

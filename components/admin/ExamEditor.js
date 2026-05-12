@@ -48,6 +48,7 @@ export default function ExamEditor({
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasQuestions = questions.length > 0;
+  const realQuestionCount = questions.filter(q => q.type !== 'TEXT').length;
 
   const updatePreset = useCallback((subj, type) => {
     let preset = 'Tuỳ chỉnh';
@@ -313,7 +314,7 @@ export default function ExamEditor({
     onSave({
       id: exam?.id || null,
       title, subject, examType, year, duration, published, note, folderId: folderId === 'root' ? null : folderId,
-      questions, scoringConfig, totalQ: questions.length,
+      questions, scoringConfig, totalQ: realQuestionCount,
       antiCheatEnabled,
     });
     setHasUnsavedChanges(false);
@@ -568,7 +569,7 @@ D. Đáp án D
           {questions.length > 0 ? (
             <>
               <div className="flex items-center justify-between">
-                <p className="text-sm text-white/40">{questions.length} câu hỏi</p>
+                <p className="text-sm text-white/40">{realQuestionCount} câu hỏi</p>
                 <div className="flex items-center gap-2">
                   <button onClick={handleShuffleQuestions}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm font-medium transition-all"
@@ -631,7 +632,7 @@ D. Đáp án D
               {published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               {published ? 'Published' : 'Draft'}
             </button>
-            <span className="text-xs text-white/30">{questions.length} câu · {duration} phút</span>
+            <span className="text-xs text-white/30">{realQuestionCount} câu · {duration} phút</span>
           </div>
           <button onClick={handleSave}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white text-sm font-semibold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/25">

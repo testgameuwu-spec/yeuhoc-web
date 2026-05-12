@@ -7,7 +7,7 @@ import ImageModal from './ImageModal';
 import { Image as ImageIcon, CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
 import { getQuestionResultState } from '@/lib/questionResult';
 
-const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', TF: 'Đúng/Sai', SA: 'Trả lời ngắn' };
+const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', TEXT: 'Ngữ liệu' };
 
 export default function QuestionCard({
     question,
@@ -23,6 +23,8 @@ export default function QuestionCard({
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [showSolution, setShowSolution] = useState(false);
     const { id, type, content, options, answer, solution, image } = question;
+    const isTextBlock = type === 'TEXT';
+    const shouldShowResultStatus = showResult && !isTextBlock;
 
     // ── TF answer stored as object { a: 'D', b: 'S', ... } ──
     const tfAnswer = (type === 'TF' && answer && typeof answer === 'object') ? answer : {};
@@ -32,7 +34,7 @@ export default function QuestionCard({
         onAnswerChange({ ...tfSelected, [stmtKey]: val });
     };
 
-    const resultState = showResult ? getQuestionResultState(question, selectedAnswer) : '';
+    const resultState = shouldShowResultStatus ? getQuestionResultState(question, selectedAnswer) : '';
     const isCorrect = resultState === 'correct';
     const isWrong = resultState === 'wrong';
     const isUnanswered = resultState === 'unanswered';
@@ -44,7 +46,7 @@ export default function QuestionCard({
         <div
             className={`et-q-card ${resultState}`}
             style={
-                showResult && cardBorder
+                shouldShowResultStatus && cardBorder
                     ? {
                         borderColor: cardBorder === 'correct'
                             ? 'var(--et-green)'
@@ -58,7 +60,7 @@ export default function QuestionCard({
             {/* ── Header ── */}
             <div className="et-q-card-hd">
                 <div className="et-q-badge">
-                    <span className="et-q-num-badge">{index + 1}</span>
+                    {!isTextBlock && <span className="et-q-num-badge">{index + 1}</span>}
                     <span className="et-q-type-badge">{TYPE_LABEL[type] || type}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -90,7 +92,7 @@ export default function QuestionCard({
                             <Flag width={18} height={18} fill={isBookmarked ? 'currentColor' : 'none'} />
                         </button>
                     )}
-                    {showResult && (
+                    {shouldShowResultStatus && (
                         <>
                             <span className={`et-result-pill ${resultState}`}>
                                 {isUnanswered ? 'Chưa làm' : isCorrect ? 'Đúng' : 'Sai'}
@@ -207,7 +209,7 @@ export default function QuestionCard({
                 )}
 
                 {/* ── Solution ── */}
-                {showResult && solution && (
+                {showResult && solution && !isTextBlock && (
                     <div style={{ marginTop: 14 }}>
                         <button
                             onClick={() => setShowSolution(!showSolution)}
