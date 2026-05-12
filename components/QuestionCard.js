@@ -519,13 +519,14 @@ function DragQuestion({
                     const letter = String.fromCharCode(65 + index);
                     const isActive = activeLetter === letter;
                     const isUsed = usedLetters.has(letter);
+                    const isOptionDisabled = disabled || isUsed;
                     return (
                         <button
                             key={letter}
                             type="button"
                             className={`et-drag-chip ${isActive ? 'active' : ''} ${isUsed ? 'used' : ''}`}
-                            draggable={!disabled}
-                            disabled={disabled}
+                            draggable={!isOptionDisabled}
+                            disabled={isOptionDisabled}
                             onClick={() => handleOptionClick(letter)}
                             onPointerDown={(event) => handlePointerDown(event, letter)}
                             onPointerMove={handlePointerMove}
@@ -537,7 +538,7 @@ function DragQuestion({
                                 setActiveLetter(letter);
                             }}
                             onDragEnd={() => setActiveLetter(null)}
-                            title={disabled ? '' : 'Kéo hoặc bấm để chọn'}
+                            title={disabled ? '' : isUsed ? 'Đáp án này đã được dùng. Bấm ô trống để xoá trước khi dùng lại.' : 'Kéo hoặc bấm để chọn'}
                         >
                             <span className="et-drag-chip-letter">{letter}</span>
                             <span className="et-drag-chip-text"><MathRenderer text={option} /></span>

@@ -471,7 +471,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
 
               <div>
                 <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">
-                  Đáp án đúng <span className="text-white/15 normal-case">(VD: 1-A, 2-C, 3-D; ô thả trong nội dung viết dạng [[1]])</span>
+                  Đáp án đúng <span className="text-white/15 normal-case">(VD: 1-A, 2-C, 3-D; không lặp chữ cái đáp án; ô thả trong nội dung viết dạng [[1]])</span>
                 </label>
                 <input type="text" value={q.answer || ''} onChange={e => update('answer', e.target.value)}
                   placeholder="1-A, 2-C"

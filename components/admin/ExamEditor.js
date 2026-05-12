@@ -433,7 +433,9 @@ B. Đáp án kéo thả B
 C. Đáp án kéo thả C
 [ANSWER] 1-A, 2-C
 [SOL] Lời giải chi tiết
-====END====`}</pre>
+====END====
+
+Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần trong [ANSWER].`}</pre>
             </div>
           </div>
         </div>

@@ -33,12 +33,12 @@ D. $12$
 [ID] DRAG_001
 [TYPE] DRAG
 [LEVEL] Trung bình
-[CONTENT] Kéo đáp án vào ô trống: Hàm số $y = x^2$ có giá trị nhỏ nhất bằng [[1]] tại $x = [[2]]$.
+[CONTENT] Kéo đáp án vào ô trống: Hàm số $y = x^2$ có giá trị nhỏ nhất bằng [[1]] tại [[2]].
 [OPTIONS]
 A. $0$
-B. $1$
+B. $x = 0$
 C. $-1$
-D. $2$
-[ANSWER] 1-A, 2-A
+D. $x = 2$
+[ANSWER] 1-A, 2-B
 [SOL] Với mọi $x$, ta có $x^2 \ge 0$. Giá trị nhỏ nhất là $0$ tại $x = 0$.
 ====END====

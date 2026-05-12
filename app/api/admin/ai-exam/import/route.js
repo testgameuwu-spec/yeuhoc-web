@@ -49,13 +49,13 @@ Ghi TEXT nếu đây là một đoạn NGỮ CẢNH CHUNG (không có đáp án,
 Với MCQ: Liệt kê các phương án A, B, C, D trên từng dòng.
 Với MA: Liệt kê các phương án A, B, C, D trên từng dòng.
 Với TF: Liệt kê các ý chọn a), b), c), d)... trên từng dòng, giữ đúng số ý của đề.
-Với DRAG: Liệt kê ngân hàng đáp án kéo thả A, B, C... trên từng dòng. Trong [CONTENT], đặt mỗi ô thả bằng placeholder [[1]], [[2]], [[3]] theo thứ tự xuất hiện.
+Với DRAG: Liệt kê ngân hàng đáp án kéo thả A, B, C... trên từng dòng. Trong [CONTENT], đặt mỗi ô thả bằng placeholder [[1]], [[2]], [[3]] theo thứ tự xuất hiện. Mỗi đáp án kéo thả chỉ được dùng cho một ô trống, không tạo đáp án trùng nhau.
 Với SA hoặc TEXT: Ghi "None".
 [ANSWER] Đáp án đúng.
 Với MCQ: Ghi A, B, C hoặc D.
 Với MA: Ghi các đáp án đúng dạng A,C,D.
 Với TF: Ghi định dạng a-Đ, b-S, c-Đ, d-S... (Đ: Đúng, S: Sai), đủ mọi ý trong câu.
-Với DRAG: Ghi mapping placeholder-option dạng 1-A, 2-C, 3-D.
+Với DRAG: Ghi mapping placeholder-option dạng 1-A, 2-C, 3-D; không được lặp lại cùng một chữ cái đáp án trong một câu.
 Với SA: Ghi giá trị cụ thể (ví dụ: 123.45).
 Với TEXT: Bỏ trống hoặc ghi "None".
 [SOL] Lời giải chi tiết (Dùng LaTeX cho công thức).
