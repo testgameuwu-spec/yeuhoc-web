@@ -181,6 +181,12 @@ export default function QuestionCard({
                     </div>
                 )}
 
+                {type === 'MA' && !disabled && Array.isArray(options) && options.length > 0 && (
+                    <div className="et-ma-instruction" role="note">
+                        Lưu ý: Câu này có thể chọn nhiều đáp án. Hãy chọn tất cả đáp án đúng.
+                    </div>
+                )}
+
                 {/* ── MCQ options ── */}
                 {type === 'MCQ' && Array.isArray(options) && options.length > 0 && (
                     <div className="et-mc-opts">

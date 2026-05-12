@@ -598,6 +598,20 @@ html[data-theme='dark'] .home-tone-badge.is-active {
   color: var(--et-gray-800);
 }
 
+.et-ma-instruction {
+  display: inline-flex;
+  align-items: center;
+  margin: -2px 0 12px;
+  padding: 7px 10px;
+  border: 1px solid rgba(79, 70, 229, .22);
+  border-radius: 8px;
+  background: var(--et-blue-lt);
+  color: var(--et-blue);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 /* MC options */
 .et-mc-opts {
   display: flex;
@@ -1744,6 +1758,11 @@ html[data-theme='dark'] .home-tone-badge.is-active {
   line-height: 2;
   margin-bottom: 20px;
 }
+.practice-card-wrap .et-ma-instruction {
+  margin-bottom: 16px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
 .practice-card-wrap .et-mc-opts {
   gap: 10px;
 }
@@ -1925,6 +1944,11 @@ html[data-theme='dark'] .home-tone-badge.is-active {
     font-size: 14px;
     line-height: 1.8;
     margin-bottom: 14px;
+  }
+  .practice-card-wrap .et-ma-instruction {
+    margin-bottom: 12px;
+    padding: 7px 10px;
+    font-size: 12px;
   }
   .practice-card-wrap .et-mc-opt {
     padding: 10px 12px;
