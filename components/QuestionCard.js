@@ -23,7 +23,8 @@ export default function QuestionCard({
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [showSolution, setShowSolution] = useState(false);
     const [activeDragLetter, setActiveDragLetter] = useState(null);
-    const { id, type, content, options, answer, solution, image } = question;
+    const { id, type, content, options, answer, solution, image: rawImage } = question;
+    const image = rawImage && typeof rawImage === 'string' && rawImage.trim() !== '' && rawImage.trim().toLowerCase() !== 'không' && (rawImage.trim().startsWith('/') || rawImage.trim().startsWith('http')) ? rawImage : null;
     const isTextBlock = type === 'TEXT';
     const shouldShowResultStatus = showResult && !isTextBlock;
 

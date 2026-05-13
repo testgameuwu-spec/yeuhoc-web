@@ -46,7 +46,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
 
     if (compact) {
         return (
-            <div className={`font-bold tabular-nums ${warnCls === 'danger' ? 'text-red-500 animate-pulse' : warnCls === 'warn' ? 'text-amber-500' : 'text-indigo-600'}`}>
+            <div className={`font-bold tabular-nums ${warnCls === 'danger' ? 'text-red-500 animate-pulse' : warnCls === 'warn' ? 'text-amber-500' : 'text-indigo-600'}`} style={warnCls ? undefined : { color: 'var(--tsa-timer-color, #4f46e5)' }}>
                 {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
             </div>
         );

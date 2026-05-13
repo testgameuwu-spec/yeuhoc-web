@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, CaretRight, CaretLeft, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk } from '@phosphor-icons/react';
+import { BookOpen, ArrowLeft, CaretRight, CaretLeft, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
@@ -140,6 +140,13 @@ const hasPracticeAnswer = (answer) => {
   return answer !== '';
 };
 
+const isValidImageSrc = (src) => {
+  if (!src || typeof src !== 'string') return false;
+  const trimmed = src.trim();
+  if (trimmed === '' || trimmed.toLowerCase() === 'không') return false;
+  return trimmed.startsWith('/') || trimmed.startsWith('http');
+};
+
 const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, realQuestions }) => {
   const nextAnswers = answers || {};
   const nextRevealed = practiceRevealed || {};
@@ -198,6 +205,24 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [aiChatMounted, setAiChatMounted] = useState(false);
+
+  // Time spent per question tracking
+  const [currentQStartTime, setCurrentQStartTime] = useState(0);
+  const [currentQElapsed, setCurrentQElapsed] = useState(0);
+
+  useEffect(() => {
+    setCurrentQStartTime(Date.now());
+    setCurrentQElapsed(0);
+  }, [currentQ]);
+
+  useEffect(() => {
+    if (quizPhase === 'quiz' && timerRunning) {
+      const interval = setInterval(() => {
+        setCurrentQElapsed(Math.floor((Date.now() - currentQStartTime) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [quizPhase, timerRunning, currentQStartTime]);
 
   // Preview Stats
   const [examStats, setExamStats] = useState(null);
@@ -732,10 +757,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     isSubmittingRef.current = false;
     isAdvancingTsaSectionRef.current = false;
     exitViolationRecordedRef.current = false;
-    setQuizPhase('quiz');
-    setTimerRunning(true);
+    setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
+    setTimerRunning(!isTSA);
     setStartTime(() => Date.now());
-    if (isAntiCheatEnabled) requestFullscreen();
+    if (isAntiCheatEnabled && !isTSA) requestFullscreen();
   };
 
   const handleBeginQuiz = () => {
@@ -767,10 +792,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             isSubmittingRef.current = false;
             isAdvancingTsaSectionRef.current = false;
             exitViolationRecordedRef.current = false;
-            setQuizPhase('quiz');
-            setTimerRunning(true);
+            setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
+            setTimerRunning(!isTSA);
             setStartTime(() => Date.now());
-            if (isAntiCheatEnabled) requestFullscreen();
+            if (isAntiCheatEnabled && !isTSA) requestFullscreen();
           } catch (e) {
             startFreshQuiz();
           }
@@ -847,20 +872,18 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
     const elapsedThisSection = getTsaSectionElapsedSeconds(tsaSectionIndex, savedSecondsLeft);
     const nextSectionIndex = tsaSectionIndex + 1;
-    const nextSection = getTsaSectionByIndex(nextSectionIndex);
 
     setTimerRunning(false);
     setTsaElapsedSeconds(prev => prev + elapsedThisSection);
     setTsaSectionIndex(nextSectionIndex);
-    setCurrentQ(Math.min(nextSection.startIndex, Math.max(realQuestions.length - 1, 0)));
     setSavedSecondsLeft(null);
     setIsPaused(false);
     setShowViolationWarning(false);
-    setTimeout(() => {
-      setTimerRunning(true);
-      isAdvancingTsaSectionRef.current = false;
-      mainRef.current?.scrollTo?.({ top: 0, behavior: 'smooth' });
-    }, 0);
+    
+    // Return to TSA Dashboard Menu
+    setQuizPhase('tsa-menu');
+    isAdvancingTsaSectionRef.current = false;
+    if (isAntiCheatEnabled) exitFullscreen();
   };
 
 
@@ -1285,7 +1308,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     <div className="text-sm leading-relaxed text-gray-700">
                       <MathRenderer text={contextQ.content} />
                     </div>
-                    {contextQ.image && (
+                    {isValidImageSrc(contextQ.image) && (
                       <div className="mt-3">
                         <Image
                           src={contextQ.image}
@@ -1495,187 +1518,174 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   // ── PREVIEW ──
   if (quizPhase === 'preview' && activeExam) {
+    const getRankClass = (i) => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
+
     return (
       <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset} />
-        <div className="flex-1 overflow-y-auto w-full p-4 sm:p-8">
-          <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center shadow-sm">
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('subject')}>📚 {activeExam.subject}</span>
-              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('duration')}>⏱ {isTSA ? TSA_TOTAL_DURATION_MINUTES : activeExam.duration} phút</span>
-              <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('questions')}>📝 {realQuestions.length} câu</span>
-              {activeExam.examType && <span className="et-tag preview-theme-badge" style={getPreviewBadgeStyle('meta')}>{activeExam.examType} · {activeExam.year}</span>}
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold mb-2 text-gray-800">{activeExam.title}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mb-6">
-              Chọn chế độ phù hợp để bắt đầu.
-            </p>
+        <div className="flex-1 overflow-y-auto w-full p-4 sm:p-6">
+          <div className="ep-wrap">
+            <div className="ep-grid">
 
-            {/* Mode selection cards */}
-            <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap', maxWidth: 560, margin: '0 auto 24px' }}>
-              {/* Exam mode card */}
-              <div style={{
-                flex: '1 1 240px', maxWidth: 270, background: 'var(--app-surface)', border: '2px solid #e0e7ff',
-                borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
-                transition: 'all .2s', position: 'relative'
-              }}
-                onClick={handleBeginQuiz}
-                onMouseOver={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(99,102,241,.15)'; }}
-                onMouseOut={e => { e.currentTarget.style.borderColor = '#e0e7ff'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <div style={{ fontSize: 32, marginBottom: 8 }}>{isAntiCheatEnabled ? '🔒' : '📝'}</div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--app-text)', marginBottom: 6 }}>Làm bài thi</div>
-                <p style={{ fontSize: 12, color: 'var(--app-muted)', lineHeight: 1.6, margin: 0 }}>
-                  {isAntiCheatEnabled
-                    ? 'Tính thời gian, toàn màn hình, chống gian lận. Kết quả được lưu lại.'
-                    : 'Tính thời gian, không chống gian lận. Kết quả được lưu lại.'}
-                </p>
-                <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <span className="preview-theme-badge" style={getPreviewBadgeStyle('duration')}>⏱ Giới hạn thời gian</span>
-                  {isAntiCheatEnabled && (
-                    <span className="preview-theme-badge" style={getPreviewBadgeStyle('fullscreen')}>🔒 Fullscreen</span>
-                  )}
+              {/* ── LEFT PANEL (sticky) ── */}
+              <div className="ep-left">
+
+                {/* Hero Banner */}
+                <div className="ep-hero">
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
+                    <span className="ep-hero-badge">📚 {activeExam.subject}</span>
+                    {activeExam.examType && (
+                      <span className="ep-hero-badge">{activeExam.examType} · {activeExam.year}</span>
+                    )}
+                  </div>
+                  <h1>{activeExam.title}</h1>
+                  <div className="ep-hero-meta">
+                    <span><Clock weight="bold" size={15} /> {activeExam.duration} phút</span>
+                    <span>📝 {realQuestions.length} câu</span>
+                    {examStats && <span><Users weight="bold" size={15} /> {examStats.totalParticipants} lượt thi</span>}
+                  </div>
                 </div>
-              </div>
 
-              {/* Practice mode card */}
-              <div style={{
-                flex: '1 1 240px', maxWidth: 270, background: 'var(--app-surface)', border: '2px solid #d1fae5',
-                borderRadius: 16, padding: '24px 20px', textAlign: 'center', cursor: 'pointer',
-                transition: 'all .2s', position: 'relative'
-              }}
-                onClick={handleStartPractice}
-                onMouseOver={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(16,185,129,.15)'; }}
-                onMouseOut={e => { e.currentTarget.style.borderColor = '#d1fae5'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--app-text)', marginBottom: 6 }}>Ôn luyện</div>
-                <p style={{ fontSize: 12, color: 'var(--app-muted)', lineHeight: 1.6, margin: 0 }}>
-                  Từng câu một, xem đáp án ngay. Không giới hạn thời gian, thoải mái học.
-                </p>
-                <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <span className="preview-theme-badge" style={getPreviewBadgeStyle('questions')}>✅ Đáp án tức thì</span>
-                  <span className="preview-theme-badge" style={getPreviewBadgeStyle('calm')}>🧘 Không áp lực</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Preview Statistics & Leaderboard */}
-            <div className="mt-12 text-left">
-              {loadingPreviewStats ? (
-                <div className="flex flex-col items-center justify-center py-10">
-                  <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                  <p className="mt-4 text-sm text-gray-500 font-medium animate-pulse">Đang tải dữ liệu thống kê...</p>
-                </div>
-              ) : examStats ? (
-                <div className="space-y-8 animate-fadeIn">
-
-                  {/* --- Thống kê --- */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <ChartBar weight="duotone" className="w-5 h-5 text-indigo-600" />
-                      <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Chi tiết thống kê</h3>
+                {/* Mode Buttons */}
+                <button className="ep-mode-btn is-exam" onClick={handleBeginQuiz}>
+                  <div className="ep-mode-icon is-exam">
+                    {isAntiCheatEnabled ? <Lock weight="duotone" size={22} /> : <Exam weight="duotone" size={22} />}
+                  </div>
+                  <div className="ep-mode-body">
+                    <div className="ep-mode-title">Làm bài thi</div>
+                    <div className="ep-mode-desc">
+                      {isAntiCheatEnabled
+                        ? 'Toàn màn hình · Chống gian lận · Tính giờ'
+                        : 'Tính thời gian · Lưu kết quả'}
                     </div>
-                    <div className="flex bg-white border border-gray-200/60 rounded-xl overflow-hidden shadow-sm">
-                      <div className="bg-indigo-600 text-white w-12 flex items-center justify-center shrink-0">
-                        <span className="font-bold tracking-widest text-sm" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CHI TIẾT</span>
+                  </div>
+                  <CaretRight weight="bold" size={18} className="ep-mode-arrow" />
+                </button>
+
+                <button className="ep-mode-btn is-practice" onClick={handleStartPractice}>
+                  <div className="ep-mode-icon is-practice">
+                    <BookOpen weight="duotone" size={22} />
+                  </div>
+                  <div className="ep-mode-body">
+                    <div className="ep-mode-title">Ôn luyện</div>
+                    <div className="ep-mode-desc">Xem đáp án ngay · Không giới hạn thời gian · AI hỗ trợ</div>
+                  </div>
+                  <CaretRight weight="bold" size={18} className="ep-mode-arrow" />
+                </button>
+
+                {/* Exam Rules */}
+                <div className="ep-rules">
+                  <div className="ep-rules-title">Lưu ý khi làm bài</div>
+                  <ul>
+                    <li>Thời gian làm bài: {activeExam.duration} phút</li>
+                    <li>Tổng số câu hỏi: {realQuestions.length} câu</li>
+                    {isAntiCheatEnabled && <li>Bài thi yêu cầu toàn màn hình, thoát sẽ bị tính vi phạm</li>}
+                    {isAntiCheatEnabled && <li>Vi phạm {MAX_VIOLATIONS} lần sẽ tự động nộp bài</li>}
+                    <li>Kết quả sẽ được lưu lại và xếp hạng</li>
+                    <li>Có thể tạm dừng và tiếp tục làm bài sau</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* ── RIGHT PANEL (scrollable) ── */}
+              <div className="ep-right">
+
+                {/* Stats Section */}
+                {loadingPreviewStats ? (
+                  <div className="ep-loading">
+                    <div className="ep-spinner" />
+                    <p style={{ marginTop: 12, fontSize: 13, fontWeight: 500, color: 'var(--app-muted)' }}>Đang tải dữ liệu...</p>
+                  </div>
+                ) : examStats ? (
+                  <>
+                    <div>
+                      <div className="ep-stats-header">
+                        <ChartBar weight="duotone" size={18} style={{ color: '#6366f1' }} />
+                        <h3>Thống kê</h3>
                       </div>
-                      <div className="flex-1 p-4 grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50/50">
-                        {/* Hàng 1 */}
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Tổng thí sinh</div>
-                          <div className="text-2xl font-black text-indigo-900">{examStats.totalParticipants} <span className="text-xs font-normal text-gray-400">(Thí sinh tham gia)</span></div>
+                      <div className="ep-stat-grid">
+                        <div className="ep-stat-tile">
+                          <div className="ep-stat-icon indigo"><Users weight="duotone" size={18} /></div>
+                          <div className="ep-stat-body">
+                            <div className="ep-stat-label">Thí sinh</div>
+                            <div className="ep-stat-value">{examStats.totalParticipants}</div>
+                          </div>
                         </div>
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Điểm trung bình</div>
-                          <div className="text-2xl font-black text-indigo-900">{examStats.avgScore} <span className="text-xs font-normal text-gray-400">(Điểm)</span></div>
+                        <div className="ep-stat-tile">
+                          <div className="ep-stat-icon violet"><ChartBar weight="duotone" size={18} /></div>
+                          <div className="ep-stat-body">
+                            <div className="ep-stat-label">Điểm trung bình</div>
+                            <div className="ep-stat-value">{examStats.avgScore}</div>
+                          </div>
                         </div>
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Điểm trung vị</div>
-                          <div className="text-2xl font-black text-indigo-900">{examStats.medianScore} <span className="text-xs font-normal text-gray-400">(Điểm)</span></div>
+                        <div className="ep-stat-tile">
+                          <div className="ep-stat-icon blue"><Medal weight="duotone" size={18} /></div>
+                          <div className="ep-stat-body">
+                            <div className="ep-stat-label">Điểm trung vị</div>
+                            <div className="ep-stat-value">{examStats.medianScore}</div>
+                          </div>
                         </div>
-                        <div className="bg-white p-4 border border-gray-100 rounded-lg shadow-sm">
-                          <div className="text-xs text-gray-500 font-medium mb-1">Thời gian làm bài tb</div>
-                          <div className="text-xl font-black text-indigo-900">
-                            {Math.floor(examStats.avgTime / 60)} <span className="text-sm font-medium text-gray-500">Phút</span> {examStats.avgTime % 60} <span className="text-sm font-medium text-gray-500">Giây</span>
+                        <div className="ep-stat-tile">
+                          <div className="ep-stat-icon sky"><Clock weight="duotone" size={18} /></div>
+                          <div className="ep-stat-body">
+                            <div className="ep-stat-label">Thời gian TB</div>
+                            <div className="ep-stat-value">
+                              {Math.floor(examStats.avgTime / 60)}<span className="ep-stat-unit">p</span>{' '}
+                              {examStats.avgTime % 60}<span className="ep-stat-unit">s</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* --- Bảng xếp hạng --- */}
-                  {examLeaderboard.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <Medal weight="duotone" className="w-5 h-5 text-amber-500" />
-                        <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Bảng xếp hạng (Top 10)</h3>
-                      </div>
-                      <div className="bg-white border border-gray-200/60 rounded-xl overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm text-left">
-                            <thead className="bg-[#1f4e79] text-white text-xs font-semibold uppercase tracking-wider">
-                              <tr>
-                                <th className="px-4 py-3 text-center w-12">Stt</th>
-                                <th className="px-4 py-3 text-center w-16">Ảnh</th>
-                                <th className="px-4 py-3">Tên học sinh</th>
-                                <th className="px-4 py-3 text-center">Điểm thi</th>
-                                <th className="px-4 py-3 text-center">Ngày thi</th>
-                                <th className="px-4 py-3 text-right">Thời gian làm bài</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                              {examLeaderboard.map((attempt, index) => (
-                                <tr key={attempt.id} className="hover:bg-gray-50 transition-colors">
-                                  <td className="px-4 py-3 text-center">
-                                    <div className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center text-xs font-bold text-white
-                                      ${index === 0 ? 'bg-amber-500 shadow-md shadow-amber-500/20' :
-                                        index === 1 ? 'bg-slate-400 shadow-md shadow-slate-400/20' :
-                                          index === 2 ? 'bg-amber-700 shadow-md shadow-amber-700/20' : 'bg-gray-300'}
-                                    `}>
-                                      {index + 1}
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {attempt.profiles?.avatar_url ? (
-                                      <Image
-                                        src={attempt.profiles.avatar_url}
-                                        alt="Avatar"
-                                        width={48}
-                                        height={48}
-                                        sizes="48px"
-                                        className="w-12 h-12 rounded-full mx-auto object-cover ring-2 ring-gray-100 aspect-square shrink-0"
-                                        style={{ minWidth: '48px', minHeight: '48px' }}
-                                      />
-                                    ) : (
-                                      <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto font-bold text-sm aspect-square shrink-0" style={{ minWidth: '48px', minHeight: '48px' }}>
-                                        {(attempt.profiles?.full_name || 'U').charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className={`px-4 py-3 font-semibold ${index < 3 ? 'text-indigo-600' : 'text-gray-700'}`}>
-                                    {attempt.profiles?.full_name || 'Học sinh ẩn danh'}
-                                  </td>
-                                  <td className={`px-4 py-3 text-center font-bold ${index < 3 ? 'text-red-500' : 'text-gray-900'}`}>
-                                    {attempt.score.toFixed(2)}
-                                  </td>
-                                  <td className="px-4 py-3 text-center text-gray-500 text-xs font-medium">
-                                    {new Date(attempt.created_at).toLocaleDateString('vi-VN')}
-                                  </td>
-                                  <td className="px-4 py-3 text-right text-gray-600 font-medium">
-                                    {Math.floor(attempt.time_spent / 60)} phút {attempt.time_spent % 60} giây
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                    {/* Leaderboard */}
+                    {examLeaderboard.length > 0 && (
+                      <div>
+                        <div className="ep-lb-header">
+                          <Medal weight="duotone" size={18} style={{ color: '#d97706' }} />
+                          <h3>Bảng xếp hạng</h3>
+                        </div>
+                        <div className="ep-lb-list">
+                          {examLeaderboard.map((attempt, index) => (
+                            <div key={attempt.id} className="ep-lb-item">
+                              <div className={`ep-rank ${getRankClass(index)}`}>{index + 1}</div>
+                              {attempt.profiles?.avatar_url ? (
+                                <Image
+                                  src={attempt.profiles.avatar_url}
+                                  alt="Avatar"
+                                  width={36}
+                                  height={36}
+                                  sizes="36px"
+                                  className="ep-lb-avatar"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="ep-lb-avatar-fallback">
+                                  {(attempt.profiles?.full_name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="ep-lb-info">
+                                <div className="ep-lb-name">{attempt.profiles?.full_name || 'Học sinh ẩn danh'}</div>
+                                <div className="ep-lb-date">{new Date(attempt.created_at).toLocaleDateString('vi-VN')}</div>
+                              </div>
+                              <div className="ep-lb-score">
+                                <div className="ep-lb-score-val">{attempt.score.toFixed(2)}</div>
+                                <div className="ep-lb-score-time">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </>
+                ) : (
+                  <div className="ep-empty">
+                    <div className="ep-empty-icon">📊</div>
+                    <div className="ep-empty-text">Chưa có dữ liệu thống kê. Hãy là người đầu tiên làm bài!</div>
+                  </div>
+                )}
 
-                </div>
-              ) : null}
+              </div>
             </div>
           </div>
         </div>
@@ -1685,6 +1695,435 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   }
 
   // ── QUIZ (2-column layout) ──
+  // ── TSA MENU (Danh sách bài thi) ──
+  if (quizPhase === 'tsa-menu' && activeExam && isTSA) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#fdfdfd', fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+        {/* Simple Top Header */}
+        <div style={{ height: 60, borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', padding: '0 24px', background: '#fff' }}>
+          <div style={{ fontWeight: 800, fontSize: 18, color: '#dc2626', letterSpacing: -0.5 }}>TSA<span style={{ fontWeight: 400, color: '#f87171' }}>'</span></div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto w-full p-4 sm:p-8">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-2xl sm:text-3xl font-black mb-2 text-gray-900 text-center">{activeExam.title}</h1>
+            <div className="flex justify-center gap-2 mb-8">
+              <span className="px-3 py-1 rounded-md bg-green-50 text-green-600 border border-green-200 text-xs font-semibold">Miễn phí</span>
+              <span className="px-3 py-1 rounded-md bg-green-50 text-green-600 border border-green-200 text-xs font-semibold">Tự do</span>
+            </div>
+
+            <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 mb-8 flex flex-col gap-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Họ và tên:</span>
+                <span className="font-semibold text-gray-900">{user?.user_metadata?.full_name || 'Học sinh ẩn danh'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Mã định danh:</span>
+                <span className="font-semibold text-gray-900">{user?.id?.split('-')[0]?.toUpperCase() || 'UNKNOWN'}</span>
+              </div>
+              <div className="flex justify-between text-sm items-center mt-1 pt-2 border-t border-gray-100">
+                <span className="text-gray-500">Trạng thái tài khoản</span>
+                <span className="px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-200 text-xs font-semibold">Miễn phí</span>
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Danh sách bài thi</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+              {TSA_SECTIONS.map((section, idx) => {
+                const isPast = idx < tsaSectionIndex;
+                const isCurrent = idx === tsaSectionIndex;
+                const isFuture = idx > tsaSectionIndex;
+                
+                let statusText = 'Chưa thi';
+                let statusColor = 'text-[#43A047] font-semibold'; // Green for Chưa thi
+                if (isPast) {
+                  statusText = 'Đã thi';
+                  statusColor = 'text-gray-400 font-semibold';
+                } else if (isCurrent && savedSecondsLeft !== null) {
+                  statusText = 'Đang thi';
+                  statusColor = 'text-amber-500 font-semibold';
+                }
+
+                return (
+                  <div key={idx} className={`p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${idx < TSA_SECTIONS.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div>
+                      <div className="text-[17px] font-bold text-[#D32F2F] mb-1.5">{idx + 1}. {section.name}</div>
+                      <div className="text-[13px] text-gray-800 flex flex-col gap-1">
+                        <div><span className="font-semibold">Giờ mở kíp:</span> 00:00 01/01/2026 – 23:59 31/12/2026</div>
+                        <div>
+                           <span className="font-semibold">Thời gian:</span> {section.durationMinutes} phút
+                           <span className="mx-2 text-gray-300">|</span>
+                           <span className="font-semibold">Trạng thái: </span> <span className={statusColor}>{statusText}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                       {isPast ? (
+                         <button disabled className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-gray-100 text-gray-400 font-bold text-sm border border-gray-200 cursor-not-allowed">Đã thi</button>
+                       ) : isFuture ? (
+                         <button disabled className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-white text-[#1976D2] font-bold text-sm border border-[#1976D2] opacity-50 cursor-not-allowed">Tiếp tục</button>
+                       ) : (
+                         <button onClick={() => {
+                            setCurrentQ(Math.min(section.startIndex, Math.max(realQuestions.length - 1, 0)));
+                            setQuizPhase('quiz');
+                            setTimerRunning(true);
+                            if (isAntiCheatEnabled) requestFullscreen();
+                         }} className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-[#D32F2F] hover:bg-red-700 text-white font-bold text-sm shadow-sm transition-colors">
+                           {savedSecondsLeft !== null ? 'Tiếp tục' : 'Bắt đầu'}
+                         </button>
+                       )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-8 flex justify-between items-center pb-12">
+               <button onClick={handleReset} className="flex items-center gap-2 text-[#D32F2F] font-semibold hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">
+                  <CaretLeft weight="bold" /> Quay lại
+               </button>
+               {tsaSectionIndex >= TSA_SECTIONS.length ? (
+                 <button onClick={() => handleSubmit()} className="flex items-center gap-2 text-[#D32F2F] font-bold hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">
+                    Hoàn thành kíp thi <CaretRight weight="bold" />
+                 </button>
+               ) : (
+                 <button disabled className="flex items-center gap-2 text-gray-300 font-bold px-4 py-2 rounded-lg cursor-not-allowed">
+                    Hoàn thành kíp thi <CaretRight weight="bold" />
+                 </button>
+               )}
+            </div>
+          </div>
+        </div>
+        {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+      </div>
+    );
+  }
+
+  // ── QUIZ (TSA UI Layout) ──
+  if (quizPhase === 'quiz' && activeExam && isTSA) {
+    const quizQuestionEntries = tsaSectionQuestionEntries;
+    const quizAnsweredCount = quizQuestionEntries.filter(({ q }) => hasPracticeAnswer(answers[q.id])).length;
+    const bookmarkedCount = quizQuestionEntries.filter(({ q }) => bookmarks.has(q.id)).length;
+    const unansweredCount = quizQuestionEntries.length - quizAnsweredCount;
+    const quizSecondsLeft = savedSecondsLeft ?? (activeQuizDuration * 60);
+
+    const confirmSubmit = () => {
+      const msg = unansweredCount > 0
+        ? `⚠️ CẢNH BÁO: Bạn còn ${unansweredCount} câu chưa làm!\n\nBạn đã trả lời ${quizAnsweredCount}/${quizQuestionEntries.length} câu. Bạn có chắc chắn muốn nộp phần này?`
+        : `Bạn đã trả lời ${quizAnsweredCount}/${quizQuestionEntries.length} câu. Bạn có chắc chắn muốn nộp phần này?`;
+      showConfirm('Xác nhận nộp bài', msg, () => handleSubmitTsaSection());
+    };
+
+    const currentQuestionObj = realQuestions[currentQ];
+    const pct = quizQuestionEntries.length > 0 ? Math.round((quizAnsweredCount / quizQuestionEntries.length) * 100) : 0;
+
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-white select-none tsa-exam-root" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+        {/* Header Bar */}
+        <div className="tsa-header h-16 border-b border-gray-200 flex items-center px-4 sm:px-6 shrink-0 justify-between bg-white z-10 relative shadow-sm">
+           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+             <div className="shrink-0" style={{ fontWeight: 900, fontSize: 20, color: '#D32F2F', letterSpacing: -1 }}>TSA<span style={{ color: '#D32F2F' }}>&apos;</span></div>
+             <div className="font-bold text-gray-800 text-[13px] sm:text-[15px] border-l-2 border-gray-200 pl-2 sm:pl-4 truncate">{currentTsaSection.name}</div>
+           </div>
+           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+             {/* Mobile timer */}
+             <div className="tsa-mobile-timer font-mono font-black text-[20px] tracking-tight" style={{ '--tsa-timer-color': '#E53935' }}>
+               <Timer key={`tsa-m-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={() => {}} onTimeUp={() => {}} isRunning={timerRunning} />
+             </div>
+             {/* Mobile sidebar toggle */}
+             <button onClick={() => { const el = document.querySelector('.tsa-sidebar'); el?.classList.toggle('tsa-sidebar-open'); }} className="tsa-sidebar-toggle w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+             </button>
+           </div>
+        </div>
+
+        {/* Main Layout */}
+        <div className="tsa-body flex flex-1 overflow-hidden relative">
+          
+          {/* Violation Warning Overlay (Keep functionality from old design) */}
+          {showViolationWarning && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 200,
+              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+              background: 'rgba(220, 38, 38, 0.08)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 16, padding: 24,
+            }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+              <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: '#dc2626', textAlign: 'center' }}>Cảnh báo vi phạm!</h2>
+              <p style={{ color: '#991b1b', marginBottom: 8, fontSize: 15, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
+                Bạn đã thoát khỏi chế độ toàn màn hình hoặc chuyển tab. Đây là hành vi không được phép trong khi thi.
+              </p>
+              <div style={{
+                background: violationCount >= 4 ? '#fef2f2' : '#fefce8',
+                border: `1px solid ${violationCount >= 4 ? '#fecaca' : '#fef08a'}`,
+                borderRadius: 12, padding: '12px 20px', marginBottom: 24,
+                fontSize: 14, fontWeight: 700, textAlign: 'center',
+                color: violationCount >= 4 ? '#dc2626' : '#92400e',
+              }}>
+                Lần vi phạm: <span style={{ fontSize: 20 }}>{violationCount}</span> / {MAX_VIOLATIONS}
+                {violationCount >= 4 && <div style={{ fontSize: 12, fontWeight: 500, marginTop: 4 }}>⚠ Lần vi phạm tiếp theo sẽ tự động nộp bài!</div>}
+              </div>
+              <button onClick={handleDismissViolationWarning} style={{
+                padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: '#dc2626', color: '#fff', fontSize: 15, fontWeight: 700,
+                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)',
+                display: 'flex', alignItems: 'center', gap: 8,
+                transition: 'background 0.2s',
+              }}>
+                🔒 {canFullscreen ? 'Quay lại làm bài (Toàn màn hình)' : 'Quay lại làm bài'}
+              </button>
+            </div>
+          )}
+
+          {/* Content Area */}
+          <div className="flex-1 flex flex-col relative bg-white">
+             <div ref={mainRef} className="flex-1 overflow-y-auto p-8 pb-24 text-black">
+                <div className="max-w-6xl mx-auto">
+                   {(() => {
+                     const contextQ = currentQuestionObj?.linkedTo ? questions.find(x => x.id === currentQuestionObj.linkedTo && x.type === 'TEXT') : null;
+                     // Get ALL sibling questions sharing the same context
+                     const groupQuestions = contextQ ? realQuestions.filter(x => x.linkedTo === contextQ.id) : null;
+
+                     // Helper to render one question's answer input
+                     const renderAnswerInput = (qObj, qIndex) => {
+                       const tfSel = (qObj.type === 'TF' && typeof answers[qObj.id] === 'object') ? answers[qObj.id] : {};
+                       const maSel = qObj.type === 'MA' ? (Array.isArray(answers[qObj.id]) ? answers[qObj.id] : []) : [];
+
+                       return (
+                         <div key={qObj.id} className="mb-8 last:mb-0">
+                           {/* Question header */}
+                           <div className="flex items-start gap-4 mb-4">
+                             <div className="w-8 h-8 rounded-full bg-[#f1f5f9] flex items-center justify-center font-bold text-gray-700 shrink-0 text-sm border border-gray-200">
+                               {qIndex - currentTsaSection.startIndex + 1}
+                             </div>
+                             <div className="flex-1 text-[16px] text-gray-900 leading-[1.7]">
+                               <MathRenderer text={qObj.content} />
+                               {isValidImageSrc(qObj.image) && (
+                                 <div className="mt-3 border border-gray-100 rounded-xl p-2 inline-block">
+                                   <img src={qObj.image} alt="" className="max-w-full max-h-[350px] object-contain rounded-lg" />
+                                 </div>
+                               )}
+                             </div>
+                             <button
+                               onClick={() => { const next = new Set(bookmarks); if (next.has(qObj.id)) next.delete(qObj.id); else next.add(qObj.id); setBookmarks(next); }}
+                               className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors border ${bookmarks.has(qObj.id) ? 'bg-[#e3f2fd] border-[#90caf9] text-[#1976D2]' : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'}`}
+                             >
+                               <svg viewBox="0 0 24 24" fill={bookmarks.has(qObj.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                             </button>
+                           </div>
+                           {/* Answer */}
+                           <div className="ml-12">
+                             {qObj.type === 'MCQ' && (
+                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-10">
+                                 {(qObj.options || []).map((opt, i) => {
+                                   const letter = String.fromCharCode(65 + i);
+                                   const isSelected = answers[qObj.id] === letter;
+                                   return (
+                                     <label key={i} onClick={() => handleAnswerChange(qObj.id, letter)} className={`flex items-start gap-3 cursor-pointer group p-3 rounded-xl border transition-colors ${isSelected ? 'border-[#1976D2] bg-[#f8faff]' : 'border-transparent hover:border-gray-200 hover:bg-gray-50'}`}>
+                                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors ${isSelected ? 'border-[#1976D2] bg-[#1976D2]' : 'border-gray-300 group-hover:border-gray-400'}`}>
+                                         {isSelected && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                                       </div>
+                                       <div className="flex-1 text-gray-800 text-[15px] leading-relaxed"><MathRenderer text={opt} /></div>
+                                     </label>
+                                   );
+                                 })}
+                               </div>
+                             )}
+                             {qObj.type === 'MA' && (
+                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-10">
+                                 {(qObj.options || []).map((opt, i) => {
+                                   const letter = String.fromCharCode(65 + i);
+                                   const isSelected = maSel.includes(letter);
+                                   return (
+                                     <label key={i} onClick={() => { const s = new Set(maSel); if (s.has(letter)) s.delete(letter); else s.add(letter); handleAnswerChange(qObj.id, [...s].sort()); }} className={`flex items-start gap-3 cursor-pointer group p-3 rounded-xl border transition-colors ${isSelected ? 'border-[#1976D2] bg-[#f8faff]' : 'border-transparent hover:border-gray-200 hover:bg-gray-50'}`}>
+                                       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors ${isSelected ? 'border-[#1976D2] bg-[#1976D2]' : 'border-gray-300 group-hover:border-gray-400'}`}>
+                                         {isSelected && <svg viewBox="0 0 10 10" className="w-3 h-3"><polyline points="1,5 4,8 9,2" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>}
+                                       </div>
+                                       <div className="flex-1 text-gray-800 text-[15px] leading-relaxed"><MathRenderer text={opt} /></div>
+                                     </label>
+                                   );
+                                 })}
+                               </div>
+                             )}
+                             {qObj.type === 'TF' && qObj.statements && (
+                               <table className="w-full border-collapse">
+                                 <thead><tr><th className="text-left py-2 px-3 text-sm font-bold text-gray-700 border-b border-gray-200">Phát biểu</th><th className="py-2 px-3 text-sm font-bold text-gray-700 border-b border-gray-200 w-16 text-center">Đúng</th><th className="py-2 px-3 text-sm font-bold text-gray-700 border-b border-gray-200 w-16 text-center">Sai</th></tr></thead>
+                                 <tbody>{qObj.statements.map((stmt, si) => { const sKey = si < 26 ? String.fromCharCode(97 + si) : String(si + 1); const sVal = tfSel[sKey]; const radio = (val) => (<button onClick={() => handleAnswerChange(qObj.id, { ...tfSel, [sKey]: val })} className={`w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors ${sVal === val ? 'border-[#1976D2] bg-[#1976D2]' : 'border-gray-300 hover:border-gray-400'}`}>{sVal === val && <svg viewBox="0 0 10 10" className="w-3 h-3"><polyline points="1,5 4,8 9,2" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>}</button>); return (<tr key={si} className="border-b border-gray-100"><td className="py-3 px-3 text-sm text-gray-800"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 mr-2">{sKey}</span><MathRenderer text={stmt.text || stmt} /></td><td className="py-3 px-3 text-center">{radio('D')}</td><td className="py-3 px-3 text-center">{radio('S')}</td></tr>); })}</tbody>
+                               </table>
+                             )}
+                             {qObj.type === 'SA' && (
+                               <div>
+                                 <div className="text-sm text-[#D32F2F] font-medium mb-2">Đáp án cần điền là: _______</div>
+                                 <input type="text" value={answers[qObj.id] ?? ''} onChange={e => handleAnswerChange(qObj.id, e.target.value)} placeholder="Nhập đáp án của bạn..." className="w-full max-w-md px-4 py-3 border border-gray-200 rounded-xl text-gray-900 text-base focus:outline-none focus:border-[#1976D2] focus:ring-2 focus:ring-blue-100 transition-all" />
+                               </div>
+                             )}
+                             {qObj.type === 'DRAG' && (
+                               <div className="tsa-drag-wrap"><QuestionCard question={qObj} index={qIndex} selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)} onAnswerChange={(val) => handleAnswerChange(qObj.id, val)} disabled={false} /></div>
+                             )}
+                           </div>
+                         </div>
+                       );
+                     };
+
+                     // GROUPED: Context + all child questions
+                     if (contextQ && groupQuestions) {
+                       return (
+                         <div className="tsa-content-split flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+                           <div className="tsa-context-panel w-full sm:w-[55%] sm:sticky sm:top-0 sm:self-start sm:max-h-[calc(100vh-180px)] overflow-y-auto">
+                             <div className="bg-[#f8f9fa] border border-gray-200 rounded-xl p-6">
+                               <div className="flex items-center gap-2 mb-3">
+                                 <BookOpen weight="duotone" className="w-4 h-4 text-gray-500" />
+                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ngữ liệu</span>
+                               </div>
+                               <div className="text-[15px] leading-relaxed text-gray-700">
+                                 <MathRenderer text={contextQ.content} />
+                               </div>
+                               {isValidImageSrc(contextQ.image) && (
+                                 <div className="mt-3"><img src={contextQ.image} alt="" className="rounded-xl max-h-[400px] w-auto max-w-full object-contain" /></div>
+                               )}
+                             </div>
+                           </div>
+                           <div className="tsa-questions-panel w-full sm:w-[45%]">
+                             {groupQuestions.map(gq => {
+                               const gIdx = realQuestions.findIndex(r => r.id === gq.id);
+                               return renderAnswerInput(gq, gIdx >= 0 ? gIdx : 0);
+                             })}
+                           </div>
+                         </div>
+                       );
+                     }
+
+                     // SINGLE question (no context)
+                     return renderAnswerInput(currentQuestionObj, currentQ);
+                   })()}
+                </div>
+             </div>
+
+             {/* Bottom Bar */}
+             <div className="tsa-bottombar absolute bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-between px-8 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+                <div className="flex items-center gap-4">
+                   <button 
+                      onClick={() => setCurrentQ(Math.max(currentTsaSection.startIndex, currentQ - 1))}
+                      disabled={currentQ <= currentTsaSection.startIndex}
+                      className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 disabled:opacity-50 hover:bg-gray-200 transition-colors"
+                   >
+                      <CaretLeft weight="bold" />
+                   </button>
+                   <button 
+                      onClick={() => {
+                        const isLastQ = currentQ >= currentTsaSection.endIndex - 1;
+                        if (isLastQ) {
+                           confirmSubmit();
+                        } else {
+                           setCurrentQ(currentQ + 1);
+                        }
+                      }}
+                      className="px-6 h-10 rounded-lg bg-[#1A237E] hover:bg-blue-900 text-white font-bold transition-colors flex items-center gap-2"
+                   >
+                      Câu tiếp <CaretRight weight="bold" />
+                   </button>
+                   
+                   <div className="ml-4 text-xs font-medium text-gray-500">
+                      Thời gian làm câu hiện tại: <span className="font-bold text-gray-700 font-mono text-[13px]">{formatClock(currentQElapsed)}</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Right Sidebar */}
+          <div className="tsa-sidebar w-[320px] bg-white border-l border-gray-200 shrink-0 flex flex-col h-full overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.03)] z-10 relative">
+             <div className="p-6 flex-1 overflow-y-auto">
+                {/* Thông tin thí sinh */}
+                <div className="mb-8">
+                   <h3 className="font-bold text-gray-800 mb-3 text-sm flex items-center gap-2"><div className="w-1 h-3.5 bg-[#D32F2F] rounded-full"></div> Thông tin thí sinh</h3>
+                   <div className="flex flex-col gap-2.5 text-[13px]">
+                      <div className="flex justify-between items-center">
+                         <span className="text-gray-500">Họ tên</span>
+                         <span className={`font-semibold py-0.5 px-2 rounded-md ${!user?.user_metadata?.full_name ? 'bg-red-50 text-[#D32F2F] border border-red-200' : 'text-gray-900 bg-gray-50'}`}>
+                            {user?.user_metadata?.full_name || 'Chưa điền'}
+                         </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                         <span className="text-gray-500">Ngày sinh</span>
+                         <span className="font-medium text-gray-800">Chưa xác định</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                         <span className="text-gray-500">Mã dự thi</span>
+                         <span className="font-medium text-gray-800">Thí sinh tự do</span>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Timer & Submit */}
+                <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-100">
+                   <div>
+                      <div className="text-[11px] font-semibold text-gray-500 mb-1">Thời gian còn lại</div>
+                      <div className="text-[32px] font-black tracking-tight leading-none font-mono" style={{ '--tsa-timer-color': '#E53935' }}>
+                         <Timer key={`tsa-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+                      </div>
+                   </div>
+                   <button onClick={confirmSubmit} className="bg-[#D32F2F] hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-lg shadow-md transition-colors flex items-center gap-2 text-sm">
+                      Nộp bài
+                   </button>
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-3 mb-5 text-[11px] font-semibold text-gray-500 flex-wrap">
+                   <span>Chỉ thị:</span>
+                   <div className="flex items-center gap-1.5"><div className="w-[16px] h-[16px] rounded-full bg-[#1976D2] text-white flex items-center justify-center text-[8px]">{quizAnsweredCount}</div><span>Đã làm</span></div>
+                   <div className="flex items-center gap-1.5"><div className="w-[16px] h-[16px] rounded-full bg-[#F57C00] text-white flex items-center justify-center text-[8px]">{bookmarkedCount}</div><span>Đánh dấu</span></div>
+                   <div className="flex items-center gap-1.5"><div className="w-[16px] h-[16px] rounded-full bg-white border border-gray-200 text-gray-400 flex items-center justify-center text-[8px]">{unansweredCount}</div><span>Chưa làm</span></div>
+                </div>
+
+                {/* Grid */}
+                <div className="grid grid-cols-6 gap-2">
+                   {quizQuestionEntries.map(({ q, i }) => {
+                      const isAnswered = hasPracticeAnswer(answers[q.id]);
+                      const isBookmarked = bookmarks.has(q.id);
+                      const isCurrent = i === currentQ;
+                      let bgClass = "bg-white border-gray-200 text-gray-500 hover:border-gray-400";
+                      
+                      if (isCurrent) bgClass = "bg-[#1A237E] border-[#1A237E] text-white shadow-md";
+                      else if (isBookmarked) bgClass = "bg-[#F57C00] border-[#F57C00] text-white";
+                      else if (isAnswered) bgClass = "bg-[#1976D2] border-[#1976D2] text-white";
+
+                      return (
+                         <button 
+                            key={i}
+                            onClick={() => setCurrentQ(i)}
+                            className={`w-9 h-9 rounded-full border flex items-center justify-center text-[13px] font-bold transition-all ${bgClass}`}
+                         >
+                            {i - currentTsaSection.startIndex + 1}
+                         </button>
+                      );
+                   })}
+                </div>
+             </div>
+
+             {/* Bottom Sidebar - Progress & Connection */}
+             <div className="p-6 bg-gray-50 border-t border-gray-200">
+                <div className="flex justify-between items-end mb-2">
+                   <div className="text-[11px] font-semibold text-gray-500">Bạn đã hoàn thành</div>
+                   <div className="text-xs font-bold text-gray-800">{quizAnsweredCount}/{quizQuestionEntries.length} câu</div>
+                </div>
+                <div className="w-full h-[6px] bg-gray-200 rounded-full overflow-hidden mb-1">
+                   <div className="h-full bg-[#D32F2F] transition-all" style={{ width: `${pct}%` }}></div>
+                </div>
+                <div className="text-right text-[10px] font-bold text-gray-400 mb-6">{pct}%</div>
+                
+                <div className="text-[11px] font-semibold text-gray-600 flex items-center gap-2">
+                   <div className="w-2.5 h-2.5 bg-[#43A047] rounded-full shadow-[0_0_8px_rgba(67,160,71,0.5)]"></div> Đã kết nối máy chủ
+                </div>
+             </div>
+          </div>
+        </div>
+        
+        {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+      </div>
+    );
+  }
+
   if (quizPhase === 'quiz' && activeExam) {
     const quizQuestionEntries = isTSA ? tsaSectionQuestionEntries : realQuestions.map((q, i) => ({ q, i }));
     const quizAnsweredCount = quizQuestionEntries.filter(({ q }) => hasPracticeAnswer(answers[q.id])).length;
@@ -1911,7 +2350,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                               <div className="text-sm leading-relaxed text-gray-700">
                                 <MathRenderer text={group.context.content} />
                               </div>
-                              {group.context.image && (
+                              {isValidImageSrc(group.context.image) && (
                                 <div className="mt-3">
                                   <Image
                                     src={group.context.image}
@@ -2262,7 +2701,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                               <div className="text-sm leading-relaxed text-gray-700">
                                 <MathRenderer text={group.context.content} />
                               </div>
-                              {group.context.image && (
+                              {isValidImageSrc(group.context.image) && (
                                 <div className="mt-3">
                                   <Image
                                     src={group.context.image}
