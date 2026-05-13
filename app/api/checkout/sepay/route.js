@@ -30,9 +30,9 @@ export async function POST(request) {
       order_amount: amount || 20000,
       currency: 'VND',
       order_description: description || 'Ung ho YeuHoc',
-      success_url: redirectUrl ? `${redirectUrl}?payment=success` : 'https://yeuhoc.site/?payment=success',
-      error_url: redirectUrl ? `${redirectUrl}?payment=error` : 'https://yeuhoc.site/?payment=error',
-      cancel_url: redirectUrl ? `${redirectUrl}?payment=cancel` : 'https://yeuhoc.site/?payment=cancel',
+      success_url: redirectUrl ? `${redirectUrl}?payment=success` : 'https://www.yeuhoc.site/?payment=success',
+      error_url: redirectUrl ? `${redirectUrl}?payment=error` : 'https://www.yeuhoc.site/?payment=error',
+      cancel_url: redirectUrl ? `${redirectUrl}?payment=cancel` : 'https://www.yeuhoc.site/?payment=cancel',
     });
 
     return NextResponse.json({
