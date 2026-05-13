@@ -1741,8 +1741,9 @@ html[data-theme='dark'] .ep-lb-score-val {
   line-height: 1.7;
 }
 
-/* Responsive: collapse sidebar on small screens */
+/* Responsive: collapse sidebar on small screens & landscape */
 @media (max-width: 768px),
+(orientation: landscape) and (max-height: 500px),
 (max-width: 950px) and (orientation: landscape) {
   .et-screen {
     grid-template-columns: 1fr;
@@ -1758,7 +1759,7 @@ html[data-theme='dark'] .ep-lb-score-val {
 }
 
 @media (min-width: 769px) and (orientation: portrait),
-(min-width: 951px) and (orientation: landscape) {
+(min-width: 951px) and (orientation: landscape) and (min-height: 501px) {
   .mobile-only {
     display: none !important;
   }
@@ -3383,15 +3384,38 @@ html[data-theme='dark'] .theme-page .preview-theme-badge {
   .tsa-bottombar { padding-left: 16px; padding-right: 16px; }
 }
 
-/* ── Mobile Landscape = same as desktop ── */
-@media (max-width: 767px) and (orientation: landscape) {
+/* ── Mobile Landscape: hide sidebar, show toggle ── */
+@media (max-width: 767px) and (orientation: landscape),
+(orientation: landscape) and (max-height: 500px) {
   .tsa-exam-root { zoom: 0.8; }
-  .tsa-mobile-timer, .tsa-sidebar-toggle { display: none !important; }
+  .tsa-mobile-timer, .tsa-sidebar-toggle { display: flex !important; }
+  .tsa-header { height: 44px; }
+  .tsa-sidebar {
+    position: fixed; top: 44px; right: -100%; bottom: 0;
+    width: 320px; max-width: 80vw; z-index: 100;
+    transition: right .3s ease;
+    box-shadow: -8px 0 30px rgba(0,0,0,.15);
+  }
+  .tsa-sidebar.tsa-sidebar-open { right: 0; }
+  .tsa-bottombar { padding-left: 12px; padding-right: 12px; }
 }
 
 /* ── Small tablets portrait ── */
 @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
   .tsa-exam-root { zoom: 0.85; }
+  .tsa-mobile-timer, .tsa-sidebar-toggle { display: flex !important; }
+  .tsa-sidebar {
+    position: fixed; top: 52px; right: -100%; bottom: 0;
+    width: 360px; z-index: 100;
+    transition: right .3s ease;
+    box-shadow: -8px 0 30px rgba(0,0,0,.15);
+  }
+  .tsa-sidebar.tsa-sidebar-open { right: 0; }
+}
+
+/* ── Small tablets landscape: hide sidebar, show toggle ── */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
+  .tsa-exam-root { zoom: 0.8; }
   .tsa-mobile-timer, .tsa-sidebar-toggle { display: flex !important; }
   .tsa-sidebar {
     position: fixed; top: 52px; right: -100%; bottom: 0;

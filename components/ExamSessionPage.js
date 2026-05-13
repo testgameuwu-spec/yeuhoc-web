@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -253,6 +253,26 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const mainRef = useRef(null);
+
+  // ── Swipe-to-close gesture support ──
+  const swipeTouchRef = useRef({ startX: 0, startY: 0 });
+  const makeSwipeHandlers = useCallback((onClose) => ({
+    onTouchStart: (e) => {
+      swipeTouchRef.current.startX = e.touches[0].clientX;
+      swipeTouchRef.current.startY = e.touches[0].clientY;
+    },
+    onTouchEnd: (e) => {
+      const dx = e.changedTouches[0].clientX - swipeTouchRef.current.startX;
+      const dy = e.changedTouches[0].clientY - swipeTouchRef.current.startY;
+      if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) onClose();
+    },
+  }), []);
+
+  const drawerSwipeHandlers = useMemo(() => makeSwipeHandlers(() => setIsDrawerOpen(false)), [makeSwipeHandlers]);
+  const tsaSidebarSwipeHandlers = useMemo(() => makeSwipeHandlers(() => {
+    const el = document.querySelector('.tsa-sidebar');
+    el?.classList.remove('tsa-sidebar-open');
+  }), [makeSwipeHandlers]);
 
   const getProgressKey = useCallback((examId) => `yeuhoc_progress_${user?.id}_${examId}`, [user?.id]);
   const getPracticeProgressKey = useCallback((examId) => `yeuhoc_practice_progress_${user?.id}_${examId}`, [user?.id]);
@@ -2032,7 +2052,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
 
           {/* Right Sidebar */}
-          <div className="tsa-sidebar w-[320px] bg-white border-l border-gray-200 shrink-0 flex flex-col h-full overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.03)] z-10 relative">
+          <div className="tsa-sidebar w-[320px] bg-white border-l border-gray-200 shrink-0 flex flex-col h-full overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.03)] z-10 relative" {...tsaSidebarSwipeHandlers}>
              <div className="p-6 flex-1 overflow-y-auto">
                 {/* Thông tin thí sinh */}
                 <div className="mb-8">
@@ -2444,7 +2464,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           <div className={`et-drawer-overlay mobile-only ${isDrawerOpen ? 'open' : ''}`} onClick={() => setIsDrawerOpen(false)} />
 
           {/* Mobile Drawer */}
-          <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`}>
+          <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`} {...drawerSwipeHandlers}>
             <div className="flex justify-between items-center mb-4">
               <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Danh sách câu hỏi</div>
               <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
@@ -2783,7 +2803,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           <div className={`et-drawer-overlay mobile-only ${isDrawerOpen ? 'open' : ''}`} onClick={() => setIsDrawerOpen(false)} />
 
           {/* Mobile Drawer */}
-          <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`}>
+          <div className={`et-drawer mobile-only flex flex-col ${isDrawerOpen ? 'open' : ''}`} {...drawerSwipeHandlers}>
             <div className="flex justify-between items-center mb-4">
               <div className="font-bold text-gray-800 uppercase text-xs tracking-wider">Chi tiết bài làm</div>
               <button onClick={() => setIsDrawerOpen(false)} className="p-1 bg-gray-100 hover:bg-gray-200 transition-colors rounded-full text-gray-600">
