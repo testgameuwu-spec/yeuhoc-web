@@ -2024,7 +2024,17 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
              <div className="tsa-bottombar absolute bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-between px-8 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
                 <div className="flex items-center gap-4">
                    <button 
-                      onClick={() => setCurrentQ(Math.max(currentTsaSection.startIndex, currentQ - 1))}
+                      onClick={() => {
+                         let targetPrev = currentQ - 1;
+                         if (currentQuestionObj?.linkedTo) {
+                           const groupQs = realQuestions.filter(x => x.linkedTo === currentQuestionObj.linkedTo);
+                           if (groupQs.length > 0) {
+                             const firstGroupIdx = realQuestions.findIndex(r => r.id === groupQs[0].id);
+                             if (firstGroupIdx <= currentQ) targetPrev = firstGroupIdx - 1;
+                           }
+                         }
+                         setCurrentQ(Math.max(currentTsaSection.startIndex, targetPrev));
+                      }}
                       disabled={currentQ <= currentTsaSection.startIndex}
                       className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 disabled:opacity-50 hover:bg-gray-200 transition-colors"
                    >
@@ -2032,11 +2042,20 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                    </button>
                    <button 
                       onClick={() => {
-                        const isLastQ = currentQ >= currentTsaSection.endIndex - 1;
+                        let nextQ = currentQ + 1;
+                        if (currentQuestionObj?.linkedTo) {
+                          const groupQs = realQuestions.filter(x => x.linkedTo === currentQuestionObj.linkedTo);
+                          if (groupQs.length > 0) {
+                            const lastGroupIdx = realQuestions.findIndex(r => r.id === groupQs[groupQs.length - 1].id);
+                            if (lastGroupIdx >= currentQ) nextQ = lastGroupIdx + 1;
+                          }
+                        }
+                        
+                        const isLastQ = nextQ > currentTsaSection.endIndex - 1;
                         if (isLastQ) {
                            confirmSubmit();
                         } else {
-                           setCurrentQ(currentQ + 1);
+                           setCurrentQ(nextQ);
                         }
                       }}
                       className="px-6 h-10 rounded-lg bg-[#1A237E] hover:bg-blue-900 text-white font-bold transition-colors flex items-center gap-2"
