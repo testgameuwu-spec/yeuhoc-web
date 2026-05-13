@@ -3,45 +3,84 @@
 import { useState, useEffect, useRef } from 'react';
 
 export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true, compact = false }) {
-    const [secondsLeft, setSecondsLeft] = useState(initialSeconds !== null ? initialSeconds : initialMinutes * 60);
-    const intervalRef = useRef(null);
-    const lastTickSentRef = useRef(secondsLeft);
+    const totalDuration = initialMinutes * 60;
+
+    // Anchor-based timing: track when the timer started and how many seconds were on the clock
+    const anchorRef = useRef(null);        // { startedAt: number, startValue: number }
     const onTickRef = useRef(onTick);
+    const onTimeUpRef = useRef(onTimeUp);
+    const [displaySeconds, setDisplaySeconds] = useState(() =>
+        initialSeconds !== null ? initialSeconds : totalDuration
+    );
+    const timeUpFiredRef = useRef(false);
 
+    // Keep callback refs fresh without causing re-renders
+    useEffect(() => { onTickRef.current = onTick; }, [onTick]);
+    useEffect(() => { onTimeUpRef.current = onTimeUp; }, [onTimeUp]);
+
+    // When initialSeconds changes from parent (e.g. resume), reset the anchor
+    const prevInitialSecondsRef = useRef(initialSeconds);
     useEffect(() => {
-        onTickRef.current = onTick;
-    }, [onTick]);
+        const nextVal = initialSeconds !== null ? initialSeconds : initialMinutes * 60;
+        // Only reset if the value actually changed from outside
+        if (prevInitialSecondsRef.current !== initialSeconds) {
+            prevInitialSecondsRef.current = initialSeconds;
+            setDisplaySeconds(nextVal);
+            timeUpFiredRef.current = false;
+            // Reset anchor so next tick calculates from new value
+            if (isRunning) {
+                anchorRef.current = { startedAt: Date.now(), startValue: nextVal };
+            } else {
+                anchorRef.current = null;
+            }
+        }
+    }, [initialSeconds, initialMinutes, isRunning]);
 
+    // Core timing loop using Date.now() anchoring
     useEffect(() => {
-        const nextSeconds = initialSeconds !== null ? initialSeconds : initialMinutes * 60;
-        if (lastTickSentRef.current === nextSeconds) return;
+        if (!isRunning) {
+            // When paused, clear anchor (will re-anchor on resume)
+            anchorRef.current = null;
+            return;
+        }
 
-        const timer = setTimeout(() => {
-            setSecondsLeft(prev => prev === nextSeconds ? prev : nextSeconds);
-        }, 0);
-        return () => clearTimeout(timer);
-    }, [initialMinutes, initialSeconds]);
+        // Set anchor to current display value
+        const startValue = displaySeconds;
+        anchorRef.current = { startedAt: Date.now(), startValue };
 
-    useEffect(() => {
-        lastTickSentRef.current = secondsLeft;
-        if (onTickRef.current) onTickRef.current(secondsLeft);
-    }, [secondsLeft]);
+        const tick = () => {
+            const anchor = anchorRef.current;
+            if (!anchor) return;
 
-    useEffect(() => {
-        if (!isRunning) { clearInterval(intervalRef.current); return; }
-        intervalRef.current = setInterval(() => {
-            setSecondsLeft(prev => {
-                if (prev <= 1) { clearInterval(intervalRef.current); onTimeUp?.(); return 0; }
-                return prev - 1;
+            const elapsed = Math.floor((Date.now() - anchor.startedAt) / 1000);
+            const newVal = Math.max(0, anchor.startValue - elapsed);
+
+            setDisplaySeconds(prev => {
+                if (prev === newVal) return prev;
+                return newVal;
             });
-        }, 1000);
-        return () => clearInterval(intervalRef.current);
-    }, [isRunning, onTimeUp]);
 
-    const total   = initialMinutes * 60;
-    const pct     = total > 0 ? (secondsLeft / total) * 100 : 100;
-    const minutes = Math.floor(secondsLeft / 60);
-    const seconds = secondsLeft % 60;
+            if (newVal <= 0 && !timeUpFiredRef.current) {
+                timeUpFiredRef.current = true;
+                onTimeUpRef.current?.();
+            }
+        };
+
+        // Use a faster interval (250ms) to reduce perceived lag
+        // The actual displayed value still only changes once per second due to Math.floor
+        const id = setInterval(tick, 250);
+        return () => clearInterval(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isRunning]);
+
+    // Notify parent whenever displayed seconds changes
+    useEffect(() => {
+        onTickRef.current?.(displaySeconds);
+    }, [displaySeconds]);
+
+    const pct = totalDuration > 0 ? (displaySeconds / totalDuration) * 100 : 100;
+    const minutes = Math.floor(displaySeconds / 60);
+    const seconds = displaySeconds % 60;
     const warnCls = pct <= 10 ? 'danger' : pct <= 25 ? 'warn' : '';
 
     if (compact) {

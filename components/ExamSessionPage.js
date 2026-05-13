@@ -1721,7 +1721,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#fdfdfd', fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
         {/* Simple Top Header */}
         <div style={{ height: 60, borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', padding: '0 24px', background: '#fff' }}>
-          <div style={{ fontWeight: 800, fontSize: 18, color: '#dc2626', letterSpacing: -0.5 }}>TSA<span style={{ fontWeight: 400, color: '#f87171' }}>'</span></div>
+          <div style={{ fontWeight: 800, fontSize: 18, color: '#dc2626', letterSpacing: -0.5 }}>YeuHocTSA<span style={{ fontWeight: 400, color: '#f87171' }}>'</span></div>
         </div>
 
         <div className="flex-1 overflow-y-auto w-full p-4 sm:p-8">
@@ -1842,13 +1842,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         {/* Header Bar */}
         <div className="tsa-header h-16 border-b border-gray-200 flex items-center px-4 sm:px-6 shrink-0 justify-between bg-white z-10 relative shadow-sm">
            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-             <div className="shrink-0" style={{ fontWeight: 900, fontSize: 20, color: '#D32F2F', letterSpacing: -1 }}>TSA<span style={{ color: '#D32F2F' }}>&apos;</span></div>
+             <div className="shrink-0" style={{ fontWeight: 900, fontSize: 20, color: '#D32F2F', letterSpacing: -1 }}>YeuHocTSA<span style={{ color: '#D32F2F' }}>&apos;</span></div>
              <div className="font-bold text-gray-800 text-[13px] sm:text-[15px] border-l-2 border-gray-200 pl-2 sm:pl-4 truncate">{currentTsaSection.name}</div>
            </div>
            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
              {/* Mobile timer */}
              <div className="tsa-mobile-timer font-mono font-black text-[20px] tracking-tight" style={{ '--tsa-timer-color': '#E53935' }}>
-               <Timer key={`tsa-m-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={() => {}} onTimeUp={() => {}} isRunning={timerRunning} />
+               <Timer key={`tsa-m-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
              </div>
              {/* Mobile sidebar toggle */}
              <button onClick={() => { const el = document.querySelector('.tsa-sidebar'); el?.classList.toggle('tsa-sidebar-open'); }} className="tsa-sidebar-toggle w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
@@ -1990,8 +1990,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                      if (contextQ && groupQuestions) {
                        return (
                          <div className="tsa-content-split flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
-                           <div className="tsa-context-panel w-full sm:w-[55%] sm:sticky sm:top-0 sm:self-start sm:max-h-[calc(100vh-180px)] overflow-y-auto">
-                             <div className="bg-[#f8f9fa] border border-gray-200 rounded-xl p-6">
+                           <div className="tsa-context-panel w-full sm:w-[55%] sm:sticky sm:top-0 sm:self-start sm:h-[calc(100dvh-100px)]">
+                             <div className="bg-[#f8f9fa] border border-gray-200 rounded-xl p-4 sm:p-6 h-full overflow-y-auto">
                                <div className="flex items-center gap-2 mb-3">
                                  <BookOpen weight="duotone" className="w-4 h-4 text-gray-500" />
                                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ngữ liệu</span>
@@ -2068,10 +2068,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                          <span className="text-gray-500">Ngày sinh</span>
                          <span className="font-medium text-gray-800">Chưa xác định</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                         <span className="text-gray-500">Mã dự thi</span>
-                         <span className="font-medium text-gray-800">Thí sinh tự do</span>
-                      </div>
+
                    </div>
                 </div>
 
@@ -2361,8 +2358,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
                         <div className="flex flex-col lg:flex-row gap-6 items-start">
                           {/* Left: Context / Ngữ liệu */}
-                          <div className="lg:w-1/2 w-full lg:sticky lg:top-4">
-                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                          <div className="lg:w-1/2 w-full lg:sticky lg:top-4 lg:h-[calc(100dvh-120px)]">
+                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm h-full overflow-y-auto">
                               <div className="flex items-center gap-2 mb-3">
                                 <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
@@ -2712,8 +2709,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
                         <div className="flex flex-col lg:flex-row gap-6 items-start">
                           {/* Left: Context */}
-                          <div className="lg:w-1/2 w-full lg:sticky lg:top-4">
-                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                          <div className="lg:w-1/2 w-full lg:sticky lg:top-4 lg:h-[calc(100dvh-120px)]">
+                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm h-full overflow-y-auto">
                               <div className="flex items-center gap-2 mb-3">
                                 <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Ngữ liệu</span>
