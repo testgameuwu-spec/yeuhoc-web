@@ -44,7 +44,7 @@ function serializeDragAnswer(answerMap, blankIds = []) {
 
 export default function QuestionEditorCard({ question, index, totalQuestions, allQuestions, onUpdate, onDelete, onReorder, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [expanded, setExpanded] = useState(true);
-  const [showSolution, setShowSolution] = useState(false);
+  const [showSolution, setShowSolution] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [draggable, setDraggable] = useState(false);
 
