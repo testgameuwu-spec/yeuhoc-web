@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, CaretRight, CaretLeft, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
+import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
@@ -13,6 +13,7 @@ import MathRenderer from '@/components/MathRenderer';
 import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
 import ThemeToggle from '@/components/ThemeToggle';
+import LogoIcon from '@/components/LogoIcon';
 import { supabase } from '@/lib/supabase';
 import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
 import {
@@ -89,6 +90,33 @@ const Topbar = ({ activeExam, handleReset, children }) => (
       <UserProfile />
       <button className="et-btn-outline desktop-only" onClick={handleReset} style={{ fontSize: 12, padding: '5px 11px' }}>
         <ArrowLeft style={{ width: 13, height: 13 }} /> Quay lại
+      </button>
+    </div>
+  </div>
+);
+
+const TsaNavbar = ({ activeExam, onBack, children }) => (
+  <div className="tsa-navbar">
+    <div className="tsa-navbar-left">
+      <button type="button" className="tsa-navbar-brand" onClick={onBack}>
+        <LogoIcon size={42} color="currentColor" />
+        <span>YeuHoc</span>
+      </button>
+      <div className="tsa-navbar-breadcrumb">
+        <button type="button" onClick={onBack}>Trang chủ</button>
+        <CaretRight weight="bold" className="tsa-navbar-breadcrumb-icon" />
+        <span>{activeExam?.title || 'Đề thi TSA'}</span>
+      </div>
+    </div>
+    <div className="tsa-navbar-right">
+      {children}
+      <ThemeToggle />
+      <div className="tsa-navbar-profile">
+        <UserProfile />
+      </div>
+      <button type="button" className="tsa-navbar-back" onClick={onBack}>
+        <ArrowLeft weight="bold" className="w-4 h-4" />
+        <span>Quay lại</span>
       </button>
     </div>
   </div>
@@ -232,6 +260,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // Anti-cheat fullscreen states
   const [violationCount, setViolationCount] = useState(0);
   const [showViolationWarning, setShowViolationWarning] = useState(false);
+  const [isTsaNavbarCollapsed, setIsTsaNavbarCollapsed] = useState(false);
   const MAX_VIOLATIONS = 5;
   const isSubmittingRef = useRef(false);
   const isAdvancingTsaSectionRef = useRef(false);
@@ -774,6 +803,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setIsPaused(false);
     setViolationCount(0);
     setShowViolationWarning(false);
+    setIsTsaNavbarCollapsed(false);
     isSubmittingRef.current = false;
     isAdvancingTsaSectionRef.current = false;
     exitViolationRecordedRef.current = false;
@@ -1115,6 +1145,34 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
 
     handleReset();
+  };
+  const confirmTsaExit = () => {
+    if (quizPhase === 'quiz') {
+      showConfirm(
+        'Thoát khỏi bài thi?',
+        isAntiCheatEnabled
+          ? (
+            <>
+              Thoát khỏi bài thi TSA sẽ được tính là 1 lần <strong className="font-black text-red-600">vi phạm</strong>. Tiến trình làm bài vẫn được lưu lại tự động. Bạn có chắc chắn muốn thoát?
+            </>
+          )
+          : 'Tiến trình làm bài TSA sẽ được lưu lại tự động. Bạn có chắc chắn muốn thoát?',
+        () => handleExitQuiz(),
+        null,
+        'Thoát',
+        'Ở lại'
+      );
+      return;
+    }
+
+    showConfirm(
+      'Rời khỏi kíp thi?',
+      'Bạn sẽ quay lại trang chủ. Các thao tác chưa nộp trong kíp thi hiện tại có thể bị mất. Bạn có chắc chắn muốn rời khỏi?',
+      () => handleReset(),
+      null,
+      'Rời khỏi',
+      'Ở lại'
+    );
   };
   const handleRetry = () => {
     if (activeExam && user) localStorage.removeItem(getProgressKey(activeExam.id));
@@ -1718,77 +1776,75 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // ── TSA MENU (Danh sách bài thi) ──
   if (quizPhase === 'tsa-menu' && activeExam && isTSA) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#fdfdfd', fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
-        {/* Simple Top Header */}
-        <div style={{ height: 60, borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', padding: '0 24px', background: '#fff' }}>
-          <div style={{ fontWeight: 800, fontSize: 18, color: '#dc2626', letterSpacing: -0.5 }}>YeuHocTSA<span style={{ fontWeight: 400, color: '#f87171' }}>'</span></div>
-        </div>
+      <div className="tsa-menu-root fixed inset-0 z-50 flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+        <TsaNavbar activeExam={activeExam} onBack={confirmTsaExit} />
 
         <div className="flex-1 overflow-y-auto w-full p-4 sm:p-8">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-2xl sm:text-3xl font-black mb-2 text-gray-900 text-center">{activeExam.title}</h1>
+            <h1 className="tsa-menu-title text-2xl sm:text-3xl font-black mb-2 text-center">{activeExam.title}</h1>
             <div className="flex justify-center gap-2 mb-8">
-              <span className="px-3 py-1 rounded-md bg-green-50 text-green-600 border border-green-200 text-xs font-semibold">Miễn phí</span>
-              <span className="px-3 py-1 rounded-md bg-green-50 text-green-600 border border-green-200 text-xs font-semibold">Tự do</span>
+              <span className="tsa-menu-badge px-3 py-1 rounded-md text-xs font-semibold">Miễn phí</span>
+              <span className="tsa-menu-badge px-3 py-1 rounded-md text-xs font-semibold">Tự do</span>
             </div>
 
-            <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 mb-8 flex flex-col gap-1.5">
+            <div className="tsa-menu-info-card rounded-xl p-5 mb-8 flex flex-col gap-1.5">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Họ và tên:</span>
-                <span className="font-semibold text-gray-900">{user?.user_metadata?.full_name || 'Học sinh ẩn danh'}</span>
+                <span className="tsa-menu-muted">Họ và tên:</span>
+                <span className="tsa-menu-value font-semibold">{user?.user_metadata?.full_name || 'Học sinh ẩn danh'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Mã định danh:</span>
-                <span className="font-semibold text-gray-900">{user?.id?.split('-')[0]?.toUpperCase() || 'UNKNOWN'}</span>
+                <span className="tsa-menu-muted">Mã định danh:</span>
+                <span className="tsa-menu-value font-semibold">{user?.id?.split('-')[0]?.toUpperCase() || 'UNKNOWN'}</span>
               </div>
-              <div className="flex justify-between text-sm items-center mt-1 pt-2 border-t border-gray-100">
-                <span className="text-gray-500">Trạng thái tài khoản</span>
-                <span className="px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-200 text-xs font-semibold">Miễn phí</span>
+              <div className="tsa-menu-divider flex justify-between text-sm items-center mt-1 pt-2">
+                <span className="tsa-menu-muted">Trạng thái tài khoản</span>
+                <span className="tsa-menu-badge rounded-full px-3 py-1 text-xs font-semibold">Miễn phí</span>
               </div>
             </div>
 
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Danh sách bài thi</h2>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+            <h2 className="tsa-menu-section-title text-xl font-bold mb-4">Danh sách bài thi</h2>
+            <div className="tsa-menu-list rounded-xl flex flex-col">
               {TSA_SECTIONS.map((section, idx) => {
                 const isPast = idx < tsaSectionIndex;
                 const isCurrent = idx === tsaSectionIndex;
                 const isFuture = idx > tsaSectionIndex;
                 
                 let statusText = 'Chưa thi';
-                let statusColor = 'text-[#43A047] font-semibold'; // Green for Chưa thi
+                let statusTone = 'ready';
                 if (isPast) {
                   statusText = 'Đã thi';
-                  statusColor = 'text-gray-400 font-semibold';
+                  statusTone = 'done';
                 } else if (isCurrent && savedSecondsLeft !== null) {
                   statusText = 'Đang thi';
-                  statusColor = 'text-amber-500 font-semibold';
+                  statusTone = 'active';
                 }
 
                 return (
-                  <div key={idx} className={`p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${idx < TSA_SECTIONS.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                  <div key={idx} className="tsa-menu-row p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <div className="text-[17px] font-bold text-[#D32F2F] mb-1.5">{idx + 1}. {section.name}</div>
-                      <div className="text-[13px] text-gray-800 flex flex-col gap-1">
+                      <div className="tsa-menu-part-title text-[17px] font-bold mb-1.5">{idx + 1}. {section.name}</div>
+                      <div className="tsa-menu-part-meta text-[13px] flex flex-col gap-1">
                         <div><span className="font-semibold">Giờ mở kíp:</span> 00:00 01/01/2026 – 23:59 31/12/2026</div>
                         <div>
                            <span className="font-semibold">Thời gian:</span> {section.durationMinutes} phút
-                           <span className="mx-2 text-gray-300">|</span>
-                           <span className="font-semibold">Trạng thái: </span> <span className={statusColor}>{statusText}</span>
+                           <span className="tsa-menu-separator mx-2">|</span>
+                           <span className="font-semibold">Trạng thái: </span> <span className={`tsa-menu-status tsa-menu-status-${statusTone}`}>{statusText}</span>
                         </div>
                       </div>
                     </div>
                     <div className="shrink-0">
                        {isPast ? (
-                         <button disabled className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-gray-100 text-gray-400 font-bold text-sm border border-gray-200 cursor-not-allowed">Đã thi</button>
+                         <button disabled className="tsa-menu-action tsa-menu-action-disabled w-full sm:w-auto px-8 py-2.5 rounded-lg font-bold text-sm cursor-not-allowed">Đã thi</button>
                        ) : isFuture ? (
-                         <button disabled className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-white text-[#1976D2] font-bold text-sm border border-[#1976D2] opacity-50 cursor-not-allowed">Tiếp tục</button>
+                         <button disabled className="tsa-menu-action tsa-menu-action-future w-full sm:w-auto px-8 py-2.5 rounded-lg font-bold text-sm cursor-not-allowed">Tiếp tục</button>
                        ) : (
                          <button onClick={() => {
                             setCurrentQ(Math.min(section.startIndex, Math.max(realQuestions.length - 1, 0)));
                             setQuizPhase('quiz');
                             setTimerRunning(true);
+                            setIsTsaNavbarCollapsed(false);
                             if (isAntiCheatEnabled) requestFullscreen();
-                         }} className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-[#D32F2F] hover:bg-red-700 text-white font-bold text-sm shadow-sm transition-colors">
+                         }} className="tsa-menu-action tsa-menu-action-primary w-full sm:w-auto px-8 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                            {savedSecondsLeft !== null ? 'Tiếp tục' : 'Bắt đầu'}
                          </button>
                        )}
@@ -1799,15 +1855,15 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </div>
             
             <div className="mt-8 flex justify-between items-center pb-12">
-               <button onClick={handleReset} className="flex items-center gap-2 text-[#D32F2F] font-semibold hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">
+               <button onClick={confirmTsaExit} className="tsa-menu-link-button flex items-center gap-2 font-semibold px-4 py-2 rounded-lg transition-colors">
                   <CaretLeft weight="bold" /> Quay lại
                </button>
                {tsaSectionIndex >= TSA_SECTIONS.length ? (
-                 <button onClick={() => handleSubmit()} className="flex items-center gap-2 text-[#D32F2F] font-bold hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">
+                 <button onClick={() => handleSubmit()} className="tsa-menu-link-button flex items-center gap-2 font-bold px-4 py-2 rounded-lg transition-colors">
                     Hoàn thành kíp thi <CaretRight weight="bold" />
                  </button>
                ) : (
-                 <button disabled className="flex items-center gap-2 text-gray-300 font-bold px-4 py-2 rounded-lg cursor-not-allowed">
+                 <button disabled className="tsa-menu-link-button-disabled flex items-center gap-2 font-bold px-4 py-2 rounded-lg cursor-not-allowed">
                     Hoàn thành kíp thi <CaretRight weight="bold" />
                  </button>
                )}
@@ -1839,23 +1895,43 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-white select-none tsa-exam-root" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
-        {/* Header Bar */}
-        <div className="tsa-header h-16 border-b border-gray-200 flex items-center px-4 sm:px-6 shrink-0 justify-between bg-white z-10 relative shadow-sm">
-           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-             <div className="shrink-0" style={{ fontWeight: 900, fontSize: 20, color: '#D32F2F', letterSpacing: -1 }}>YeuHocTSA<span style={{ color: '#D32F2F' }}>&apos;</span></div>
-             <div className="font-bold text-gray-800 text-[13px] sm:text-[15px] border-l-2 border-gray-200 pl-2 sm:pl-4 truncate">{currentTsaSection.name}</div>
-           </div>
-           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-             {/* Mobile timer */}
-             <div className="tsa-mobile-timer font-mono font-black text-[20px] tracking-tight" style={{ '--tsa-timer-color': '#E53935' }}>
-               <Timer key={`tsa-m-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
-             </div>
-             {/* Mobile sidebar toggle */}
-             <button onClick={() => { const el = document.querySelector('.tsa-sidebar'); el?.classList.toggle('tsa-sidebar-open'); }} className="tsa-sidebar-toggle w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
-               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-             </button>
-           </div>
-        </div>
+        {isTsaNavbarCollapsed ? (
+          <button
+            type="button"
+            className="tsa-navbar-toggle is-collapsed"
+            onClick={() => setIsTsaNavbarCollapsed(false)}
+            aria-label="Mở navbar"
+          >
+            <CaretDown weight="bold" />
+          </button>
+        ) : (
+          <div className="tsa-navbar-wrap">
+            <TsaNavbar activeExam={activeExam} onBack={confirmTsaExit}>
+              {isAntiCheatEnabled && violationCount > 0 && (
+                <div
+                  className={`tsa-violation-badge ${violationCount >= 3 ? 'is-danger' : ''}`}
+                  title={`Vi phạm: ${violationCount}/${MAX_VIOLATIONS}`}
+                >
+                  ⚠ {violationCount}/{MAX_VIOLATIONS}
+                </div>
+              )}
+              <div className="tsa-mobile-timer font-mono font-black text-[20px] tracking-tight" style={{ '--tsa-timer-color': '#E53935' }}>
+                <Timer key={`tsa-m-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+              </div>
+              <button onClick={() => { const el = document.querySelector('.tsa-sidebar'); el?.classList.toggle('tsa-sidebar-open'); }} className="tsa-sidebar-toggle w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+              </button>
+            </TsaNavbar>
+            <button
+              type="button"
+              className="tsa-navbar-toggle"
+              onClick={() => setIsTsaNavbarCollapsed(true)}
+              aria-label="Đóng navbar"
+            >
+              <CaretUp weight="bold" />
+            </button>
+          </div>
+        )}
 
         {/* Main Layout */}
         <div className="tsa-body flex flex-1 overflow-hidden relative">
@@ -1897,8 +1973,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           )}
 
           {/* Content Area */}
-          <div className="flex-1 flex flex-col relative bg-white">
-             <div ref={mainRef} className="flex-1 overflow-y-auto p-8 pb-24 text-black">
+          <div className="tsa-main-panel flex-1 flex flex-col relative bg-white">
+             <div ref={mainRef} className="tsa-scroll-area flex-1 overflow-y-auto p-8 pb-24 text-black">
                 <div className="max-w-6xl mx-auto">
                    {(() => {
                      const contextQ = currentQuestionObj?.linkedTo ? questions.find(x => x.id === currentQuestionObj.linkedTo && x.type === 'TEXT') : null;
@@ -1979,7 +2055,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                </div>
                              )}
                              {qObj.type === 'DRAG' && (
-                               <div className="tsa-drag-wrap"><QuestionCard question={qObj} index={qIndex} selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)} onAnswerChange={(val) => handleAnswerChange(qObj.id, val)} disabled={false} /></div>
+                               <div className="tsa-drag-wrap"><QuestionCard question={{ ...qObj, image: null }} index={qIndex} selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)} onAnswerChange={(val) => handleAnswerChange(qObj.id, val)} disabled={false} /></div>
                              )}
                            </div>
                          </div>

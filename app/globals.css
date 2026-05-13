@@ -3384,21 +3384,428 @@ html[data-theme='dark'] .theme-page .preview-theme-badge {
 .tsa-drag-wrap .et-q-card-body { padding: 0 !important; }
 .tsa-drag-wrap .et-q-text { display: none !important; }
 
+.tsa-exam-root,
+.tsa-navbar,
+.tsa-menu-root {
+  --tsa-bg: #f8fafc;
+  --tsa-surface: #ffffff;
+  --tsa-surface-muted: #f8fafc;
+  --tsa-text: #0f172a;
+  --tsa-muted: #64748b;
+  --tsa-soft: #94a3b8;
+  --tsa-border: #e5e7eb;
+  --tsa-border-soft: #fee2e2;
+  --tsa-divider: #f1f5f9;
+  --tsa-red: #dc2626;
+  --tsa-red-strong: #b91c1c;
+  --tsa-red-soft: #fef2f2;
+  --tsa-red-border: #fecaca;
+  --tsa-green: #16a34a;
+  --tsa-amber: #f59e0b;
+  --tsa-user-bg: #ffffff;
+  --tsa-user-border: #fee2e2;
+  --tsa-user-text: #0f172a;
+  --tsa-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+}
+
+html[data-theme='dark'] .tsa-exam-root,
+html[data-theme='dark'] .tsa-navbar,
+html[data-theme='dark'] .tsa-menu-root {
+  --tsa-bg: #0f172a;
+  --tsa-surface: #111827;
+  --tsa-surface-muted: #182235;
+  --tsa-text: #f8fafc;
+  --tsa-muted: #cbd5e1;
+  --tsa-soft: #94a3b8;
+  --tsa-border: #273449;
+  --tsa-border-soft: #3f2630;
+  --tsa-divider: #263449;
+  --tsa-red: #ef4444;
+  --tsa-red-strong: #f87171;
+  --tsa-red-soft: rgba(239, 68, 68, .12);
+  --tsa-red-border: rgba(248, 113, 113, .35);
+  --tsa-green: #4ade80;
+  --tsa-amber: #fbbf24;
+  --tsa-user-bg: #020617;
+  --tsa-user-border: #334155;
+  --tsa-user-text: #f8fafc;
+  --tsa-shadow: 0 18px 40px rgba(0, 0, 0, .28);
+}
+
+.tsa-navbar {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px;
+  background: var(--tsa-surface);
+  border-bottom: 1px solid var(--tsa-border-soft);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .04);
+  position: relative;
+  z-index: 120;
+}
+
+html[data-theme='dark'] .tsa-navbar {
+  box-shadow: 0 1px 0 rgba(148, 163, 184, .08);
+}
+
+.tsa-navbar-left,
+.tsa-navbar-right {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.tsa-navbar-left {
+  gap: 18px;
+  flex: 1;
+}
+
+.tsa-navbar-right {
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.tsa-navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--tsa-red);
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tsa-navbar-brand span {
+  color: var(--tsa-red);
+}
+
+.tsa-navbar-brand:hover {
+  color: var(--tsa-red-strong);
+}
+
+.tsa-navbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: var(--tsa-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tsa-navbar-breadcrumb button {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--tsa-soft);
+  cursor: pointer;
+}
+
+.tsa-navbar-breadcrumb button:hover {
+  color: var(--tsa-red);
+}
+
+.tsa-navbar-breadcrumb span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tsa-text);
+  font-weight: 800;
+}
+
+.tsa-navbar-breadcrumb-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--tsa-soft);
+}
+
+.tsa-navbar-back {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--tsa-border-soft);
+  border-radius: 10px;
+  background: var(--tsa-surface);
+  color: var(--tsa-muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.tsa-navbar-back:hover {
+  background: var(--tsa-red-soft);
+  border-color: var(--tsa-red-border);
+  color: var(--tsa-red);
+}
+
+.tsa-navbar .theme-toggle {
+  border-color: var(--tsa-border-soft);
+  background: var(--tsa-surface);
+  color: var(--tsa-muted);
+}
+
+.tsa-navbar .theme-toggle:hover {
+  background: var(--tsa-red-soft);
+  border-color: var(--tsa-red-border);
+  color: var(--tsa-red);
+}
+
+.tsa-navbar-profile > .relative > button {
+  border-color: var(--tsa-user-border) !important;
+  background: var(--tsa-user-bg) !important;
+  color: var(--tsa-user-text) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .12);
+}
+
+.tsa-navbar-profile > .relative > button span,
+.tsa-navbar-profile > .relative > button svg {
+  color: var(--tsa-user-text) !important;
+}
+
+.tsa-navbar-wrap {
+  position: relative;
+  z-index: 150;
+  flex-shrink: 0;
+}
+
+.tsa-navbar-toggle {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 18px;
+  border: 1px solid var(--tsa-border);
+  border-top: 0;
+  border-radius: 0 0 999px 999px;
+  background: color-mix(in srgb, var(--tsa-surface) 82%, transparent);
+  color: var(--tsa-muted);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 160;
+  opacity: .72;
+  transition: background .18s ease, border-color .18s ease, color .18s ease, opacity .18s ease, top .18s ease;
+}
+
+.tsa-navbar-toggle:hover {
+  background: var(--tsa-red-soft);
+  border-color: var(--tsa-red-border);
+  color: var(--tsa-red);
+  opacity: 1;
+}
+
+.tsa-navbar-toggle.is-collapsed {
+  position: fixed;
+  top: 0;
+  bottom: auto;
+}
+
+.tsa-navbar-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tsa-violation-badge {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tsa-violation-badge.is-danger {
+  background: #ef4444;
+}
+
+.tsa-menu-root {
+  background: var(--tsa-bg);
+  color: var(--tsa-text);
+}
+
+.tsa-menu-title,
+.tsa-menu-section-title {
+  color: var(--tsa-text);
+}
+
+.tsa-menu-badge {
+  background: var(--tsa-red-soft);
+  border: 1px solid var(--tsa-red-border);
+  color: var(--tsa-red);
+}
+
+.tsa-menu-info-card,
+.tsa-menu-list {
+  background: var(--tsa-surface);
+  border: 1px solid var(--tsa-border);
+  box-shadow: var(--tsa-shadow);
+}
+
+.tsa-menu-muted {
+  color: var(--tsa-muted);
+}
+
+.tsa-menu-value,
+.tsa-menu-part-meta {
+  color: var(--tsa-text);
+}
+
+.tsa-menu-divider {
+  border-top: 1px solid var(--tsa-divider);
+}
+
+.tsa-menu-row + .tsa-menu-row {
+  border-top: 1px solid var(--tsa-divider);
+}
+
+.tsa-menu-part-title {
+  color: var(--tsa-red);
+}
+
+.tsa-menu-separator {
+  color: var(--tsa-soft);
+}
+
+.tsa-menu-status {
+  font-weight: 700;
+}
+
+.tsa-menu-status-ready {
+  color: var(--tsa-green);
+}
+
+.tsa-menu-status-done {
+  color: var(--tsa-soft);
+}
+
+.tsa-menu-status-active {
+  color: var(--tsa-amber);
+}
+
+.tsa-menu-action {
+  border: 1px solid transparent;
+}
+
+.tsa-menu-action-primary {
+  background: var(--tsa-red);
+  color: #fff;
+}
+
+.tsa-menu-action-primary:hover {
+  background: var(--tsa-red-strong);
+}
+
+.tsa-menu-action-future {
+  background: var(--tsa-surface);
+  border-color: var(--tsa-red-border);
+  color: var(--tsa-red);
+  opacity: .55;
+}
+
+.tsa-menu-action-disabled {
+  background: var(--tsa-surface-muted);
+  border-color: var(--tsa-border);
+  color: var(--tsa-soft);
+}
+
+.tsa-menu-link-button {
+  color: var(--tsa-red);
+}
+
+.tsa-menu-link-button:hover {
+  background: var(--tsa-red-soft);
+}
+
+.tsa-menu-link-button-disabled {
+  color: var(--tsa-soft);
+  opacity: .72;
+}
+
 /* TSA exam zoom - desktop/landscape */
 .tsa-exam-root { zoom: 1.1; }
+.tsa-body,
+.tsa-main-panel,
+.tsa-scroll-area {
+  min-height: 0;
+}
+
+.tsa-scroll-area {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
 
 /* Hide mobile-only elements on desktop */
 .tsa-mobile-timer, .tsa-sidebar-toggle { display: none !important; }
 
 /* ── Mobile Portrait ── */
 @media (max-width: 767px) and (orientation: portrait) {
-  .tsa-exam-root { zoom: 1; }
-  .tsa-header { height: 52px; padding-left: 12px; padding-right: 12px; }
+  .tsa-exam-root {
+    zoom: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  .tsa-navbar { height: 52px; padding-left: 12px; padding-right: 12px; gap: 8px; }
+  .tsa-navbar-left { flex: 0 1 auto; gap: 0; }
+  .tsa-navbar-brand span, .tsa-navbar-breadcrumb, .tsa-navbar-back span { display: none; }
+  .tsa-navbar-right { gap: 6px; margin-left: auto; }
+  .tsa-navbar .theme-toggle { min-width: 34px; height: 34px; padding: 0 8px; border-radius: 10px; }
+  .tsa-navbar-profile > .relative > button { max-width: 46px; overflow: hidden; }
+  .tsa-navbar-back { min-height: 34px; padding: 0 10px; }
+  .tsa-navbar-toggle {
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 16px;
+  }
+  .tsa-navbar-toggle.is-collapsed { top: 0; }
+  .tsa-navbar-toggle svg { width: 12px; height: 12px; }
+  .tsa-violation-badge { padding: 3px 7px; }
   .tsa-mobile-timer, .tsa-sidebar-toggle { display: flex !important; }
-  .tsa-body { flex-direction: column; }
+  .tsa-body {
+    flex: none;
+    display: block;
+    min-height: auto;
+    overflow: visible;
+  }
+  .tsa-main-panel {
+    display: block;
+    min-height: auto;
+    height: auto;
+  }
+  .tsa-scroll-area {
+    min-height: auto;
+    height: auto;
+    overflow: visible;
+    touch-action: pan-y;
+  }
 
   /* Reduce content padding for portrait */
-  .tsa-body > div > div { padding: 16px 14px 96px !important; }
+  .tsa-scroll-area { padding: 16px 14px 112px !important; }
 
   .tsa-sidebar {
     position: fixed; top: 52px; right: -100%; bottom: 0;
@@ -3407,15 +3814,59 @@ html[data-theme='dark'] .theme-page .preview-theme-badge {
     box-shadow: -8px 0 30px rgba(0,0,0,.15);
   }
   .tsa-sidebar.tsa-sidebar-open { right: 0; }
-  .tsa-bottombar { padding-left: 12px; padding-right: 12px; }
+  .tsa-bottombar {
+    position: fixed !important;
+    padding-left: 12px;
+    padding-right: 12px;
+    z-index: 90;
+  }
 }
 
 /* ── Mobile Landscape: hide sidebar, show toggle ── */
 @media (max-width: 767px) and (orientation: landscape),
 (orientation: landscape) and (max-height: 500px) {
-  .tsa-exam-root { zoom: 0.8; }
+  .tsa-exam-root {
+    zoom: 0.8;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
   .tsa-mobile-timer, .tsa-sidebar-toggle { display: flex !important; }
-  .tsa-header { height: 44px; }
+  .tsa-navbar { height: 44px; padding-left: 12px; padding-right: 12px; gap: 8px; }
+  .tsa-navbar-brand svg { width: 34px; height: 34px; }
+  .tsa-navbar-brand span, .tsa-navbar-breadcrumb { display: none; }
+  .tsa-navbar-right { gap: 6px; margin-left: auto; }
+  .tsa-navbar .theme-toggle { min-width: 32px; height: 32px; padding: 0 7px; border-radius: 9px; }
+  .tsa-navbar-profile > .relative > button { max-width: 46px; overflow: hidden; }
+  .tsa-navbar-back { min-height: 32px; padding: 0 10px; }
+  .tsa-navbar-back span { display: none; }
+  .tsa-navbar-toggle {
+    left: 50%;
+    transform: translateX(-50%);
+    width: 42px;
+    height: 15px;
+  }
+  .tsa-navbar-toggle.is-collapsed { top: 0; }
+  .tsa-navbar-toggle svg { width: 12px; height: 12px; }
+  .tsa-body {
+    flex: none;
+    display: block;
+    min-height: auto;
+    overflow: visible;
+  }
+  .tsa-main-panel {
+    display: block;
+    min-height: auto;
+    height: auto;
+  }
+  .tsa-scroll-area {
+    min-height: auto;
+    height: auto;
+    overflow: visible;
+    touch-action: pan-y;
+    padding-bottom: 96px !important;
+  }
   .tsa-sidebar {
     position: fixed; top: 44px; right: -100%; bottom: 0;
     width: 320px; max-width: 80vw; z-index: 100;
@@ -3423,12 +3874,26 @@ html[data-theme='dark'] .theme-page .preview-theme-badge {
     box-shadow: -8px 0 30px rgba(0,0,0,.15);
   }
   .tsa-sidebar.tsa-sidebar-open { right: 0; }
-  .tsa-bottombar { padding-left: 12px; padding-right: 12px; }
+  .tsa-bottombar {
+    position: fixed !important;
+    padding-left: 12px;
+    padding-right: 12px;
+    z-index: 90;
+  }
 }
 
 /* ── Small tablets portrait ── */
 @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
   .tsa-exam-root { zoom: 0.85; }
+  .tsa-navbar { height: 52px; padding-left: 16px; padding-right: 16px; }
+  .tsa-navbar-breadcrumb { display: none; }
+  .tsa-navbar-toggle {
+    left: 50%;
+    transform: translateX(-50%);
+    width: 48px;
+    height: 17px;
+  }
+  .tsa-navbar-toggle.is-collapsed { top: 0; }
   .tsa-mobile-timer, .tsa-sidebar-toggle { display: flex !important; }
   .tsa-sidebar {
     position: fixed; top: 52px; right: -100%; bottom: 0;
