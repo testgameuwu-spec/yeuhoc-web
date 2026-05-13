@@ -235,22 +235,25 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const [aiChatMounted, setAiChatMounted] = useState(false);
 
   // Time spent per question tracking
-  const [currentQStartTime, setCurrentQStartTime] = useState(0);
+  const currentQStartTimeRef = useRef(0);
   const [currentQElapsed, setCurrentQElapsed] = useState(0);
 
   useEffect(() => {
-    setCurrentQStartTime(Date.now());
-    setCurrentQElapsed(0);
+    currentQStartTimeRef.current = Date.now();
+    const resetTimer = setTimeout(() => {
+      setCurrentQElapsed(0);
+    }, 0);
+    return () => clearTimeout(resetTimer);
   }, [currentQ]);
 
   useEffect(() => {
     if (quizPhase === 'quiz' && timerRunning) {
       const interval = setInterval(() => {
-        setCurrentQElapsed(Math.floor((Date.now() - currentQStartTime) / 1000));
+        setCurrentQElapsed(Math.floor((Date.now() - currentQStartTimeRef.current) / 1000));
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [quizPhase, timerRunning, currentQStartTime]);
+  }, [quizPhase, timerRunning, currentQ]);
 
   // Preview Stats
   const [examStats, setExamStats] = useState(null);
@@ -1997,7 +2000,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                <MathRenderer text={qObj.content} />
                                {isValidImageSrc(qObj.image) && (
                                  <div className="mt-3 border border-gray-100 rounded-xl p-2 inline-block">
-                                   <img src={qObj.image} alt="" className="max-w-full max-h-[350px] object-contain rounded-lg" />
+                                   <Image
+                                     src={qObj.image}
+                                     alt=""
+                                     width={900}
+                                     height={500}
+                                     sizes="(max-width: 1024px) 100vw, 60vw"
+                                     className="max-w-full max-h-[350px] w-auto object-contain rounded-lg"
+                                   />
                                  </div>
                                )}
                              </div>
@@ -2076,7 +2086,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                  <MathRenderer text={contextQ.content} />
                                </div>
                                {isValidImageSrc(contextQ.image) && (
-                                 <div className="mt-3"><img src={contextQ.image} alt="" className="rounded-xl max-h-[400px] w-auto max-w-full object-contain" /></div>
+                                 <div className="mt-3">
+                                   <Image
+                                     src={contextQ.image}
+                                     alt=""
+                                     width={900}
+                                     height={500}
+                                     sizes="(max-width: 1024px) 100vw, 50vw"
+                                     className="rounded-xl max-h-[400px] w-auto max-w-full object-contain"
+                                   />
+                                 </div>
                                )}
                              </div>
                            </div>

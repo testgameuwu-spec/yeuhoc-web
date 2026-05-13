@@ -61,6 +61,7 @@ export default function HomePage() {
   const router = useRouter();
   const [allExams, setAllExams] = useState([]);
   const [allFolders, setAllFolders] = useState([]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState({});
   const [savedExams, setSavedExams] = useState(new Set());
   const [continueItems, setContinueItems] = useState([]);
@@ -86,22 +87,28 @@ export default function HomePage() {
 
   useEffect(() => {
     async function init() {
-      const [exams, folders] = await Promise.all([
-        getPublishedExams(),
-        getAllFolders(),
-      ]);
-      setAllExams(exams);
-      setAllFolders(folders || []);
-      setExpandedFolders({});
+      try {
+        const [exams, folders] = await Promise.all([
+          getPublishedExams(),
+          getAllFolders(),
+        ]);
+        setAllExams(exams);
+        setAllFolders(folders || []);
+        setExpandedFolders({});
+      } finally {
+        setCatalogLoaded(true);
+      }
     }
     init();
   }, []);
 
   useEffect(() => {
     let isMounted = true;
+    let targetLoadSeq = 0;
 
     const loadTargetData = async (sessionUser) => {
       if (!sessionUser) return;
+      const loadSeq = ++targetLoadSeq;
       setTargetDataLoaded(false);
       try {
         const profilePromise = supabase
@@ -116,7 +123,7 @@ export default function HomePage() {
           getUserTargetExams(sessionUser.id),
         ]);
 
-        if (!isMounted) return;
+        if (!isMounted || loadSeq !== targetLoadSeq) return;
 
         const activeTargets = activeTargetsRes.status === 'fulfilled' ? activeTargetsRes.value : [];
         const selectedTargets = selectedTargetsRes.status === 'fulfilled' ? selectedTargetsRes.value : [];
@@ -130,7 +137,7 @@ export default function HomePage() {
         setTargetDraftIds(selectedTargets.map((exam) => exam.id));
         setTargetModalOpen(selectedTargets.length === 0 && activeTargets.length > 0);
       } finally {
-        if (isMounted) setTargetDataLoaded(true);
+        if (isMounted && loadSeq === targetLoadSeq) setTargetDataLoaded(true);
       }
     };
 
@@ -141,6 +148,7 @@ export default function HomePage() {
       setSavedExams(sessionUser ? readSavedExams(sessionUser.id) : new Set());
 
       if (!sessionUser) {
+        targetLoadSeq++;
         setProfile(null);
         setTargetExams([]);
         setSelectedTargetExams([]);
@@ -154,8 +162,8 @@ export default function HomePage() {
       }
 
       setWish(getRandomWish());
-      await loadTargetData(sessionUser);
-      if (isMounted) setAuthLoaded(true);
+      setAuthLoaded(true);
+      void loadTargetData(sessionUser);
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -348,7 +356,7 @@ export default function HomePage() {
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'bạn';
   const nearestTargetExam = findNearestTargetExam(selectedTargetExams);
 
-  if (!authLoaded || !user || !targetDataLoaded) {
+  if (!authLoaded || !user) {
     return (
       <div className="home-page min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-gray-500 text-base font-medium">Đang tải...</div>
@@ -367,6 +375,7 @@ export default function HomePage() {
             nearestTargetExam={nearestTargetExam}
             selectedCount={selectedTargetExams.length}
             activeTargetCount={targetExams.length}
+            targetDataLoaded={targetDataLoaded}
             wish={wish}
           />
 
@@ -374,18 +383,24 @@ export default function HomePage() {
             <ContinueExamsPanel items={continueItems} loading={continueLoading} />
           </div>
 
-          <FilterBar
-            search={searchQuery} onSearch={handleSearch}
-            selYear={selYear} onYear={handleYear}
-            selType={selType} onType={handleType}
-            selSubject={selSubject} onSubject={handleSubject}
-            resultCount={filteredFolders.length}
-            totalCount={renderableFolders.length}
-            onClear={handleClearFilters}
-            sortOrder={sortOrder} onSortOrder={handleSortOrder}
-          />
+          {catalogLoaded && (
+            <FilterBar
+              search={searchQuery} onSearch={handleSearch}
+              selYear={selYear} onYear={handleYear}
+              selType={selType} onType={handleType}
+              selSubject={selSubject} onSubject={handleSubject}
+              resultCount={filteredFolders.length}
+              totalCount={renderableFolders.length}
+              onClear={handleClearFilters}
+              sortOrder={sortOrder} onSortOrder={handleSortOrder}
+            />
+          )}
 
-          {content ? (
+          {!catalogLoaded ? (
+            <div className="home-box py-14 text-center bg-white rounded-2xl border border-gray-100 text-sm font-medium text-gray-500">
+              Đang tải danh sách đề thi...
+            </div>
+          ) : content ? (
             <>
               {content}
 
@@ -434,7 +449,7 @@ export default function HomePage() {
   );
 }
 
-function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTargetCount, wish }) {
+function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTargetCount, targetDataLoaded, wish }) {
   return (
     <div className="home-box relative bg-white border border-gray-100 rounded-2xl p-5 sm:p-7 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
       <div className="relative z-10">
@@ -443,7 +458,11 @@ function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTar
           Xin chào, {displayName}
         </h1>
 
-        {nearestTargetExam ? (
+        {!targetDataLoaded ? (
+          <p className="text-base font-semibold text-gray-700">
+            Đang tải kỳ thi mục tiêu...
+          </p>
+        ) : nearestTargetExam ? (
           <>
             <p className="text-base sm:text-lg font-bold text-gray-800">
               {getCountdownSentence(nearestTargetExam)}
@@ -566,11 +585,12 @@ function getRenderableFolders(exams, folders) {
   const publicFolders = folders
     .filter((folder) => folder.visibility !== 'private')
     .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+  const publicFolderIds = new Set(publicFolders.map((folder) => folder.id));
   const examsByFolder = {};
   const rootExams = [];
 
   exams.forEach((exam) => {
-    if (exam.folderId && publicFolders.find((folder) => folder.id === exam.folderId)) {
+    if (exam.folderId && publicFolderIds.has(exam.folderId)) {
       if (!examsByFolder[exam.folderId]) examsByFolder[exam.folderId] = [];
       examsByFolder[exam.folderId].push(exam);
     } else {

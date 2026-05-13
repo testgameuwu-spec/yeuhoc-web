@@ -36,7 +36,7 @@ export default function UserProfile() {
       try {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('*')
+          .select('full_name, username, avatar_url, role, is_banned')
           .eq('id', sessionUser.id)
           .single();
           
@@ -96,7 +96,7 @@ export default function UserProfile() {
       if (!currentUser) return;
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('*')
+        .select('full_name, username, avatar_url, role, is_banned')
         .eq('id', currentUser.id)
         .single();
       if (profileData && isMounted) setProfile(profileData);

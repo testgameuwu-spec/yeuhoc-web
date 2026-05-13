@@ -35,7 +35,7 @@ export default function Navbar() {
   useEffect(() => {
     const refreshTimer = setTimeout(() => {
       refreshReportBadge();
-    }, 0);
+    }, 1500);
     const onSeen = () => refreshReportBadge();
     const onFocus = () => refreshReportBadge();
     window.addEventListener('yeuhoc-reports-seen', onSeen);
@@ -76,7 +76,9 @@ export default function Navbar() {
       await subscribeForUser(session?.user?.id || null);
     };
 
-    initRealtime();
+    const initTimer = setTimeout(() => {
+      initRealtime();
+    }, 2000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (reportChannel) {
@@ -89,6 +91,7 @@ export default function Navbar() {
 
     return () => {
       isMounted = false;
+      clearTimeout(initTimer);
       subscription.unsubscribe();
       if (reportChannel) {
         supabase.removeChannel(reportChannel);
@@ -108,7 +111,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200" style={{ isolation: 'isolate' }}>
       <div className="px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-3 min-w-0">
         {/* ─── Left: Logo ─── */}
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 no-underline group">
+        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 no-underline group">
           <div className="w-[38px] h-[38px] rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-shadow">
             <LogoIcon size={22} color="white" />
           </div>
@@ -121,6 +124,7 @@ export default function Navbar() {
         <nav className="flex min-w-0 items-center justify-center gap-0.5 sm:gap-1">
           <Link
             href="/"
+            prefetch={false}
             className={linkClass(normalizedPath === '/')}
           >
             <House weight="duotone" className="w-[18px] h-[18px]" />
@@ -128,6 +132,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/profile/phan-tich/"
+            prefetch={false}
             className={linkClass(normalizedPath === '/profile/phan-tich')}
           >
             <ChartBar weight="duotone" className="w-[18px] h-[18px]" />
@@ -135,6 +140,7 @@ export default function Navbar() {
           </Link>
           <Link
             href={unseenResolvedReports > 0 ? '/profile/?tab=reports' : '/profile/'}
+            prefetch={false}
             className={linkClass(normalizedPath === '/profile', 'relative')}
           >
             <UserIcon weight="duotone" className="w-[18px] h-[18px]" />

@@ -1,4 +1,4 @@
-import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, themeInitScript } from "@/components/ThemeProvider";
 
@@ -6,13 +6,6 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["vietnamese", "latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
-  display: "swap",
-});
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-outfit",
   display: "swap",
 });
 
@@ -30,7 +23,7 @@ export const metadata = {
     url: "https://www.yeuhoc.site",
     images: [
       {
-        url: "https://www.yeuhoc.site/og-image.png?v=3",
+        url: "/opengraph-image.png",
         width: 1200,
         height: 630,
         alt: "YeuHoc Banner",
@@ -41,13 +34,13 @@ export const metadata = {
     card: "summary_large_image",
     title: "YeuHoc",
     description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
-    images: ["https://www.yeuhoc.site/og-image.png?v=3"],
+    images: ["/opengraph-image.png"],
   },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="vi" className={`${plusJakartaSans.variable} ${outfit.variable}`} suppressHydrationWarning>
+    <html lang="vi" className={plusJakartaSans.variable} suppressHydrationWarning>
       <body className="antialiased bg-gray-100 text-gray-900 min-h-screen font-sans" suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <ThemeProvider>{children}</ThemeProvider>
