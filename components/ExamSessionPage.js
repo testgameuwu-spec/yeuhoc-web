@@ -5,6 +5,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
+import mediumZoom from 'medium-zoom';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
@@ -99,8 +100,8 @@ const TsaNavbar = ({ activeExam, onBack, children }) => (
   <div className="tsa-navbar">
     <div className="tsa-navbar-left">
       <button type="button" className="tsa-navbar-brand" onClick={onBack}>
-        <LogoIcon size={42} color="currentColor" />
-        <span>YeuHoc</span>
+        <LogoIcon size={28} color="currentColor" />
+        <span>YeuHocTSA</span>
       </button>
       <div className="tsa-navbar-breadcrumb">
         <button type="button" onClick={onBack}>Trang chủ</button>
@@ -254,6 +255,26 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       return () => clearInterval(interval);
     }
   }, [quizPhase, timerRunning, currentQ]);
+
+  // Zoom Images
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const zoom = mediumZoom('.markdown-content img, .tsa-main-panel img, .et-main img', {
+        margin: 24,
+        background: 'rgba(0, 0, 0, 0.85)',
+      });
+      return () => zoom.detach();
+    }
+  }, [currentQ, quizPhase, tsaSectionIndex, isDrawerOpen]);
+
+  // Default sidebar state for Reading/Science
+  useEffect(() => {
+    if (quizPhase === 'quiz' && isTSA && (tsaSectionIndex === 1 || tsaSectionIndex === 2)) {
+      setIsSidebarCollapsed(true);
+    } else {
+      setIsSidebarCollapsed(false);
+    }
+  }, [tsaSectionIndex, isTSA, quizPhase]);
 
   // Preview Stats
   const [examStats, setExamStats] = useState(null);
@@ -1795,10 +1816,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 <span className="tsa-menu-muted">Họ và tên:</span>
                 <span className="tsa-menu-value font-semibold">{user?.user_metadata?.full_name || 'Học sinh ẩn danh'}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="tsa-menu-muted">Mã định danh:</span>
-                <span className="tsa-menu-value font-semibold">{user?.id?.split('-')[0]?.toUpperCase() || 'UNKNOWN'}</span>
-              </div>
               <div className="tsa-menu-divider flex justify-between text-sm items-center mt-1 pt-2">
                 <span className="tsa-menu-muted">Trạng thái tài khoản</span>
                 <span className="tsa-menu-badge rounded-full px-3 py-1 text-xs font-semibold">Miễn phí</span>
@@ -1921,7 +1938,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               <div className="tsa-mobile-timer font-mono font-black text-[20px] tracking-tight" style={{ '--tsa-timer-color': '#E53935' }}>
                 <Timer key={`tsa-m-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
               </div>
-              <button onClick={() => { const el = document.querySelector('.tsa-sidebar'); el?.classList.toggle('tsa-sidebar-open'); }} className="tsa-sidebar-toggle w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+              <button onClick={() => {
+                if (window.innerWidth < 1024) {
+                   const el = document.querySelector('.tsa-sidebar');
+                   el?.classList.toggle('tsa-sidebar-open');
+                } else {
+                   setIsSidebarCollapsed(prev => !prev);
+                }
+              }} className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors" title="Đóng/Mở Danh sách">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
               </button>
             </TsaNavbar>
@@ -2175,7 +2199,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
 
           {/* Right Sidebar */}
-          <div className="tsa-sidebar w-[320px] bg-white border-l border-gray-200 shrink-0 flex flex-col h-full overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.03)] z-10 relative" {...tsaSidebarSwipeHandlers}>
+          <div className={`tsa-sidebar w-[320px] bg-white border-l border-gray-200 shrink-0 flex flex-col h-full overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.03)] z-10 relative ${isSidebarCollapsed ? 'lg:hidden' : 'lg:flex'}`} {...tsaSidebarSwipeHandlers}>
              <div className="p-6 flex-1 overflow-y-auto">
                 {/* Thông tin thí sinh */}
                 <div className="mb-8">
