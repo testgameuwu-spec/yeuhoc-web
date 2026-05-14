@@ -15,6 +15,7 @@ import TransactionManagement from '@/components/admin/TransactionManagement';
 import PracticeProgressManagement from '@/components/admin/PracticeProgressManagement';
 import AdminOverview from '@/components/admin/AdminOverview';
 import TargetExamManagement from '@/components/admin/TargetExamManagement';
+import { parseImageMap } from '@/components/ContentWithInlineImage';
 import {
   BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
@@ -203,22 +204,52 @@ export default function AdminDashboard() {
       const updatedQuestions = [...examData.questions];
       for (let i = 0; i < updatedQuestions.length; i++) {
         const q = updatedQuestions[i];
-        if (q.imageFile) {
-          const fileExt = q.imageFile.name.split('.').pop();
+        const uploadImageFile = async (file) => {
+          const fileExt = file.name.split('.').pop();
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
           const filePath = `images/${fileName}`; // Lưu vào folder images/ trong bucket
           
           const { error: uploadError } = await supabase.storage
             .from('exam-images') // Bucket name
-            .upload(filePath, q.imageFile);
+            .upload(filePath, file);
             
           if (uploadError) {
              throw new Error(`Lỗi tải ảnh (Câu ${i+1}): ` + uploadError.message + '\n\n💡 Vui lòng đảm bảo bạn đã tạo Bucket tên "exam-images" và public trên Supabase.');
           }
           
           const { data } = supabase.storage.from('exam-images').getPublicUrl(filePath);
-          q.image = data.publicUrl;
+          return data.publicUrl;
+        };
+
+        if (q.imageFiles && typeof q.imageFiles === 'object') {
+          const nextImageMap = { ...parseImageMap(q.image) };
+
+          for (const [markerId, file] of Object.entries(q.imageFiles)) {
+            if (!file || typeof file.name !== 'string') continue;
+            nextImageMap[markerId] = await uploadImageFile(file);
+          }
+
+          const persistedImageMap = Object.fromEntries(
+            Object.entries(nextImageMap).filter(([, value]) => (
+              typeof value === 'string'
+              && (value.startsWith('/') || value.startsWith('http'))
+            ))
+          );
+
+          q.image = Object.keys(persistedImageMap).length > 0 ? JSON.stringify(persistedImageMap) : null;
+          delete q.imageFiles;
           delete q.imageFile;
+        } else if (q.imageFile) {
+          q.image = await uploadImageFile(q.imageFile);
+          delete q.imageFile;
+        } else if (q.image && typeof q.image === 'object') {
+          const persistedImageMap = Object.fromEntries(
+            Object.entries(parseImageMap(q.image)).filter(([, value]) => (
+              typeof value === 'string'
+              && (value.startsWith('/') || value.startsWith('http'))
+            ))
+          );
+          q.image = Object.keys(persistedImageMap).length > 0 ? JSON.stringify(persistedImageMap) : null;
         }
       }
       examData.questions = updatedQuestions;

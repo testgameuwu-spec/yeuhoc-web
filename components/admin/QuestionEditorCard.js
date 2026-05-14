@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
 import { getDragBlankIds, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
+import { getInlineImageMarkerIds, parseImageMap } from '@/components/ContentWithInlineImage';
 
 const TYPE_STYLES = {
   MCQ: { label: 'Trắc nghiệm', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', icon: CheckCircle2 },
@@ -31,6 +32,16 @@ const LEVEL_COLORS = {
 
 const OPTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+const isPreviewImageSrc = (src) => {
+  if (!src || typeof src !== 'string') return false;
+  return src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('/') || src.startsWith('http');
+};
+
+const compactImageMap = (imageMap) => {
+  const entries = Object.entries(imageMap || {}).filter(([, value]) => Boolean(value));
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+};
+
 function serializeDragAnswer(answerMap, blankIds = []) {
   const keys = blankIds.length > 0 ? blankIds : Object.keys(answerMap || {});
   return keys
@@ -47,8 +58,18 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
   const [showSolution, setShowSolution] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [draggable, setDraggable] = useState(false);
+  const [selectedImageMarkerId, setSelectedImageMarkerId] = useState(null);
 
   const q = question;
+  const imageMarkers = getInlineImageMarkerIds(q.content);
+  const hasImageMarker = imageMarkers.length > 0;
+  const activeImageMarkerId = imageMarkers.includes(selectedImageMarkerId)
+    ? selectedImageMarkerId
+    : (imageMarkers[0] || null);
+  const imageMap = parseImageMap(q.image);
+  const singleImage = isPreviewImageSrc(q.image)
+    ? q.image
+    : Object.values(imageMap).find(isPreviewImageSrc);
   const typeStyle = TYPE_STYLES[q.type] || TYPE_STYLES.MCQ;
   const TypeIcon = typeStyle.icon;
   const maAnswerLetters = normalizeMAAnswer(q.answer);
@@ -63,6 +84,42 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
   const updateMultiple = useCallback((updates) => {
     onUpdate({ ...q, ...updates });
   }, [q, onUpdate]);
+
+  const applyImageFile = useCallback((file, markerId = null) => {
+    if (!file || !file.type.startsWith('image/')) return;
+
+    if (markerId || imageMarkers.length > 0) {
+      const targetMarker = markerId || imageMarkers[0];
+      const nextImageMap = { ...parseImageMap(q.image) };
+      if (nextImageMap.default && imageMarkers.length > 0 && !imageMarkers.some(id => nextImageMap[id])) {
+        nextImageMap[imageMarkers[0]] = nextImageMap.default;
+      }
+      delete nextImageMap.default;
+      nextImageMap[targetMarker] = URL.createObjectURL(file);
+
+      updateMultiple({
+        image: compactImageMap(nextImageMap),
+        imageFiles: { ...(q.imageFiles || {}), [targetMarker]: file },
+      });
+      return;
+    }
+
+    updateMultiple({ imageFile: file, image: URL.createObjectURL(file) });
+  }, [imageMarkers, q.image, q.imageFiles, updateMultiple]);
+
+  const removeMarkerImage = useCallback((markerId) => {
+    const nextImageMap = { ...parseImageMap(q.image) };
+    delete nextImageMap.default;
+    delete nextImageMap[markerId];
+
+    const nextImageFiles = { ...(q.imageFiles || {}) };
+    delete nextImageFiles[markerId];
+
+    updateMultiple({
+      image: compactImageMap(nextImageMap),
+      imageFiles: Object.keys(nextImageFiles).length > 0 ? nextImageFiles : undefined,
+    });
+  }, [q.image, q.imageFiles, updateMultiple]);
 
   // ── MCQ helpers ──
   const handleOptionChange = (i, value) => {
@@ -195,9 +252,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
     e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      updateMultiple({ imageFile: file, image: URL.createObjectURL(file) });
-    }
+    applyImageFile(file, activeImageMarkerId);
   };
 
   const handlePaste = (e) => {
@@ -209,7 +264,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
         const file = items[i].getAsFile();
         if (file) {
           e.preventDefault();
-          updateMultiple({ imageFile: file, image: URL.createObjectURL(file) });
+          applyImageFile(file, activeImageMarkerId);
           break;
         }
       }
@@ -621,43 +676,143 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
 
           {/* ── Image ── */}
           <div className="space-y-3">
-            {q.needsImageReview && (
+            {(q.needsImageReview || hasImageMarker) && (
               <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{q.aiImageNote || 'AI phát hiện câu này có hình. Vui lòng kiểm tra hoặc tải ảnh đúng trước khi lưu.'}</span>
+                <span>
+                  {q.needsImageReview
+                    ? (q.aiImageNote || 'AI phát hiện câu này có hình. Vui lòng kiểm tra hoặc tải ảnh đúng trước khi lưu.')
+                    : 'Nội dung có ký hiệu ảnh như ((1)), ((2)). Vui lòng kiểm tra và tải ảnh minh hoạ tương ứng trước khi lưu.'}
+                </span>
               </div>
             )}
-            <label 
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`flex flex-col items-center justify-center gap-2 w-full sm:w-[400px] py-6 px-4 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                isDragging
-                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 scale-[1.01]'
-                  : 'border-white/10 bg-white/5 text-white/40 hover:text-white/70 hover:border-white/20 hover:bg-white/10'
-              }`}
-            >
-              <ImageIcon className={`w-6 h-6 transition-transform ${isDragging ? '-translate-y-1' : ''}`} />
-              <span className="text-xs font-medium text-center">
-                {isDragging ? 'Thả ảnh vào đây...' : (q.image ? 'Kéo thả, click hoặc Ctrl+V để đổi ảnh khác' : 'Kéo thả, click hoặc Ctrl+V để tải ảnh minh hoạ lên')}
-              </span>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  updateMultiple({ imageFile: file, image: URL.createObjectURL(file) });
-                }
-              }} />
-            </label>
-            
-            {q.image && (
-              <div className="relative w-fit">
-                <Image src={q.image} alt="Preview" width={320} height={192} className="max-w-xs max-h-48 rounded-xl border border-white/10 object-contain bg-white/5" />
-                <button onClick={() => { updateMultiple({ imageFile: null, image: null }); }}
-                  className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
-                  title="Xoá ảnh">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
+            {hasImageMarker ? (
+              <>
+                <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
+                  {imageMarkers.map((markerId) => {
+                    const markerImage = imageMap[markerId] || (markerId === imageMarkers[0] ? imageMap.default : null);
+                    const hasMarkerImage = isPreviewImageSrc(markerImage);
+                    const isActiveImageMarker = markerId === activeImageMarkerId;
+
+                    return (
+                      <div
+                        key={markerId}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedImageMarkerId(markerId)}
+                        onFocus={() => setSelectedImageMarkerId(markerId)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedImageMarkerId(markerId);
+                          }
+                        }}
+                        className={`rounded-xl border p-3 transition-all ${
+                          isActiveImageMarker
+                            ? 'border-indigo-500/70 bg-indigo-500/15 shadow-sm shadow-indigo-500/20 ring-2 ring-indigo-500/30'
+                            : 'border-white/10 bg-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/10'
+                        }`}
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`rounded-lg border px-2 py-1 font-mono text-xs font-bold ${
+                              isActiveImageMarker
+                                ? 'border-indigo-400/70 bg-indigo-500/25 text-indigo-200'
+                                : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300'
+                            }`}>
+                              (({markerId}))
+                            </span>
+                            {isActiveImageMarker && (
+                              <span className="rounded-full bg-indigo-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                Đang chọn
+                              </span>
+                            )}
+                          </div>
+                          {hasMarkerImage && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeMarkerImage(markerId);
+                              }}
+                              className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                              title={`Xoá ảnh vị trí ${markerId}`}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <label className={`flex min-h-[132px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-3 py-4 text-center transition-all ${
+                          isActiveImageMarker
+                            ? 'border-indigo-400/60 bg-indigo-950/20 text-indigo-200 hover:bg-indigo-500/20'
+                            : 'border-white/10 bg-white/5 text-white/40 hover:border-indigo-500/30 hover:bg-indigo-500/10 hover:text-indigo-300'
+                        }`}>
+                          {hasMarkerImage ? (
+                            <Image
+                              src={markerImage}
+                              alt={`Ảnh vị trí ${markerId}`}
+                              width={260}
+                              height={150}
+                              unoptimized
+                              className="max-h-28 w-auto max-w-full rounded-lg object-contain"
+                            />
+                          ) : (
+                            <>
+                              <ImageIcon className="h-5 w-5" />
+                              <span className="text-xs font-medium">Chọn ảnh cho vị trí {markerId}</span>
+                            </>
+                          )}
+                          <span className="text-[11px] font-medium text-white/30">
+                            {hasMarkerImage ? 'Bấm để đổi ảnh' : `Bấm để tải ảnh ((${markerId}))`}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              setSelectedImageMarkerId(markerId);
+                              applyImageFile(e.target.files?.[0], markerId);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="max-w-3xl text-[11px] leading-relaxed text-white/30">
+                  Đang chọn (({activeImageMarkerId})). Bấm ô khác hoặc Ctrl+V để dán ảnh vào đúng vị trí.
+                </p>
+              </>
+            ) : (
+              <>
+                <label
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`flex flex-col items-center justify-center gap-2 w-full sm:w-[400px] py-6 px-4 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                    isDragging
+                      ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 scale-[1.01]'
+                      : 'border-white/10 bg-white/5 text-white/40 hover:text-white/70 hover:border-white/20 hover:bg-white/10'
+                  }`}
+                >
+                  <ImageIcon className={`w-6 h-6 transition-transform ${isDragging ? '-translate-y-1' : ''}`} />
+                  <span className="text-xs font-medium text-center">
+                    {isDragging ? 'Thả ảnh vào đây...' : (singleImage ? 'Kéo thả, click hoặc Ctrl+V để đổi ảnh khác' : 'Kéo thả, click hoặc Ctrl+V để tải ảnh minh hoạ lên')}
+                  </span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => applyImageFile(e.target.files?.[0])} />
+                </label>
+
+                {singleImage && (
+                  <div className="relative w-fit">
+                    <Image src={singleImage} alt="Preview" width={320} height={192} unoptimized className="max-w-xs max-h-48 rounded-xl border border-white/10 object-contain bg-white/5" />
+                    <button onClick={() => { updateMultiple({ imageFile: null, image: null }); }}
+                      className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                      title="Xoá ảnh">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

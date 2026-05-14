@@ -9,6 +9,7 @@ import ImageModal from '@/components/ImageModal';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
+import ContentWithInlineImage from '@/components/ContentWithInlineImage';
 import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
 import MathRenderer from '@/components/MathRenderer';
 import ResultsView from '@/components/ResultsView';
@@ -167,13 +168,6 @@ const hasPracticeAnswer = (answer) => {
   if (!answer) return false;
   if (typeof answer === 'object') return Object.keys(answer).length > 0;
   return answer !== '';
-};
-
-const isValidImageSrc = (src) => {
-  if (!src || typeof src !== 'string') return false;
-  const trimmed = src.trim();
-  if (trimmed === '' || trimmed.toLowerCase() === 'không') return false;
-  return trimmed.startsWith('/') || trimmed.startsWith('http');
 };
 
 const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, realQuestions }) => {
@@ -1420,21 +1414,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     <div className="flex items-center gap-2 mb-3">
                       <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
                     </div>
-                    <div className="text-sm leading-relaxed text-gray-700">
-                      <MathRenderer text={contextQ.content} />
-                    </div>
-                    {isValidImageSrc(contextQ.image) && (
-                      <div className="mt-3">
-                        <Image
-                          src={contextQ.image}
-                          alt=""
-                          width={900}
-                          height={500}
-                          sizes="(max-width: 1024px) 100vw, 50vw"
-                          className="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
-                        />
-                      </div>
-                    )}
+                    <ContentWithInlineImage
+                      text={contextQ.content}
+                      image={contextQ.image}
+                      alt=""
+                      className="text-sm leading-relaxed text-gray-700"
+                      imageWrapperClassName="mt-3"
+                      imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
+                    />
                   </div>
                 </div>
 
@@ -2040,7 +2027,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 {qObj.type === 'DRAG' ? (
                                   <div className="tsa-drag-wrap">
                                     <QuestionCard
-                                      question={{ ...qObj, image: null }}
+                                      question={qObj}
                                       index={qIndex}
                                       selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)}
                                       onAnswerChange={(val) => handleAnswerChange(qObj.id, val)}
@@ -2048,20 +2035,15 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     />
                                   </div>
                                 ) : (
-                                  <MathRenderer text={qObj.content} />
+                                  <ContentWithInlineImage
+                                    text={qObj.content}
+                                    image={qObj.image}
+                                    alt=""
+                                    imageWrapperClassName="mt-3 border border-gray-100 rounded-xl p-2 inline-block"
+                                    imageClassName="max-w-full max-h-[350px] w-auto object-contain rounded-lg"
+                                    sizes="(max-width: 1024px) 100vw, 60vw"
+                                  />
                                 )}
-                                {isValidImageSrc(qObj.image) && (
-                                  <div className="mt-3 border border-gray-100 rounded-xl p-2 inline-block">
-                                    <Image
-                                     src={qObj.image}
-                                     alt=""
-                                     width={900}
-                                     height={500}
-                                     sizes="(max-width: 1024px) 100vw, 60vw"
-                                     className="max-w-full max-h-[350px] w-auto object-contain rounded-lg"
-                                   />
-                                 </div>
-                               )}
                              </div>
                              <button
                                onClick={() => { const next = new Set(bookmarks); if (next.has(qObj.id)) next.delete(qObj.id); else next.add(qObj.id); setBookmarks(next); }}
@@ -2131,21 +2113,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                  <BookOpen weight="duotone" className="w-4 h-4 text-gray-500" />
                                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ngữ liệu</span>
                                </div>
-                               <div className="text-[15px] leading-relaxed text-gray-700">
-                                 <MathRenderer text={contextQ.content} />
-                               </div>
-                               {isValidImageSrc(contextQ.image) && (
-                                 <div className="mt-3">
-                                   <Image
-                                     src={contextQ.image}
-                                     alt=""
-                                     width={900}
-                                     height={500}
-                                     sizes="(max-width: 1024px) 100vw, 50vw"
-                                     className="rounded-xl max-h-[400px] w-auto max-w-full object-contain"
-                                   />
-                                 </div>
-                               )}
+                               <ContentWithInlineImage
+                                 text={contextQ.content}
+                                 image={contextQ.image}
+                                 alt=""
+                                 className="text-[15px] leading-relaxed text-gray-700"
+                                 imageWrapperClassName="mt-3"
+                                 imageClassName="rounded-xl max-h-[400px] w-auto max-w-full object-contain"
+                               />
                              </div>
                            </div>
                            <div className="tsa-questions-panel w-full sm:w-[45%]">
@@ -2528,21 +2503,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
                               </div>
-                              <div className="text-sm leading-relaxed text-gray-700">
-                                <MathRenderer text={group.context.content} />
-                              </div>
-                              {isValidImageSrc(group.context.image) && (
-                                <div className="mt-3">
-                                  <Image
-                                    src={group.context.image}
-                                    alt="Context image"
-                                    width={900}
-                                    height={500}
-                                    sizes="(max-width: 1024px) 100vw, 50vw"
-                                    className="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
-                                  />
-                                </div>
-                              )}
+                              <ContentWithInlineImage
+                                text={group.context.content}
+                                image={group.context.image}
+                                alt="Context image"
+                                className="text-sm leading-relaxed text-gray-700"
+                                imageWrapperClassName="mt-3"
+                                imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
+                              />
                             </div>
                           </div>
 
@@ -2881,21 +2849,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Ngữ liệu</span>
                               </div>
-                              <div className="text-sm leading-relaxed text-gray-700">
-                                <MathRenderer text={group.context.content} />
-                              </div>
-                              {isValidImageSrc(group.context.image) && (
-                                <div className="mt-3">
-                                  <Image
-                                    src={group.context.image}
-                                    alt="Context image"
-                                    width={900}
-                                    height={500}
-                                    sizes="(max-width: 1024px) 100vw, 50vw"
-                                    className="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
-                                  />
-                                </div>
-                              )}
+                              <ContentWithInlineImage
+                                text={group.context.content}
+                                image={group.context.image}
+                                alt="Context image"
+                                className="text-sm leading-relaxed text-gray-700"
+                                imageWrapperClassName="mt-3"
+                                imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
+                              />
                             </div>
                           </div>
 

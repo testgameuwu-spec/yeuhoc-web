@@ -1,9 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
+import ContentWithInlineImage, { parseImageMap } from './ContentWithInlineImage';
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
 import { getDragBlankIds, getQuestionResultState, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
 
@@ -21,10 +21,12 @@ export default function QuestionCard({
     onReport = null,
 }) {
     const [imageModalOpen, setImageModalOpen] = useState(false);
+    const [modalImageSrc, setModalImageSrc] = useState(null);
     const [showSolution, setShowSolution] = useState(false);
     const [activeDragLetter, setActiveDragLetter] = useState(null);
     const { id, type, content, options, answer, solution, image: rawImage } = question;
-    const image = rawImage && typeof rawImage === 'string' && rawImage.trim() !== '' && rawImage.trim().toLowerCase() !== 'không' && (rawImage.trim().startsWith('/') || rawImage.trim().startsWith('http')) ? rawImage : null;
+    const image = rawImage;
+    const hasImage = Object.keys(parseImageMap(rawImage)).length > 0;
     const isTextBlock = type === 'TEXT';
     const shouldShowResultStatus = showResult && !isTextBlock;
 
@@ -145,8 +147,55 @@ export default function QuestionCard({
                     />
                 ) : (
                     <div className="et-q-text">
-                        <MathRenderer text={content} />
+                        <ContentWithInlineImage
+                            text={content}
+                            image={image}
+                            alt={`Hình minh họa câu ${index + 1}`}
+                            imageWrapperClassName="mb-3"
+                            imageClassName="max-h-[220px] w-auto max-w-full object-contain block"
+                            imageButtonStyle={{
+                                background: 'none',
+                                border: '1px solid var(--et-gray-200)',
+                                borderRadius: 8,
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                padding: 0,
+                                display: 'block',
+                            }}
+                            width={700}
+                            height={400}
+                            sizes="(max-width: 768px) 100vw, 700px"
+                            onImageClick={(src) => {
+                                setModalImageSrc(src);
+                                setImageModalOpen(true);
+                            }}
+                        />
                     </div>
+                )}
+                {type === 'DRAG' && hasImage && (
+                    <ContentWithInlineImage
+                        text=""
+                        image={image}
+                        alt={`Hình minh họa câu ${index + 1}`}
+                        imageWrapperClassName="mb-3"
+                        imageClassName="max-h-[220px] w-auto max-w-full object-contain block"
+                        imageButtonStyle={{
+                            background: 'none',
+                            border: '1px solid var(--et-gray-200)',
+                            borderRadius: 8,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'block',
+                        }}
+                        width={700}
+                        height={400}
+                        sizes="(max-width: 768px) 100vw, 700px"
+                        onImageClick={(src) => {
+                            setModalImageSrc(src);
+                            setImageModalOpen(true);
+                        }}
+                    />
                 )}
 
                 {isUnanswered && (
@@ -155,30 +204,6 @@ export default function QuestionCard({
                         <div>
                             <div className="font-bold">Bạn chưa trả lời câu này.</div>
                         </div>
-                    </div>
-                )}
-
-                {/* Image */}
-                {image && (
-                    <div style={{ marginBottom: 14 }}>
-                        <button
-                            onClick={() => setImageModalOpen(true)}
-                            style={{
-                                background: 'none', border: '1px solid var(--et-gray-200)',
-                                borderRadius: 8, overflow: 'hidden', cursor: 'pointer', padding: 0,
-                                display: 'block',
-                            }}
-                        >
-                            <Image
-                                src={image}
-                                alt={`Hình minh họa câu ${index + 1}`}
-                                width={700}
-                                height={400}
-                                sizes="(max-width: 768px) 100vw, 700px"
-                                style={{ maxHeight: 220, maxWidth: '100%', objectFit: 'contain', display: 'block' }}
-                                onError={e => { e.target.style.display = 'none'; }}
-                            />
-                        </button>
                     </div>
                 )}
 
@@ -324,7 +349,7 @@ export default function QuestionCard({
                 <ImageModal
                     isOpen={imageModalOpen}
                     onClose={() => setImageModalOpen(false)}
-                    src={image}
+                    src={modalImageSrc}
                     alt={`Hình minh họa câu ${index + 1}`}
                 />
             )}
