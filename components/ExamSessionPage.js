@@ -1978,7 +1978,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           {/* Content Area */}
           <div className="tsa-main-panel flex-1 flex flex-col relative bg-white">
              <div ref={mainRef} className="tsa-scroll-area flex-1 overflow-y-auto p-8 pb-24 text-black">
-                <div className="max-w-6xl mx-auto">
+                <div className="tsa-scroll-inner max-w-6xl mx-auto">
                    {(() => {
                      const contextQ = currentQuestionObj?.linkedTo ? questions.find(x => x.id === currentQuestionObj.linkedTo && x.type === 'TEXT') : null;
                      // Get ALL sibling questions sharing the same context
@@ -2084,9 +2084,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                      // GROUPED: Context + all child questions
                      if (contextQ && groupQuestions) {
                        return (
-                         <div className="tsa-content-split flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
-                           <div className="tsa-context-panel w-full sm:w-[55%] sm:sticky sm:top-0 sm:self-start sm:h-[calc(100dvh-100px)]">
-                             <div className="bg-[#f8f9fa] border border-gray-200 rounded-xl p-4 sm:p-6 h-full overflow-y-auto">
+                         <div className="tsa-content-split flex flex-col sm:flex-row gap-6 sm:gap-8 items-stretch">
+                           <div className="tsa-context-panel w-full sm:w-[55%]">
+                             <div className="tsa-context-card bg-[#f8f9fa] border border-gray-200 rounded-xl p-4 sm:p-6 h-full overflow-y-auto">
                                <div className="flex items-center gap-2 mb-3">
                                  <BookOpen weight="duotone" className="w-4 h-4 text-gray-500" />
                                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ngữ liệu</span>

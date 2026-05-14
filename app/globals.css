@@ -3781,6 +3781,42 @@ html[data-theme='dark'] .tsa-navbar {
   touch-action: pan-y;
 }
 
+.tsa-scroll-inner {
+  min-height: 0;
+}
+
+@media (min-width: 768px) {
+  .tsa-scroll-inner:has(.tsa-content-split) {
+    height: 100%;
+  }
+
+  .tsa-content-split,
+  .tsa-context-panel,
+  .tsa-questions-panel {
+    min-height: 0;
+  }
+
+  .tsa-content-split {
+    height: 100%;
+  }
+
+  .tsa-context-panel,
+  .tsa-questions-panel {
+    height: 100%;
+  }
+
+  .tsa-context-card,
+  .tsa-questions-panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .tsa-questions-panel {
+    padding-right: 4px;
+  }
+}
+
 html[data-theme='dark'] .tsa-exam-root .bg-\[\#f8f9fa\],
 html[data-theme='dark'] .tsa-exam-root [class~="bg-[#f8f9fa]"],
 html[data-theme='dark'] .tsa-exam-root [class~="bg-[#f1f5f9]"],
