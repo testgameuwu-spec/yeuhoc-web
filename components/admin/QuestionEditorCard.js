@@ -763,7 +763,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
                             </>
                           )}
                           <span className="text-[11px] font-medium text-white/30">
-                            {hasMarkerImage ? 'Bấm để đổi ảnh' : `Bấm để tải ảnh ((${markerId}))`}
+                            {hasMarkerImage ? 'Bấm để đổi ảnh hoặc Ctrl+V để dán ảnh' : `Bấm để tải ảnh ((${markerId})) hoặc Ctrl+V để dán ảnh`}
                           </span>
                           <input
                             type="file"
