@@ -5,7 +5,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
-import mediumZoom from 'medium-zoom';
+import ImageModal from '@/components/ImageModal';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
@@ -256,16 +256,25 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
   }, [quizPhase, timerRunning, currentQ]);
 
-  // Zoom Images
+  const [globalImageModal, setGlobalImageModal] = useState({ isOpen: false, src: '', alt: '' });
+
+  // Zoom Images with global ImageModal
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const zoom = mediumZoom('.markdown-content img, .tsa-main-panel img, .et-main img', {
-        margin: 24,
-        background: 'rgba(0, 0, 0, 0.85)',
-      });
-      return () => zoom.detach();
-    }
-  }, [currentQ, quizPhase, tsaSectionIndex, isDrawerOpen]);
+    const handleGlobalImgClick = (e) => {
+      if (e.target.tagName === 'IMG') {
+        if (e.target.closest('button')) return;
+        if (e.target.closest('.markdown-content') || e.target.closest('.tsa-main-panel') || e.target.closest('.et-main')) {
+          setGlobalImageModal({
+            isOpen: true,
+            src: e.target.src,
+            alt: e.target.alt || 'Zoomed Image',
+          });
+        }
+      }
+    };
+    document.addEventListener('click', handleGlobalImgClick);
+    return () => document.removeEventListener('click', handleGlobalImgClick);
+  }, []);
 
   // Default sidebar state for Reading/Science
   useEffect(() => {
@@ -1618,6 +1627,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         )}
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+        {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
     );
   }
@@ -1796,6 +1806,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
         </div>
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+        {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
     );
   }
@@ -1895,6 +1906,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
         </div>
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+        {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
     );
   }
@@ -2288,6 +2300,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         </div>
         
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+        {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
     );
   }
@@ -2746,6 +2759,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         </div>
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+        {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
     );
   }
@@ -2773,6 +2787,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         </div>
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+        {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
     );
   }
@@ -3044,6 +3059,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         </div>
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
+        {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
     );
   }
