@@ -2999,6 +2999,8 @@ html[data-theme='dark'] .markdown-content code {
 
 /* Admin light-mode rescue for the existing dark dashboard classes. */
 html[data-theme='light'] .admin-shell {
+  --app-border: #cbd5e1;
+  --app-border-strong: #94a3b8;
   background: var(--app-bg) !important;
   color: var(--app-text);
 }
