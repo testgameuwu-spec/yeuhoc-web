@@ -14,6 +14,11 @@
   --app-input: #ffffff;
   --app-hover: #f1f5f9;
   --app-indigo-soft: #eef2ff;
+  --home-brand-primary: #4f7df3;
+  --home-brand-hover: #3f6ee8;
+  --home-brand-soft: #eef4ff;
+  --home-brand-border: #cfe0ff;
+  --home-brand-shadow: rgba(79, 125, 243, .18);
   --app-admin-bg: #0a0a1e;
   --admin-sidebar-bg: rgba(10, 10, 30, 0.95);
   --background: var(--app-bg);
@@ -68,6 +73,9 @@ html[data-theme='dark'] {
   --app-input: #0f172a;
   --app-hover: rgba(255, 255, 255, .07);
   --app-indigo-soft: rgba(99, 102, 241, .16);
+  --home-brand-soft: rgba(79, 125, 243, .14);
+  --home-brand-border: rgba(111, 145, 247, .34);
+  --home-brand-shadow: rgba(79, 125, 243, .16);
   --admin-sidebar-bg: rgba(10, 10, 30, 0.95);
   --background: var(--app-bg);
   --foreground: var(--app-text);
@@ -2085,8 +2093,8 @@ html[data-theme='dark'] .ep-lb-score-val {
 }
 
 .auth-input-wrap:focus-within {
-  border-color: #818cf8;
-  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.12);
+  border-color: var(--home-brand-primary);
+  box-shadow: 0 0 0 3px var(--home-brand-shadow);
 }
 
 .auth-input {
@@ -2117,14 +2125,15 @@ html[data-theme='dark'] .ep-lb-score-val {
   font-weight: 600;
   font-family: inherit;
   color: #fff;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+  background: var(--home-brand-primary);
+  box-shadow: 0 4px 14px var(--home-brand-shadow);
   transition: all 0.25s ease;
 }
 
 .auth-btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+  background: var(--home-brand-hover);
+  box-shadow: 0 6px 20px var(--home-brand-shadow);
 }
 
 .auth-btn-primary:active:not(:disabled) {

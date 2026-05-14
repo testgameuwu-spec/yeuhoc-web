@@ -638,8 +638,8 @@ function ExamSwitch({ activeKey, onChange, statsByExam }) {
               onClick={() => onChange(tab.key)}
               className={`flex min-w-[150px] items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-extrabold transition-colors ${
                 active
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                  ? 'bg-[var(--home-brand-primary)] text-white shadow-sm'
+                  : 'text-slate-500 hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)]'
               }`}
             >
               {tab.label}
@@ -691,7 +691,7 @@ function SummaryGrid({ stats, examKey }) {
         title={examKey === 'THPT' ? 'Cao nhất' : 'Tỉ lệ cao nhất'}
         value={stats.totalAttempts ? formatMetricValue(stats.highestValue, examKey) : '--'}
         detail={examKey === 'THPT' ? 'Theo thang 10 điểm' : totalAnswerText}
-        colorClass="text-blue-600"
+        colorClass="text-[var(--home-brand-primary)]"
       />
       <SummaryItem
         icon={History}
@@ -730,7 +730,7 @@ function MetricBarChart({ rows, examKey, emptyText }) {
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-blue-600 transition-all"
+                className="h-full rounded-full bg-[var(--home-brand-primary)] transition-all"
                 style={{ width: `${width}%` }}
               />
             </div>
@@ -754,7 +754,7 @@ function AbilityChartCard({ title, description, badge, rows, examKey, emptyText 
             {description && <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">{description}</p>}
           </div>
           {badge && (
-            <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-600">
+            <span className="w-fit rounded-full bg-[var(--home-brand-soft)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[var(--home-brand-primary)]">
               {badge}
             </span>
           )}
@@ -801,10 +801,10 @@ function ScoreHistoryChart({ attempts, examKey }) {
             </g>
           );
         })}
-        <polyline fill="none" points={path} stroke="#2563eb" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+        <polyline fill="none" points={path} stroke="var(--home-brand-primary)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
         {points.map((point) => (
           <g key={point.attempt.id}>
-            <circle cx={point.x} cy={point.y} r="6" fill="#2563eb" stroke="#ffffff" strokeWidth="3" />
+            <circle cx={point.x} cy={point.y} r="6" fill="var(--home-brand-primary)" stroke="#ffffff" strokeWidth="3" />
             <text x={point.x} y={height - 12} textAnchor="middle" className="fill-slate-400 text-[10px] font-semibold">
               {point.attempt.createdAt ? point.attempt.createdAt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '--'}
             </text>
@@ -832,7 +832,7 @@ function SuggestionsCard({
       <div className="flex flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div>
           <h2 className="flex items-center gap-3 text-xl font-extrabold text-slate-950">
-            <Lightbulb className="h-6 w-6 text-blue-600" />
+            <Lightbulb className="h-6 w-6 text-[var(--home-brand-primary)]" />
             Gợi ý ôn tập {examLabel}
           </h2>
           <p className="mt-2 text-sm text-slate-500">
@@ -845,7 +845,7 @@ function SuggestionsCard({
             type="button"
             onClick={onGenerate}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--home-brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--home-brand-hover)] disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {loading ? 'Đang tạo...' : usingAi ? 'Tạo lại gợi ý AI' : 'Tạo gợi ý AI'}
@@ -1013,7 +1013,7 @@ export default function PersonalAnalysisPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--home-brand-primary)]" />
           Đang tải phân tích cá nhân...
         </div>
       </div>
@@ -1089,7 +1089,7 @@ export default function PersonalAnalysisPage() {
                     key={attempt.id}
                     type="button"
                     onClick={() => router.push(`/profile/history/${attempt.id}/`)}
-                    className="flex w-full flex-col gap-3 rounded-xl bg-slate-50 px-4 py-3 text-left transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                    className="flex w-full flex-col gap-3 rounded-xl bg-slate-50 px-4 py-3 text-left transition-colors hover:bg-[var(--home-brand-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--home-brand-border)] sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-extrabold text-slate-900">{attempt.title}</div>
@@ -1100,7 +1100,7 @@ export default function PersonalAnalysisPage() {
                       </div>
                     </div>
                     <div className="w-full shrink-0 text-left sm:w-auto sm:text-right">
-                      <div className="text-lg font-extrabold text-blue-600">{formatAttemptResult(attempt, activeExamKey)}</div>
+                      <div className="text-lg font-extrabold text-[var(--home-brand-primary)]">{formatAttemptResult(attempt, activeExamKey)}</div>
                       <div className="flex items-center justify-start gap-1 text-xs font-semibold text-slate-400 sm:justify-end">
                         {formatMinutes(attempt.timeSpent)}
                         <ChevronRight className="h-3.5 w-3.5" />
@@ -1125,7 +1125,7 @@ export default function PersonalAnalysisPage() {
           </div>
 
           <div className="mt-8">
-            <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 no-underline hover:text-blue-700">
+            <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-[var(--home-brand-primary)] no-underline hover:text-[var(--home-brand-hover)]">
               Làm thêm đề thi
               <ChevronRight className="h-4 w-4" />
             </Link>

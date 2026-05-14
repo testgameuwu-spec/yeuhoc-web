@@ -92,7 +92,7 @@ function ContinueExamItem({ item }) {
     <Link
       href={item.href}
       prefetch={false}
-      className="home-box group block rounded-xl border border-gray-100 bg-white p-3.5 transition-all hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-sm"
+      className="home-box group block rounded-xl border border-gray-100 bg-white p-3.5 transition-all hover:border-[var(--home-brand-border)] hover:bg-[var(--home-brand-soft)] hover:shadow-sm"
     >
       <div className="flex flex-col gap-3 min-w-0">
         <div className="min-w-0">
@@ -113,7 +113,7 @@ function ContinueExamItem({ item }) {
               </span>
             )}
           </div>
-          <h3 className="mt-2 truncate text-sm font-bold text-gray-950 group-hover:text-indigo-700">
+          <h3 className="mt-2 truncate text-sm font-bold text-gray-950 group-hover:text-[var(--home-brand-hover)]">
             {item.title}
           </h3>
           <p className="mt-1 truncate text-xs font-medium text-gray-500">
@@ -123,7 +123,7 @@ function ContinueExamItem({ item }) {
 
         <div className="flex items-center justify-between gap-3 text-xs text-gray-400">
           <span className="truncate">{formatContinueTime(item.updatedAt)}</span>
-          <span className="inline-flex shrink-0 items-center gap-1 font-bold text-indigo-600">
+          <span className="inline-flex shrink-0 items-center gap-1 font-bold text-[var(--home-brand-primary)]">
             Tiếp tục
             <PlayCircle className="w-3.5 h-3.5" />
           </span>

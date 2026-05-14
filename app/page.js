@@ -295,7 +295,7 @@ export default function HomePage() {
                   ) : isLocked ? (
                     <Lock className="w-5 h-5 shrink-0 text-gray-400" />
                   ) : (
-                    <Folder className="w-5 h-5 shrink-0 text-indigo-500" fill="currentColor" fillOpacity={0.2} />
+                    <Folder className="w-5 h-5 shrink-0 text-[var(--home-brand-primary)]" fill="currentColor" fillOpacity={0.2} />
                   )}
                   <h2 className="min-w-0 max-w-full truncate text-base sm:text-lg font-bold text-gray-800">{folder.name}</h2>
                   {folder.subject && (
@@ -420,7 +420,7 @@ export default function HomePage() {
               <div className="text-5xl mb-4">🔍</div>
               <h3 className="text-lg font-bold text-gray-800 mb-1">Không tìm thấy đề thi</h3>
               <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem các đề thi khác.</p>
-              <button onClick={handleClearFilters} className="px-5 py-2.5 rounded-xl bg-indigo-50 text-indigo-600 font-semibold text-sm hover:bg-indigo-100 transition-colors">
+              <button onClick={handleClearFilters} className="px-5 py-2.5 rounded-xl bg-[var(--home-brand-soft)] text-[var(--home-brand-primary)] font-semibold text-sm hover:bg-[var(--home-brand-border)] transition-colors">
                 Xóa bộ lọc
               </button>
             </div>
@@ -453,7 +453,7 @@ function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTar
   return (
     <div className="home-box relative bg-white border border-gray-100 rounded-2xl p-5 sm:p-7 overflow-hidden shadow-[0_2px_12px_rgb(0,0,0,0.04)]">
       <div className="relative z-10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-indigo-500 mb-1.5">Trang chủ</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--home-brand-primary)] mb-1.5">Trang chủ</p>
         <h1 className="text-2xl sm:text-3xl font-black text-gray-950 mb-3">
           Xin chào, {displayName}
         </h1>
@@ -469,7 +469,7 @@ function HomeGreeting({ displayName, nearestTargetExam, selectedCount, activeTar
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-500">
               <span
-                className="home-dark-badge inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 font-semibold text-indigo-700"
+                className="home-dark-badge inline-flex items-center gap-1.5 rounded-full border border-[var(--home-brand-border)] bg-[var(--home-brand-soft)] px-3 py-1 font-semibold text-[var(--home-brand-primary)]"
                 style={getHomeBadgeStyle('target')}
               >
                 <CalendarDays className="w-4 h-4" />
@@ -520,7 +520,7 @@ function TargetExamSetupModal({ targetExams, selectedIds, onToggle, onSave, savi
                 key={exam.id}
                 className={`home-box flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
                   checked
-                    ? 'border-indigo-200 bg-indigo-50'
+                    ? 'border-[var(--home-brand-border)] bg-[var(--home-brand-soft)]'
                     : 'border-gray-200 bg-white hover:bg-gray-50'
                 }`}
               >
@@ -528,7 +528,7 @@ function TargetExamSetupModal({ targetExams, selectedIds, onToggle, onSave, savi
                   type="checkbox"
                   checked={checked}
                   onChange={() => onToggle(exam.id)}
-                  className="mt-1 w-4 h-4 accent-indigo-600"
+                  className="mt-1 w-4 h-4 accent-[var(--home-brand-primary)]"
                 />
                 <span className="min-w-0">
                   <span className="block font-bold text-gray-900">{exam.name}</span>
@@ -552,7 +552,7 @@ function TargetExamSetupModal({ targetExams, selectedIds, onToggle, onSave, savi
           <button
             onClick={onSave}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--home-brand-primary)] text-white text-sm font-bold hover:bg-[var(--home-brand-hover)] disabled:opacity-60 transition-colors"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Lưu lựa chọn

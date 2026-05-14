@@ -75,7 +75,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
     transition-all duration-200 no-underline
     ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
     ${hov && !isLocked
-      ? 'border-indigo-300 shadow-lg shadow-indigo-100 -translate-y-0.5'
+      ? 'border-[var(--home-brand-border)] shadow-[0_12px_28px_var(--home-brand-shadow)] -translate-y-0.5'
       : 'border-gray-200 shadow-sm'
     }
   `;
@@ -86,10 +86,10 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
     ${isLocked
       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
       : isSaved
-        ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer'
+        ? 'bg-[var(--home-brand-soft)] text-[var(--home-brand-primary)] hover:bg-[var(--home-brand-border)] cursor-pointer'
         : hov
-          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 cursor-pointer'
-          : 'bg-indigo-50 text-indigo-600 cursor-pointer'
+          ? 'bg-[var(--home-brand-primary)] text-white shadow-[0_8px_16px_var(--home-brand-shadow)] cursor-pointer'
+          : 'bg-[var(--home-brand-soft)] text-[var(--home-brand-primary)] cursor-pointer'
     }
   `;
 

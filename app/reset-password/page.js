@@ -136,7 +136,7 @@ export default function ResetPasswordPage() {
         <div className="flex items-center justify-center px-4 py-12 sm:py-20">
           <div className="w-full max-w-md">
             <div className="auth-card text-center">
-              <div className="auth-spinner mx-auto mb-4" style={{ borderTopColor: '#6366f1', borderColor: 'rgba(99, 102, 241, 0.2)' }} />
+              <div className="auth-spinner mx-auto mb-4" style={{ borderTopColor: 'var(--home-brand-primary)', borderColor: 'var(--home-brand-border)' }} />
               <p className="text-sm text-gray-500">Đang xác thực phiên...</p>
             </div>
           </div>
@@ -189,11 +189,8 @@ export default function ResetPasswordPage() {
           <div className="auth-card">
             {/* Header */}
             <div className="text-center mb-8">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
-              >
-                <LockKey weight="fill" className="w-7 h-7" />
+              <div className="flex justify-center mb-4">
+                <LogoIcon size={56} color="var(--home-brand-primary)" />
               </div>
               <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
                 Đặt lại mật khẩu

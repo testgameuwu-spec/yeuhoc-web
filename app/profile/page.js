@@ -34,7 +34,7 @@ const REPORT_REASON_LABELS = {
 };
 
 const COVER_GRADIENTS = [
-  { id: 'default', name: 'Indigo Night', css: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { id: 'default', name: 'YeuHoc Blue', css: 'linear-gradient(135deg, #4f7df3 0%, #3f6ee8 100%)' },
   { id: 'ocean', name: 'Ocean Blue', css: 'linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)' },
   { id: 'sunset', name: 'Sunset', css: 'linear-gradient(135deg, #f97316 0%, #ec4899 100%)' },
   { id: 'aurora', name: 'Aurora', css: 'linear-gradient(135deg, #a855f7 0%, #3b82f6 50%, #06b6d4 100%)' },
@@ -494,7 +494,7 @@ function ProfilePageInner() {
       <div className="profile-page min-h-screen bg-gray-100" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
         <Navbar />
         <div className="flex flex-col items-center justify-center py-40">
-          <Loader2 weight="bold" className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+          <Loader2 weight="bold" className="w-12 h-12 text-[var(--home-brand-primary)] animate-spin mb-4" />
           <p className="text-gray-500 font-medium animate-pulse">Đang tải dữ liệu hồ sơ...</p>
         </div>
       </div>
@@ -536,7 +536,7 @@ function ProfilePageInner() {
                       onClick={() => handleCoverChange(g.css)}
                       className={`h-16 rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-md border-2 ${
                         coverGradient === g.css || (!coverGradient && g.id === 'default')
-                          ? 'border-indigo-500 shadow-md scale-105'
+                          ? 'border-[var(--home-brand-primary)] shadow-md scale-105'
                           : 'border-transparent'
                       }`}
                       style={{ background: g.css }}
@@ -570,7 +570,7 @@ function ProfilePageInner() {
                     className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover ring-4 ring-white bg-white shadow-lg"
                   />
                 ) : (
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-5xl font-bold ring-4 ring-white shadow-lg">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-[var(--home-brand-primary)] flex items-center justify-center text-white text-5xl font-bold ring-4 ring-white shadow-lg">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -579,10 +579,10 @@ function ProfilePageInner() {
                   title="Đổi ảnh đại diện"
                   onClick={() => avatarFileInputRef.current?.click()}
                   disabled={uploadingAvatar || !user}
-                  className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-white border-2 border-gray-100 flex items-center justify-center shadow-md hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                  className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-white border-2 border-gray-100 flex items-center justify-center shadow-md hover:bg-[var(--home-brand-soft)] hover:border-[var(--home-brand-border)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed z-10"
                 >
                   {uploadingAvatar ? (
-                    <Loader2 weight="bold" className="w-5 h-5 text-indigo-500 animate-spin" />
+                    <Loader2 weight="bold" className="w-5 h-5 text-[var(--home-brand-primary)] animate-spin" />
                   ) : (
                     <Camera weight="fill" className="w-[20px] h-[20px] text-gray-600" />
                   )}
@@ -610,7 +610,7 @@ function ProfilePageInner() {
                     Admin
                   </span>
                 ) : (
-                  <span className="profile-theme-badge inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200" style={{ '--profile-badge-dark-color': '#a5b4fc' }}>
+                  <span className="profile-theme-badge inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[var(--home-brand-soft)] text-[var(--home-brand-primary)] border border-[var(--home-brand-border)]" style={{ '--profile-badge-dark-color': '#8fb0ff' }}>
                     <User weight="fill" className="w-3.5 h-3.5" />
                     User
                   </span>
@@ -630,7 +630,7 @@ function ProfilePageInner() {
               <button
                 onClick={() => setActiveTab('overview')}
                 className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
-                  activeTab === 'overview' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                  activeTab === 'overview' ? 'border-[var(--home-brand-primary)] text-[var(--home-brand-primary)]' : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}
               >
                 <Activity weight="duotone" className="w-[18px] h-[18px]" /> Tổng quan
@@ -638,7 +638,7 @@ function ProfilePageInner() {
               <button
                 onClick={() => setActiveTab('history')}
                 className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
-                  activeTab === 'history' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                  activeTab === 'history' ? 'border-[var(--home-brand-primary)] text-[var(--home-brand-primary)]' : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}
               >
                 <History weight="duotone" className="w-[18px] h-[18px]" /> Lịch sử làm bài
@@ -646,7 +646,7 @@ function ProfilePageInner() {
               <button
                 onClick={() => setActiveTab('reports')}
                 className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
-                  activeTab === 'reports' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                  activeTab === 'reports' ? 'border-[var(--home-brand-primary)] text-[var(--home-brand-primary)]' : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}
               >
                 <Flag weight="duotone" className="w-[18px] h-[18px]" /> Báo cáo câu hỏi
@@ -654,7 +654,7 @@ function ProfilePageInner() {
               <button
                 onClick={() => setActiveTab('info')}
                 className={`pb-3 text-sm font-bold transition-colors flex items-center gap-2 border-b-2 ${
-                  activeTab === 'info' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+                  activeTab === 'info' ? 'border-[var(--home-brand-primary)] text-[var(--home-brand-primary)]' : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}
               >
                 <FileText weight="duotone" className="w-[18px] h-[18px]" /> Thông tin cá nhân
@@ -668,7 +668,7 @@ function ProfilePageInner() {
             {activeTab === 'overview' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Activity weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
+                  <Activity weight="duotone" className="w-[22px] h-[22px] text-[var(--home-brand-primary)]" />
                   Tổng quan học tập
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">Thống kê và tiến trình học tập của bạn</p>
@@ -683,9 +683,9 @@ function ProfilePageInner() {
                     <div className="space-y-8">
                       {/* Stats grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="profile-dark-text-box bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
-                          <p className="text-xs text-indigo-600 font-semibold mb-1 uppercase tracking-wider">Điểm cao nhất</p>
-                          <p className="text-2xl font-black text-indigo-700">{highestScore}</p>
+                        <div className="profile-dark-text-box bg-[var(--home-brand-soft)] border border-[var(--home-brand-border)] rounded-xl p-4 text-center">
+                          <p className="text-xs text-[var(--home-brand-primary)] font-semibold mb-1 uppercase tracking-wider">Điểm cao nhất</p>
+                          <p className="text-2xl font-black text-[var(--home-brand-hover)]">{highestScore}</p>
                         </div>
                         <div className="profile-dark-text-box bg-green-50 border border-green-100 rounded-xl p-4 text-center">
                           <p className="text-xs text-green-600 font-semibold mb-1 uppercase tracking-wider">Điểm trung bình</p>
@@ -712,11 +712,11 @@ function ProfilePageInner() {
                         <div>
                           <div className="mb-3 flex items-center justify-between gap-3">
                             <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
-                              <History className="w-4 h-4 text-indigo-500" /> 5 Đề thi gần nhất
+                              <History className="w-4 h-4 text-[var(--home-brand-primary)]" /> 5 Đề thi gần nhất
                             </h4>
                             <button
                               onClick={() => setActiveTab('history')}
-                              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                              className="text-xs font-bold text-[var(--home-brand-primary)] hover:text-[var(--home-brand-hover)] transition-colors"
                             >
                               Xem tất cả
                             </button>
@@ -735,7 +735,7 @@ function ProfilePageInner() {
                                   <div className="flex items-center gap-4 text-sm flex-shrink-0">
                                     <div className="text-center">
                                       <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
-                                      <p className="font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</p>
+                                      <p className="font-black text-[var(--home-brand-primary)]">{attempt.score?.toFixed(1) || 0}</p>
                                     </div>
                                     <div className="w-px h-8 bg-gray-200"></div>
                                     <div className="text-center">
@@ -744,7 +744,7 @@ function ProfilePageInner() {
                                     </div>
                                     <button
                                       onClick={() => handleViewAttemptDetails(attempt)}
-                                      className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
+                                      className="ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--home-brand-primary)] bg-[var(--home-brand-soft)] hover:bg-[var(--home-brand-border)] border border-[var(--home-brand-border)] transition-colors flex items-center gap-1"
                                     >
                                       Chi tiết <ChevronRight weight="bold" className="w-[14px] h-[14px]" />
                                     </button>
@@ -768,7 +768,7 @@ function ProfilePageInner() {
             ) : activeTab === 'history' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <History weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
+                  <History weight="duotone" className="w-[22px] h-[22px] text-[var(--home-brand-primary)]" />
                   Lịch sử làm bài
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">Xem lại các bài thi đã nộp và chi tiết từng câu trả lời</p>
@@ -791,7 +791,7 @@ function ProfilePageInner() {
                         <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-4 text-sm flex-shrink-0">
                           <div className="text-center">
                             <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
-                            <p className="font-black text-indigo-600">{attempt.score?.toFixed(1) || 0}</p>
+                            <p className="font-black text-[var(--home-brand-primary)]">{attempt.score?.toFixed(1) || 0}</p>
                           </div>
                           <div className="w-px h-8 bg-gray-200"></div>
                           <div className="text-center">
@@ -800,7 +800,7 @@ function ProfilePageInner() {
                           </div>
                           <button
                             onClick={() => handleViewAttemptDetails(attempt)}
-                            className="ml-0 sm:ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-colors flex items-center gap-1"
+                            className="ml-0 sm:ml-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--home-brand-primary)] bg-[var(--home-brand-soft)] hover:bg-[var(--home-brand-border)] border border-[var(--home-brand-border)] transition-colors flex items-center gap-1"
                           >
                             Chi tiết <ChevronRight weight="bold" className="w-[14px] h-[14px]" />
                           </button>
@@ -819,7 +819,7 @@ function ProfilePageInner() {
             ) : activeTab === 'reports' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Flag weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
+                  <Flag weight="duotone" className="w-[22px] h-[22px] text-[var(--home-brand-primary)]" />
                   Báo cáo của tôi
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">
@@ -903,7 +903,7 @@ function ProfilePageInner() {
             ) : activeTab === 'info' ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm animate-fadeIn">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <FileText weight="duotone" className="w-[22px] h-[22px] text-indigo-500" />
+                  <FileText weight="duotone" className="w-[22px] h-[22px] text-[var(--home-brand-primary)]" />
                   Cập nhật thông tin
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">Chỉnh sửa thông tin cá nhân hiển thị trên hồ sơ</p>
@@ -993,7 +993,7 @@ function ProfilePageInner() {
                     placeholder="Viết vài dòng về bản thân..."
                     rows={3}
                     maxLength={200}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 outline-none transition-all focus:border-[var(--home-brand-primary)] focus:ring-2 focus:ring-[var(--home-brand-border)] resize-none"
                     style={{ fontFamily: 'inherit' }}
                   />
                   <p className="text-[11px] text-gray-400 mt-1 text-right">{bio.length}/200</p>
@@ -1011,7 +1011,7 @@ function ProfilePageInner() {
                             key={exam.id}
                             className={`profile-dark-text-box flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
                               checked
-                                ? 'border-indigo-200 bg-indigo-50'
+                                ? 'border-[var(--home-brand-border)] bg-[var(--home-brand-soft)]'
                                 : 'border-gray-200 bg-white hover:bg-gray-50'
                             }`}
                           >
@@ -1019,7 +1019,7 @@ function ProfilePageInner() {
                               type="checkbox"
                               checked={checked}
                               onChange={() => handleTargetExamToggle(exam.id)}
-                              className="mt-1 w-4 h-4 accent-indigo-600"
+                              className="mt-1 w-4 h-4 accent-[var(--home-brand-primary)]"
                             />
                             <span className="flex-1 min-w-0">
                               <span className="flex flex-wrap items-center gap-2">
@@ -1062,18 +1062,18 @@ function ProfilePageInner() {
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xl font-bold border border-gray-200 shadow-sm">
+                        <div className="w-16 h-16 rounded-full bg-[var(--home-brand-primary)] flex items-center justify-center text-white text-xl font-bold border border-gray-200 shadow-sm">
                           {displayName.charAt(0).toUpperCase()}
                         </div>
                       )}
                       {uploadingAvatar && (
                         <div className="absolute inset-0 bg-white/60 rounded-full flex items-center justify-center">
-                          <Loader2 weight="bold" className="w-6 h-6 text-indigo-600 animate-spin" />
+                          <Loader2 weight="bold" className="w-6 h-6 text-[var(--home-brand-primary)] animate-spin" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
-                      <label className="profile-dark-text-box cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2">
+                      <label className="profile-dark-text-box cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm focus-within:ring-2 focus-within:ring-[var(--home-brand-primary)] focus-within:ring-offset-2">
                         <Camera weight="duotone" className="w-[18px] h-[18px] text-gray-500" />
                         <span>Tải ảnh mới lên</span>
                         <input
@@ -1112,7 +1112,7 @@ function ProfilePageInner() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                        <LockKey weight="duotone" className="w-[18px] h-[18px] text-indigo-500" />
+                        <LockKey weight="duotone" className="w-[18px] h-[18px] text-[var(--home-brand-primary)]" />
                         Đổi mật khẩu
                       </h4>
                       <p className="text-[11px] text-gray-400 mt-0.5">Thay đổi mật khẩu đăng nhập của bạn</p>
@@ -1126,7 +1126,7 @@ function ProfilePageInner() {
                         setNewPassword('');
                         setConfirmNewPassword('');
                       }}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors bg-transparent border-0 cursor-pointer"
+                      className="text-xs font-semibold text-[var(--home-brand-primary)] hover:text-[var(--home-brand-hover)] transition-colors bg-transparent border-0 cursor-pointer"
                     >
                       {showChangePassword ? 'Đóng' : 'Thay đổi'}
                     </button>
@@ -1278,7 +1278,7 @@ export default function ProfilePage() {
       fallback={
         <div className="profile-page min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
           <Navbar />
-          <Loader2 weight="bold" className="w-12 h-12 text-indigo-500 animate-spin mt-20" />
+          <Loader2 weight="bold" className="w-12 h-12 text-[var(--home-brand-primary)] animate-spin mt-20" />
         </div>
       }
     >

@@ -264,7 +264,7 @@ export default function AttemptHistoryDetailPage() {
             <button
               type="button"
               onClick={() => router.push('/profile/?tab=history')}
-              className="mb-5 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+              className="mb-5 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Quay lại lịch sử
@@ -272,7 +272,7 @@ export default function AttemptHistoryDetailPage() {
 
             {loading ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-sm">
-                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto mb-3" />
+                <Loader2 className="w-10 h-10 text-[var(--home-brand-primary)] animate-spin mx-auto mb-3" />
                 <p className="text-sm text-gray-500 font-medium">Đang tải chi tiết bài làm...</p>
               </div>
             ) : error ? (
@@ -292,7 +292,7 @@ export default function AttemptHistoryDetailPage() {
                 <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2 flex items-center gap-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[var(--home-brand-primary)] mb-2 flex items-center gap-2">
                         <History className="w-4 h-4" />
                         Lịch sử làm bài
                       </p>
@@ -310,10 +310,10 @@ export default function AttemptHistoryDetailPage() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 sm:min-w-[300px]">
-                      <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center">
-                        <Trophy className="w-4 h-4 text-indigo-500 mx-auto mb-1" />
-                        <p className="text-[11px] font-semibold text-indigo-600 uppercase">Điểm</p>
-                        <p className="text-lg font-black text-indigo-700">{scoreText}</p>
+                      <div className="rounded-xl border border-[var(--home-brand-border)] bg-[var(--home-brand-soft)] p-3 text-center">
+                        <Trophy className="w-4 h-4 text-[var(--home-brand-primary)] mx-auto mb-1" />
+                        <p className="text-[11px] font-semibold text-[var(--home-brand-primary)] uppercase">Điểm</p>
+                        <p className="text-lg font-black text-[var(--home-brand-hover)]">{scoreText}</p>
                       </div>
                       <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
@@ -372,18 +372,18 @@ export default function AttemptHistoryDetailPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 bg-indigo-50 rounded-xl p-3 m-[17px] mb-2">
+            <div className="grid grid-cols-3 gap-2 bg-[var(--home-brand-soft)] rounded-xl p-3 m-[17px] mb-2">
               <div>
-                <div className="text-xl font-black text-indigo-600">{correctCount}/{realQuestions.length}</div>
-                <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Đúng</div>
+                <div className="text-xl font-black text-[var(--home-brand-primary)]">{correctCount}/{realQuestions.length}</div>
+                <div className="text-[10px] text-[var(--home-brand-primary)] font-bold uppercase tracking-wider mt-1">Đúng</div>
               </div>
               <div className="text-center">
                 <div className="text-xl font-black text-amber-600">{unansweredCount}</div>
                 <div className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-black text-indigo-600">{scoreText}</div>
-                <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm</div>
+                <div className="text-xl font-black text-[var(--home-brand-primary)]">{scoreText}</div>
+                <div className="text-[10px] text-[var(--home-brand-primary)] font-bold uppercase tracking-wider mt-1">Điểm</div>
               </div>
             </div>
 
@@ -426,18 +426,18 @@ export default function AttemptHistoryDetailPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 bg-indigo-50 rounded-xl p-4 mb-5">
+            <div className="grid grid-cols-3 gap-3 bg-[var(--home-brand-soft)] rounded-xl p-4 mb-5">
               <div>
-                <div className="text-2xl font-black text-indigo-600">{correctCount}/{realQuestions.length}</div>
-                <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Câu đúng</div>
+                <div className="text-2xl font-black text-[var(--home-brand-primary)]">{correctCount}/{realQuestions.length}</div>
+                <div className="text-xs text-[var(--home-brand-primary)] font-bold uppercase tracking-wider mt-1">Câu đúng</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-black text-amber-600">{unansweredCount}</div>
                 <div className="text-xs text-amber-500 font-bold uppercase tracking-wider mt-1">Chưa làm</div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-indigo-600">{scoreText}</div>
-                <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
+                <div className="text-2xl font-black text-[var(--home-brand-primary)]">{scoreText}</div>
+                <div className="text-xs text-[var(--home-brand-primary)] font-bold uppercase tracking-wider mt-1">Điểm số</div>
               </div>
             </div>
 
@@ -487,7 +487,7 @@ export default function AttemptHistoryDetailPage() {
               <button
                 type="button"
                 onClick={() => setNotice(null)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--home-brand-primary)] hover:bg-[var(--home-brand-hover)] transition-colors"
               >
                 Đóng
               </button>

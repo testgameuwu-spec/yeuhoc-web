@@ -44,7 +44,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, vari
 
   const btnActive = isDark
     ? 'bg-indigo-500/30 border-indigo-500/40 text-indigo-300'
-    : 'bg-indigo-600 border-indigo-600 text-white shadow-sm';
+    : 'bg-[var(--home-brand-primary)] border-[var(--home-brand-primary)] text-white shadow-sm';
 
   const btnInactive = isDark
     ? 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white/80'

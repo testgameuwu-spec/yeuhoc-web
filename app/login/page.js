@@ -109,8 +109,8 @@ export default function LoginPage() {
           <div className="auth-card">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white mx-auto mb-4 shadow-lg">
-                <LogoIcon size={20} color="white" />
+              <div className="flex justify-center mb-4">
+                <LogoIcon size={56} color="var(--home-brand-primary)" />
               </div>
               <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
                 Đăng nhập
@@ -179,7 +179,7 @@ export default function LoginPage() {
                   <label className="auth-label" style={{ marginBottom: 0 }}>Mật khẩu</label>
                   <Link
                     href="/forgot-password"
-                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors no-underline"
+                    className="text-xs font-semibold text-[var(--home-brand-primary)] hover:text-[var(--home-brand-hover)] transition-colors no-underline"
                   >
                     Quên mật khẩu?
                   </Link>
@@ -228,7 +228,7 @@ export default function LoginPage() {
                 Chưa có tài khoản?{' '}
                 <a
                   href="/register"
-                  className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors no-underline"
+                  className="font-semibold text-[var(--home-brand-primary)] hover:text-[var(--home-brand-hover)] transition-colors no-underline"
                 >
                   Đăng ký ngay <ArrowRight className="w-3.5 h-3.5 inline" />
                 </a>

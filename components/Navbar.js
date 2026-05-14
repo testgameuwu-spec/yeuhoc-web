@@ -49,12 +49,43 @@ export default function Navbar() {
 
   useEffect(() => {
     let reportChannel = null;
+    let subscribedUserId = null;
+    let subscribeRequestId = 0;
     let isMounted = true;
+    const getReportChannelTopic = (userId) => `navbar-question-reports-${userId}`;
+
+    const removeReportChannel = async () => {
+      if (!reportChannel) return;
+      const channel = reportChannel;
+      reportChannel = null;
+      subscribedUserId = null;
+      await supabase.removeChannel(channel);
+    };
+
+    const removeExistingReportChannel = async (userId) => {
+      const existingChannel = supabase
+        .getChannels()
+        .find((channel) => channel.topic === `realtime:${getReportChannelTopic(userId)}`);
+      if (existingChannel) {
+        await supabase.removeChannel(existingChannel);
+      }
+    };
 
     const subscribeForUser = async (userId) => {
-      if (!userId) return;
+      const requestId = ++subscribeRequestId;
+      if (!userId) {
+        await removeReportChannel();
+        return;
+      }
+      if (reportChannel && subscribedUserId === userId) return;
+
+      await removeReportChannel();
+      await removeExistingReportChannel(userId);
+      if (!isMounted || requestId !== subscribeRequestId) return;
+
+      subscribedUserId = userId;
       reportChannel = supabase
-        .channel(`navbar-question-reports-${userId}`)
+        .channel(getReportChannelTopic(userId))
         .on(
           'postgres_changes',
           {
@@ -81,10 +112,6 @@ export default function Navbar() {
     }, 2000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (reportChannel) {
-        supabase.removeChannel(reportChannel);
-        reportChannel = null;
-      }
       await subscribeForUser(session?.user?.id || null);
       refreshReportBadge();
     });
@@ -102,8 +129,8 @@ export default function Navbar() {
   const linkClass = (active, extra = '') => (
     `${extra} flex shrink-0 items-center gap-1.5 px-2 sm:px-3 py-1.5 min-h-9 rounded-lg text-sm font-medium transition-all no-underline ${
       active
-        ? 'text-indigo-600 bg-indigo-50 [html[data-theme=dark]_&]:bg-black [html[data-theme=dark]_&]:text-indigo-200'
-        : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 [html[data-theme=dark]_&]:text-gray-300 [html[data-theme=dark]_&]:hover:bg-black [html[data-theme=dark]_&]:hover:text-indigo-200 [html[data-theme=dark]_&]:active:bg-black'
+        ? 'text-[var(--home-brand-primary)] bg-[var(--home-brand-soft)] [html[data-theme=dark]_&]:bg-black [html[data-theme=dark]_&]:text-[var(--home-brand-primary)]'
+        : 'text-gray-600 hover:text-[var(--home-brand-primary)] hover:bg-[var(--home-brand-soft)] [html[data-theme=dark]_&]:text-gray-300 [html[data-theme=dark]_&]:hover:bg-black [html[data-theme=dark]_&]:hover:text-[var(--home-brand-primary)] [html[data-theme=dark]_&]:active:bg-black'
     }`
   );
 
@@ -112,10 +139,8 @@ export default function Navbar() {
       <div className="px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-3 min-w-0">
         {/* ─── Left: Logo ─── */}
         <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 no-underline group">
-          <div className="w-[38px] h-[38px] rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:shadow-lg transition-shadow">
-            <LogoIcon size={22} color="white" />
-          </div>
-          <span className="site-logo-text font-extrabold font-outfit text-xl text-gray-900 group-hover:text-indigo-600 transition-colors">
+          <LogoIcon size={38} color="var(--home-brand-primary)" className="shrink-0" />
+          <span className="site-logo-text text-xl transition-colors font-extrabold text-[var(--home-brand-primary)] group-hover:text-[var(--home-brand-hover)]">
             YeuHoc
           </span>
         </Link>

@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
                 style={{
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  background: 'var(--home-brand-primary)',
                   animation: 'otpSuccessPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                 }}
               >
@@ -70,13 +70,13 @@ export default function ForgotPasswordPage() {
               <p className="text-sm text-gray-500 mb-2 leading-relaxed">
                 Chúng tôi đã gửi link đặt lại mật khẩu đến
               </p>
-              <p className="text-sm font-semibold text-indigo-600 mb-4">{email}</p>
+              <p className="text-sm font-semibold text-[var(--home-brand-primary)] mb-4">{email}</p>
               <p className="text-xs text-gray-400 mb-6">
                 Vui lòng kiểm tra hộp thư (bao gồm thư mục spam). Link có hiệu lực trong 1 giờ.
               </p>
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors no-underline"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--home-brand-primary)] hover:text-[var(--home-brand-hover)] transition-colors no-underline"
               >
                 <ArrowLeft weight="bold" className="w-4 h-4" />
                 Quay lại đăng nhập
@@ -105,8 +105,8 @@ export default function ForgotPasswordPage() {
           <div className="auth-card">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white mx-auto mb-4 shadow-lg">
-                <LogoIcon size={20} color="white" />
+              <div className="flex justify-center mb-4">
+                <LogoIcon size={56} color="var(--home-brand-primary)" />
               </div>
               <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
                 Quên mật khẩu

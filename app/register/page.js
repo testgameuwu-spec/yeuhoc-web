@@ -308,12 +308,7 @@ export default function RegisterPage() {
             <div className="auth-card">
               {/* Header */}
               <div className="text-center mb-8">
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"
-                  style={{
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
-                  }}
-                >
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg bg-[var(--home-brand-primary)]">
                   <ShieldCheck className="w-8 h-8" />
                 </div>
                 <h1 className="text-2xl font-extrabold text-gray-900 mb-2">
@@ -322,7 +317,7 @@ export default function RegisterPage() {
                 <p className="text-sm text-gray-500 leading-relaxed">
                   Chúng tôi đã gửi mã xác nhận 8 số đến
                 </p>
-                <p className="text-sm font-semibold text-indigo-600 mt-1">
+                <p className="text-sm font-semibold text-[var(--home-brand-primary)] mt-1">
                   {email}
                 </p>
               </div>
@@ -358,20 +353,20 @@ export default function RegisterPage() {
                       fontWeight: '700',
                       borderRadius: 'clamp(8px, 2vw, 12px)',
                       border: digit
-                        ? '2px solid #6366f1'
+                        ? '2px solid var(--home-brand-primary)'
                         : '2px solid #e5e7eb',
-                      background: digit ? '#eef2ff' : '#f9fafb',
+                      background: digit ? 'var(--home-brand-soft)' : '#f9fafb',
                       color: '#1f2937',
                       outline: 'none',
                       transition: 'all 0.2s ease',
-                      caretColor: '#6366f1',
+                      caretColor: 'var(--home-brand-primary)',
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = '#6366f1';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.15)';
+                      e.target.style.borderColor = 'var(--home-brand-primary)';
+                      e.target.style.boxShadow = '0 0 0 3px var(--home-brand-shadow)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = digit ? '#6366f1' : '#e5e7eb';
+                      e.target.style.borderColor = digit ? 'var(--home-brand-primary)' : '#e5e7eb';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
@@ -406,13 +401,13 @@ export default function RegisterPage() {
                   Không nhận được mã?{' '}
                   {resendCooldown > 0 ? (
                     <span className="text-gray-400">
-                      Gửi lại sau <span className="font-semibold text-indigo-500">{resendCooldown}s</span>
+                      Gửi lại sau <span className="font-semibold text-[var(--home-brand-primary)]">{resendCooldown}s</span>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleResendOtp}
-                      className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors bg-transparent border-0 p-0 cursor-pointer inline-flex items-center gap-1"
+                      className="font-semibold text-[var(--home-brand-primary)] hover:text-[var(--home-brand-hover)] transition-colors bg-transparent border-0 p-0 cursor-pointer inline-flex items-center gap-1"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       Gửi lại mã
@@ -442,11 +437,11 @@ export default function RegisterPage() {
             100% { transform: scale(1); opacity: 1; }
           }
           .otp-input::selection {
-            background: rgba(99, 102, 241, 0.2);
+            background: var(--home-brand-border);
           }
           .otp-input:focus {
-            border-color: #6366f1 !important;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+            border-color: var(--home-brand-primary) !important;
+            box-shadow: 0 0 0 3px var(--home-brand-shadow) !important;
           }
         `}</style>
       </div>
@@ -467,9 +462,7 @@ export default function RegisterPage() {
             {/* Header */}
             <div className="text-center mb-8">
               <div className="flex justify-center mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xl transform -rotate-6 hover:rotate-0 transition-transform duration-300">
-                  <LogoIcon size={20} color="white" />
-                </div>
+                <LogoIcon size={56} color="var(--home-brand-primary)" />
               </div>
               <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
                 Tạo tài khoản
@@ -641,7 +634,7 @@ export default function RegisterPage() {
                 Đã có tài khoản?{' '}
                 <a
                   href="/login"
-                  className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors no-underline"
+                  className="font-semibold text-[var(--home-brand-primary)] hover:text-[var(--home-brand-hover)] transition-colors no-underline"
                 >
                   Đăng nhập <ArrowRight className="w-3.5 h-3.5 inline" />
                 </a>

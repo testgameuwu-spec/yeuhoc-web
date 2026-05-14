@@ -112,7 +112,7 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
-      <Loader2 weight="bold" className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+      <Loader2 weight="bold" className="w-12 h-12 text-[var(--home-brand-primary)] animate-spin mb-4" />
       <p className="text-gray-500 font-medium animate-pulse">Đang xác thực...</p>
     </div>
   );

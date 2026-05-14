@@ -143,13 +143,13 @@ export default function UserProfile() {
       <div className="flex items-center gap-1 sm:gap-2">
         <a
           href="/login/"
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all no-underline border border-transparent hover:border-gray-200"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:text-[var(--home-brand-primary)] hover:bg-[var(--home-brand-soft)] transition-all no-underline border border-transparent hover:border-[var(--home-brand-border)]"
         >
           Đăng nhập
         </a>
         <a
           href="/register/"
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all no-underline"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-[var(--home-brand-primary)] text-white hover:bg-[var(--home-brand-hover)] shadow-sm transition-all no-underline"
         >
           Đăng ký
         </a>
@@ -171,7 +171,7 @@ export default function UserProfile() {
         {avatarUrl ? (
           <Image src={avatarUrl} alt={displayName} width={28} height={28} sizes="28px" className="w-7 h-7 rounded-full object-cover ring-2 ring-white" />
         ) : (
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white">
+          <div className="w-7 h-7 rounded-full bg-[var(--home-brand-primary)] flex items-center justify-center text-white text-xs font-bold ring-2 ring-white">
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
@@ -195,14 +195,14 @@ export default function UserProfile() {
           </div>
 
           <div className="py-1">
-            <a href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
+            <a href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)] transition-colors no-underline cursor-pointer">
               <UserCircle weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Hồ sơ
             </a>
-            <a href="/profile/?tab=history" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
+            <a href="/profile/?tab=history" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)] transition-colors no-underline cursor-pointer">
               <History weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Lịch sử làm bài
             </a>
             {isAdmin && (
-              <a href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors no-underline cursor-pointer">
+              <a href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)] transition-colors no-underline cursor-pointer">
                 <Shield weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Bảng điều khiển Admin
               </a>
             )}
