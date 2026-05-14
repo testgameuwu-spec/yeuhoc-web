@@ -3404,9 +3404,10 @@ html[data-theme='dark'] .theme-page .preview-theme-badge {
   --tsa-text: #0f172a;
   --tsa-muted: #64748b;
   --tsa-soft: #94a3b8;
-  --tsa-border: #e5e7eb;
-  --tsa-border-soft: #fee2e2;
-  --tsa-divider: #f1f5f9;
+  --tsa-border: #cbd5e1;
+  --tsa-border-strong: #94a3b8;
+  --tsa-border-soft: #fecaca;
+  --tsa-divider: #dbe3ef;
   --tsa-red: #dc2626;
   --tsa-red-strong: #b91c1c;
   --tsa-red-soft: #fef2f2;
@@ -3417,7 +3418,7 @@ html[data-theme='dark'] .theme-page .preview-theme-badge {
   --tsa-blue-soft: #f8faff;
   --tsa-progress-track: #e5e7eb;
   --tsa-user-bg: #ffffff;
-  --tsa-user-border: #fee2e2;
+  --tsa-user-border: #fecaca;
   --tsa-user-text: #0f172a;
   --tsa-shadow: 0 12px 28px rgba(15, 23, 42, .08);
 }
@@ -3432,6 +3433,7 @@ html[data-theme='dark'] .tsa-menu-root {
   --tsa-muted: #cbd5e1;
   --tsa-soft: #94a3b8;
   --tsa-border: #273449;
+  --tsa-border-strong: #475569;
   --tsa-border-soft: #3f2630;
   --tsa-divider: #263449;
   --tsa-red: #ef4444;
@@ -3784,6 +3786,21 @@ html[data-theme='dark'] .tsa-navbar {
   background: var(--tsa-surface) !important;
   border-color: var(--tsa-border) !important;
   color: var(--tsa-text);
+}
+
+.tsa-exam-root .border-gray-100,
+.tsa-exam-root .border-gray-200 {
+  border-color: var(--tsa-border) !important;
+}
+
+.tsa-exam-root .border-gray-300 {
+  border-color: var(--tsa-border-strong) !important;
+}
+
+.tsa-exam-root .hover\:border-gray-200:hover,
+.tsa-exam-root .hover\:border-gray-400:hover,
+.tsa-exam-root .group:hover .group-hover\:border-gray-400 {
+  border-color: var(--tsa-border-strong) !important;
 }
 
 .tsa-scroll-area {
