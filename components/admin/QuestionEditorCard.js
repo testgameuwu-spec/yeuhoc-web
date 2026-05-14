@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   Trash2, ChevronDown, ChevronUp, GripVertical, Plus, X,
@@ -54,18 +54,20 @@ function serializeDragAnswer(answerMap, blankIds = []) {
 }
 
 export default function QuestionEditorCard({ question, index, totalQuestions, allQuestions, onUpdate, onDelete, onReorder, isDragged, onDragStart, onDragOver, onDrop, onDragEnd }) {
+  const cardRef = useRef(null);
   const [expanded, setExpanded] = useState(true);
   const [showSolution, setShowSolution] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [draggable, setDraggable] = useState(false);
   const [selectedImageMarkerId, setSelectedImageMarkerId] = useState(null);
+  const [isSingleImageSelected, setIsSingleImageSelected] = useState(false);
 
   const q = question;
   const imageMarkers = getInlineImageMarkerIds(q.content);
   const hasImageMarker = imageMarkers.length > 0;
   const activeImageMarkerId = imageMarkers.includes(selectedImageMarkerId)
     ? selectedImageMarkerId
-    : (imageMarkers[0] || null);
+    : null;
   const imageMap = parseImageMap(q.image);
   const singleImage = isPreviewImageSrc(q.image)
     ? q.image
@@ -75,6 +77,23 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
   const maAnswerLetters = normalizeMAAnswer(q.answer);
   const dragBlankIds = q.type === 'DRAG' ? getDragBlankIds(q.content) : [];
   const dragAnswerMap = q.type === 'DRAG' ? parseDragAnswer(q.answer) : {};
+  const singleImageUploadStyle = isDragging
+    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 scale-[1.01]'
+    : isSingleImageSelected
+      ? 'border-indigo-500/70 bg-indigo-500/15 text-indigo-300 ring-2 ring-indigo-500/30'
+      : 'border-white/10 bg-white/5 text-white/40 hover:text-white/70 hover:border-white/20 hover:bg-white/10';
+
+  useEffect(() => {
+    if (!isSingleImageSelected) return;
+
+    const handlePointerDown = (event) => {
+      if (cardRef.current?.contains(event.target)) return;
+      setIsSingleImageSelected(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isSingleImageSelected]);
 
   // ── Generic field updater ──
   const update = useCallback((field, value) => {
@@ -271,11 +290,18 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
     }
   };
 
+  const selectSingleImageCard = () => {
+    if (!hasImageMarker) setIsSingleImageSelected(true);
+  };
+
   return (
     <div 
+      ref={cardRef}
       id={`editor-question-${q.id}`}
       className={`rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden transition-all hover:border-white/15 ${isDragged ? 'opacity-50 scale-[0.98] shadow-lg shadow-indigo-500/20 z-10 relative' : ''}`}
       draggable={draggable}
+      onClick={selectSingleImageCard}
+      onFocus={selectSingleImageCard}
       onDragStart={(e) => {
         if (onDragStart) onDragStart(e, index);
       }}
@@ -779,9 +805,15 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
                     );
                   })}
                 </div>
-                <p className="max-w-3xl text-[11px] leading-relaxed text-white/30">
-                  Đang chọn (({activeImageMarkerId})). Bấm ô khác hoặc Ctrl+V để dán ảnh vào đúng vị trí.
-                </p>
+                {activeImageMarkerId ? (
+                  <p className="max-w-3xl text-[11px] leading-relaxed text-white/30">
+                    Đang chọn (({activeImageMarkerId})). Bấm ô khác hoặc Ctrl+V để dán ảnh vào đúng vị trí.
+                  </p>
+                ) : (
+                  <p className="max-w-3xl text-[11px] leading-relaxed text-white/30">
+                    Chọn một ô ảnh hoặc Ctrl+V để dán ảnh vào vị trí đầu tiên.
+                  </p>
+                )}
               </>
             ) : (
               <>
@@ -789,11 +821,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`flex flex-col items-center justify-center gap-2 w-full sm:w-[400px] py-6 px-4 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                    isDragging
-                      ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 scale-[1.01]'
-                      : 'border-white/10 bg-white/5 text-white/40 hover:text-white/70 hover:border-white/20 hover:bg-white/10'
-                  }`}
+                  className={`flex flex-col items-center justify-center gap-2 w-full sm:w-[400px] py-6 px-4 rounded-xl border-2 border-dashed transition-all cursor-pointer ${singleImageUploadStyle}`}
                 >
                   <ImageIcon className={`w-6 h-6 transition-transform ${isDragging ? '-translate-y-1' : ''}`} />
                   <span className="text-xs font-medium text-center">

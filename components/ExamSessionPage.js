@@ -9,7 +9,7 @@ import ImageModal from '@/components/ImageModal';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
-import ContentWithInlineImage from '@/components/ContentWithInlineImage';
+import ContentWithInlineImage, { getRenderableImageSrc, parseImageMap } from '@/components/ContentWithInlineImage';
 import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
 import MathRenderer from '@/components/MathRenderer';
 import ResultsView from '@/components/ResultsView';
@@ -44,6 +44,50 @@ const PREVIEW_BADGE_TONES = {
 };
 
 const PracticeAIChatbox = dynamic(() => import('@/components/PracticeAIChatbox'), { ssr: false });
+const EXAM_IMAGE_PRELOAD_TIMEOUT_MS = 15000;
+
+function getExamImageUrls(questions = []) {
+  const urls = new Set();
+
+  questions.forEach((question) => {
+    const imageMap = parseImageMap(question?.image);
+    Object.values(imageMap).forEach((src) => {
+      const imageSrc = getRenderableImageSrc(src);
+      if (imageSrc) urls.add(imageSrc);
+    });
+  });
+
+  return [...urls];
+}
+
+function preloadExamImage(src) {
+  if (typeof window === 'undefined') {
+    return Promise.resolve({ src, ok: false, reason: 'browser-unavailable' });
+  }
+
+  return new Promise((resolve) => {
+    const image = new window.Image();
+    let settled = false;
+
+    const finish = (ok, reason) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      image.onload = null;
+      image.onerror = null;
+      resolve({ src, ok, reason });
+    };
+
+    const timeoutId = window.setTimeout(() => finish(false, 'timeout'), EXAM_IMAGE_PRELOAD_TIMEOUT_MS);
+    image.onload = () => finish(true, 'loaded');
+    image.onerror = () => finish(false, 'error');
+    image.src = src;
+
+    if (image.complete && image.naturalWidth > 0) {
+      finish(true, 'cached');
+    }
+  });
+}
 
 function getPracticeButtonStyle(toneKey, disabled = false) {
   const tone = PRACTICE_BUTTON_TONES[toneKey] || PRACTICE_BUTTON_TONES.nav;
@@ -220,6 +264,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const [startTime, setStartTime] = useState(null);
   const [loadingExam, setLoadingExam] = useState(true);
   const [examLoadError, setExamLoadError] = useState('');
+  const [imagePreloadProgress, setImagePreloadProgress] = useState({ loaded: 0, total: 0, failed: 0 });
 
   // Pause & Resume states
   const [isPaused, setIsPaused] = useState(false);
@@ -349,6 +394,29 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setIsAIChatOpen(true);
   }, []);
 
+  const preloadExamImages = useCallback(async (loadingPhase) => {
+    const imageUrls = getExamImageUrls(activeExam?.questions || []);
+    if (imageUrls.length === 0) return;
+
+    setImagePreloadProgress({ loaded: 0, total: imageUrls.length, failed: 0 });
+    setQuizPhase(loadingPhase);
+
+    const results = await Promise.all(imageUrls.map(async (src) => {
+      const result = await preloadExamImage(src);
+      setImagePreloadProgress(prev => ({
+        loaded: Math.min(prev.loaded + 1, prev.total),
+        total: prev.total,
+        failed: prev.failed + (result.ok ? 0 : 1),
+      }));
+      return result;
+    }));
+
+    const failedCount = results.filter(result => !result.ok).length;
+    if (failedCount > 0) {
+      console.warn(`Exam image preload completed with ${failedCount} failed image(s).`);
+    }
+  }, [activeExam?.questions]);
+
   // Fetch preview stats
   useEffect(() => {
     if (quizPhase === 'preview' && activeExam) {
@@ -427,7 +495,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   useEffect(() => {
     if (!shouldResume || resumeHandledRef.current || !user || !activeExam || typeof window === 'undefined') return;
     resumeHandledRef.current = true;
-    const resumeTimer = setTimeout(() => {
+    const resumeTimer = setTimeout(async () => {
       const key = `yeuhoc_progress_${user.id}_${activeExam.id}`;
       const saved = localStorage.getItem(key);
       if (!saved) return;
@@ -445,6 +513,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         isSubmittingRef.current = false;
         isAdvancingTsaSectionRef.current = false;
         exitViolationRecordedRef.current = false;
+        setTimerRunning(false);
+        await preloadExamImages('quiz-loading');
         setQuizPhase('quiz');
         setTimerRunning(true);
         setStartTime(() => Date.now());
@@ -461,7 +531,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       }
     }, 0);
     return () => clearTimeout(resumeTimer);
-  }, [shouldResume, user, activeExam, getRestoredQuizSecondsLeft]);
+  }, [shouldResume, user, activeExam, getRestoredQuizSecondsLeft, preloadExamImages]);
 
   // Fetch session
   useEffect(() => {
@@ -623,7 +693,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
   };
 
-  const applyPracticeSnapshot = (snapshot) => {
+  const applyPracticeSnapshot = async (snapshot) => {
+    await preloadExamImages('practice-loading');
     setAnswers(snapshot?.answers || {});
     setBookmarks(new Set(snapshot?.bookmarks || []));
     setCurrentQ(Math.min(Math.max(Number(snapshot?.currentQ) || 0, 0), Math.max(realQuestions.length - 1, 0)));
@@ -632,7 +703,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setQuizPhase('practice');
   };
 
-  const startFreshPractice = () => {
+  const startFreshPractice = async () => {
+    await preloadExamImages('practice-loading');
     setAnswers({});
     setBookmarks(new Set());
     setCurrentQ(0);
@@ -738,6 +810,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       );
 
       if (!hasSavedProgress) return;
+      await preloadExamImages('practice-loading');
       setAnswers(saved?.answers || {});
       setBookmarks(new Set(saved?.bookmarks || []));
       setCurrentQ(Math.min(Math.max(Number(saved?.currentQ) || 0, 0), Math.max(questionCount - 1, 0)));
@@ -748,7 +821,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }, 0);
 
     return () => clearTimeout(resumeTimer);
-  }, [activeExam, getPracticeProgressKey, realQuestions.length, shouldResumePractice, user]);
+  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions.length, shouldResumePractice, user]);
 
   const handleStartPractice = async () => {
     if (realQuestions.length === 0) {
@@ -824,7 +897,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
   }, [canFullscreen]);
 
-  const startFreshQuiz = () => {
+  const startFreshQuiz = async () => {
     setAnswers({});
     setBookmarks(new Set());
     setCurrentQ(0);
@@ -838,10 +911,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     isSubmittingRef.current = false;
     isAdvancingTsaSectionRef.current = false;
     exitViolationRecordedRef.current = false;
+    setTimerRunning(false);
+    if (isAntiCheatEnabled && !isTSA) requestFullscreen();
+    await preloadExamImages('quiz-loading');
     setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
     setTimerRunning(!isTSA);
     setStartTime(() => Date.now());
-    if (isAntiCheatEnabled && !isTSA) requestFullscreen();
   };
 
   const handleBeginQuiz = () => {
@@ -857,7 +932,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       showConfirm(
         'Tiếp tục làm bài',
         'Bạn đang có một phiên làm bài chưa nộp. Bạn có muốn tiếp tục phiên làm bài đó không?',
-        () => {
+        async () => {
           // Resume
           try {
             const data = JSON.parse(saved);
@@ -873,12 +948,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             isSubmittingRef.current = false;
             isAdvancingTsaSectionRef.current = false;
             exitViolationRecordedRef.current = false;
+            setTimerRunning(false);
+            if (isAntiCheatEnabled && !isTSA) requestFullscreen();
+            await preloadExamImages('quiz-loading');
             setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
             setTimerRunning(!isTSA);
             setStartTime(() => Date.now());
-            if (isAntiCheatEnabled && !isTSA) requestFullscreen();
           } catch (e) {
-            startFreshQuiz();
+            await startFreshQuiz();
           }
         },
         () => {
@@ -1295,6 +1372,127 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div style={{ color: 'var(--et-gray-500)', fontSize: 16, fontWeight: 500 }}>Đang tải...</div>
+      </div>
+    );
+  }
+
+  if ((quizPhase === 'practice-loading' || quizPhase === 'quiz-loading') && activeExam) {
+    const preloadPercent = imagePreloadProgress.total > 0
+      ? Math.round((imagePreloadProgress.loaded / imagePreloadProgress.total) * 100)
+      : 0;
+    const isQuizPreload = quizPhase === 'quiz-loading';
+    const isTsaPreload = isQuizPreload && isTSA;
+    const isPracticePreload = quizPhase === 'practice-loading';
+    const NormalLoadingIcon = isPracticePreload ? BookOpen : Exam;
+    const normalAccent = isPracticePreload ? '#16a34a' : 'var(--et-blue)';
+    const normalSoftBg = isPracticePreload ? 'var(--practice-answer-bg)' : 'var(--et-blue-lt)';
+    const normalBorder = isPracticePreload ? 'var(--practice-answer-border)' : 'var(--app-border)';
+
+    if (isTsaPreload) {
+      return (
+        <div className="tsa-menu-root fixed inset-0 z-50 flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
+          <TsaNavbar activeExam={activeExam} onBack={handleReset}>
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold"
+              style={{
+                background: 'var(--tsa-red-soft)',
+                border: '1px solid var(--tsa-red-border)',
+                color: 'var(--tsa-red)',
+              }}
+            >
+              <Exam weight="duotone" className="w-4 h-4" />
+              Đang vào phòng thi TSA
+            </div>
+          </TsaNavbar>
+
+          <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+            <div
+              className="w-full max-w-md rounded-3xl border p-6 sm:p-8 text-center"
+              style={{
+                background: 'var(--tsa-surface)',
+                borderColor: 'var(--tsa-border)',
+                boxShadow: 'var(--tsa-shadow)',
+              }}
+            >
+              <div className="ep-spinner mx-auto" style={{ borderTopColor: 'var(--tsa-red)' }} />
+              <h1 className="mt-5 text-xl sm:text-2xl font-black" style={{ color: 'var(--tsa-text)' }}>
+                Đang chuẩn bị phòng thi TSA
+              </h1>
+              <p className="mt-2 text-sm font-medium" style={{ color: 'var(--tsa-muted)' }}>
+                Đang tải ảnh câu hỏi...
+              </p>
+
+              <div className="mt-6">
+                <div
+                  className="h-3 w-full overflow-hidden rounded-full"
+                  style={{ background: 'var(--tsa-red-soft)' }}
+                  aria-label={`Tiến độ tải ảnh ${preloadPercent}%`}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${preloadPercent}%`, background: 'var(--tsa-red)' }}
+                  />
+                </div>
+                <div className="mt-3 text-3xl font-black" style={{ color: 'var(--tsa-red)' }}>
+                  {preloadPercent}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--app-text)' }}>
+        <Topbar activeExam={activeExam} handleReset={handleReset}>
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold"
+            style={{
+              background: normalSoftBg,
+              border: `1px solid ${normalBorder}`,
+              color: normalAccent,
+            }}
+          >
+            <NormalLoadingIcon weight="duotone" className="w-4 h-4" />
+            {isPracticePreload ? 'Đang vào ôn luyện' : 'Đang vào phòng thi'}
+          </div>
+        </Topbar>
+
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+          <div
+            className="w-full max-w-md rounded-3xl border p-6 sm:p-8 text-center"
+            style={{
+              background: 'var(--app-surface)',
+              borderColor: 'var(--app-border)',
+              boxShadow: '0 18px 45px rgba(15, 23, 42, .10)',
+            }}
+          >
+            <div className="ep-spinner mx-auto" style={{ borderTopColor: normalAccent }} />
+            <h1 className="mt-5 text-xl sm:text-2xl font-black" style={{ color: 'var(--app-text)' }}>
+              {isPracticePreload ? 'Đang chuẩn bị phòng ôn luyện' : 'Đang chuẩn bị phòng thi'}
+            </h1>
+            <p className="mt-2 text-sm font-medium" style={{ color: 'var(--app-muted)' }}>
+              Đang tải ảnh câu hỏi...
+            </p>
+
+            <div className="mt-6">
+              <div
+                className="h-3 w-full overflow-hidden rounded-full"
+                style={{ background: normalSoftBg }}
+                aria-label={`Tiến độ tải ảnh ${preloadPercent}%`}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${preloadPercent}%`, background: normalAccent }}
+                />
+              </div>
+              <div className="mt-3 text-3xl font-black" style={{ color: normalAccent }}>
+                {preloadPercent}%
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
