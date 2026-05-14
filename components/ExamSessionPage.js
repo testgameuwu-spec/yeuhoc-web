@@ -1996,11 +1996,23 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                              <div className="w-8 h-8 rounded-full bg-[#f1f5f9] flex items-center justify-center font-bold text-gray-700 shrink-0 text-sm border border-gray-200">
                                {qIndex - currentTsaSection.startIndex + 1}
                              </div>
-                             <div className="flex-1 text-[16px] text-gray-900 leading-[1.7]">
-                               <MathRenderer text={qObj.content} />
-                               {isValidImageSrc(qObj.image) && (
-                                 <div className="mt-3 border border-gray-100 rounded-xl p-2 inline-block">
-                                   <Image
+                              <div className="flex-1 text-[16px] text-gray-900 leading-[1.7]">
+                                {qObj.type === 'DRAG' ? (
+                                  <div className="tsa-drag-wrap">
+                                    <QuestionCard
+                                      question={{ ...qObj, image: null }}
+                                      index={qIndex}
+                                      selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)}
+                                      onAnswerChange={(val) => handleAnswerChange(qObj.id, val)}
+                                      disabled={false}
+                                    />
+                                  </div>
+                                ) : (
+                                  <MathRenderer text={qObj.content} />
+                                )}
+                                {isValidImageSrc(qObj.image) && (
+                                  <div className="mt-3 border border-gray-100 rounded-xl p-2 inline-block">
+                                    <Image
                                      src={qObj.image}
                                      alt=""
                                      width={900}
@@ -2064,11 +2076,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                  <input type="text" value={answers[qObj.id] ?? ''} onChange={e => handleAnswerChange(qObj.id, e.target.value)} placeholder="Nhập đáp án của bạn..." className="w-full max-w-md px-4 py-3 border border-gray-200 rounded-xl text-gray-900 text-base focus:outline-none focus:border-[#1976D2] focus:ring-2 focus:ring-blue-100 transition-all" />
                                </div>
                              )}
-                             {qObj.type === 'DRAG' && (
-                               <div className="tsa-drag-wrap"><QuestionCard question={{ ...qObj, image: null }} index={qIndex} selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)} onAnswerChange={(val) => handleAnswerChange(qObj.id, val)} disabled={false} /></div>
-                             )}
-                           </div>
-                         </div>
+                            </div>
+                          </div>
                        );
                      };
 

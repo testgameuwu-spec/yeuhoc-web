@@ -9,6 +9,7 @@ import {
   BookOpen, Plus, Upload, Settings, ChevronDown, FileText, ShieldAlert, Shuffle, AlertTriangle
 } from 'lucide-react';
 import { TSA_TOTAL_DURATION_MINUTES, TSA_TOTAL_QUESTIONS } from '@/lib/examScoring';
+import { shuffleExamQuestions } from '@/lib/questionShuffle';
 
 const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
 const EXAM_TYPES = ['THPT', 'HSA', 'TSA', 'Other'];
@@ -283,41 +284,23 @@ export default function ExamEditor({
   }, [getGroupIds]);
 
   const handleShuffleQuestions = useCallback(() => {
-    if (!window.confirm('Bạn có chắc chắn muốn xáo trộn ngẫu nhiên toàn bộ câu hỏi? Các câu hỏi trong cùng một ngữ cảnh sẽ vẫn được giữ gần nhau.')) {
+    const confirmMessage = examType === 'TSA'
+      ? 'Bạn có chắc chắn muốn xáo trộn câu hỏi? Với TSA, hệ thống chỉ trộn câu trong từng phần 40/20/40. Các câu hỏi chùm luôn đi liền nhau và ngữ cảnh luôn đứng đầu.'
+      : 'Bạn có chắc chắn muốn xáo trộn câu hỏi? Các câu hỏi chùm luôn đi liền nhau và ngữ cảnh luôn đứng đầu.';
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
-    setQuestions(prev => {
-      const groups = [];
-      const groupMap = new Map();
-      
-      prev.forEach(q => {
-        let parentId = q.type === 'TEXT' ? q.id : (q.linkedTo || q.id);
-        
-        if (!groupMap.has(parentId)) {
-          groupMap.set(parentId, groups.length);
-          groups.push([]);
-        }
-        
-        // Đảm bảo TEXT context luôn đứng đầu trong nhóm
-        if (q.type === 'TEXT') {
-          groups[groupMap.get(parentId)].unshift(q);
-        } else {
-          groups[groupMap.get(parentId)].push(q);
-        }
-      });
-      
-      // Fisher-Yates shuffle cho các nhóm
-      const shuffledGroups = [...groups];
-      for (let i = shuffledGroups.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledGroups[i], shuffledGroups[j]] = [shuffledGroups[j], shuffledGroups[i]];
-      }
-      
-      return shuffledGroups.flat();
-    });
+    const result = shuffleExamQuestions(questions, { examType });
+    if (result.error) {
+      window.alert(result.error);
+      return;
+    }
+
+    setQuestions(result.questions);
     setHasUnsavedChanges(true);
-  }, []);
+  }, [examType, questions]);
 
   const handleSave = () => {
     onSave({
@@ -633,7 +616,7 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
                 <div className="flex items-center gap-2">
                   <button onClick={handleShuffleQuestions}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm font-medium transition-all"
-                    title="Xáo trộn ngẫu nhiên toàn bộ câu hỏi">
+                    title={isTsaExam ? 'Trộn câu hỏi trong từng phần TSA, giữ liền câu chùm' : 'Trộn câu hỏi, giữ liền câu chùm'}>
                     <Shuffle className="w-4 h-4" /> Trộn câu hỏi
                   </button>
                   <button onClick={handleAddQuestion}

@@ -3402,6 +3402,9 @@ html[data-theme='dark'] .theme-page .preview-theme-badge {
   --tsa-red-border: #fecaca;
   --tsa-green: #16a34a;
   --tsa-amber: #f59e0b;
+  --tsa-blue: #1976d2;
+  --tsa-blue-soft: #f8faff;
+  --tsa-progress-track: #e5e7eb;
   --tsa-user-bg: #ffffff;
   --tsa-user-border: #fee2e2;
   --tsa-user-text: #0f172a;
@@ -3426,6 +3429,9 @@ html[data-theme='dark'] .tsa-menu-root {
   --tsa-red-border: rgba(248, 113, 113, .35);
   --tsa-green: #4ade80;
   --tsa-amber: #fbbf24;
+  --tsa-blue: #60a5fa;
+  --tsa-blue-soft: rgba(37, 99, 235, .18);
+  --tsa-progress-track: #334155;
   --tsa-user-bg: #020617;
   --tsa-user-border: #334155;
   --tsa-user-text: #f8fafc;
@@ -3751,10 +3757,113 @@ html[data-theme='dark'] .tsa-navbar {
   min-height: 0;
 }
 
+.tsa-exam-root {
+  background: var(--tsa-bg) !important;
+  color: var(--tsa-text);
+}
+
+.tsa-main-panel,
+.tsa-scroll-area {
+  background: var(--tsa-bg) !important;
+  color: var(--tsa-text) !important;
+}
+
+.tsa-sidebar,
+.tsa-bottombar {
+  background: var(--tsa-surface) !important;
+  border-color: var(--tsa-border) !important;
+  color: var(--tsa-text);
+}
+
 .tsa-scroll-area {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   touch-action: pan-y;
+}
+
+html[data-theme='dark'] .tsa-exam-root .bg-\[\#f8f9fa\],
+html[data-theme='dark'] .tsa-exam-root [class~="bg-[#f8f9fa]"],
+html[data-theme='dark'] .tsa-exam-root [class~="bg-[#f1f5f9]"],
+html[data-theme='dark'] .tsa-exam-root .bg-\[\#f8faff\],
+html[data-theme='dark'] .tsa-exam-root .bg-\[\#f1f5f9\],
+html[data-theme='dark'] .tsa-exam-root .bg-\[\#e3f2fd\],
+html[data-theme='dark'] .tsa-exam-root .bg-gray-50,
+html[data-theme='dark'] .tsa-exam-root .bg-gray-100,
+html[data-theme='dark'] .tsa-exam-root .bg-gray-200 {
+  background-color: var(--tsa-surface-muted) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .bg-\[\#f8faff\],
+html[data-theme='dark'] .tsa-exam-root .bg-\[\#e3f2fd\],
+html[data-theme='dark'] .tsa-exam-root [class~="bg-[#f8faff]"],
+html[data-theme='dark'] .tsa-exam-root [class~="bg-[#e3f2fd]"] {
+  background-color: var(--tsa-blue-soft) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .border-gray-100,
+html[data-theme='dark'] .tsa-exam-root .border-gray-200,
+html[data-theme='dark'] .tsa-exam-root .border-gray-300,
+html[data-theme='dark'] .tsa-exam-root [class~="border-[#90caf9]"] {
+  border-color: var(--tsa-border) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root [class~="border-[#1976D2]"] {
+  border-color: var(--tsa-blue) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .text-black,
+html[data-theme='dark'] .tsa-exam-root .text-gray-900,
+html[data-theme='dark'] .tsa-exam-root .text-gray-800,
+html[data-theme='dark'] .tsa-exam-root .text-gray-700 {
+  color: var(--tsa-text) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .text-gray-600,
+html[data-theme='dark'] .tsa-exam-root .text-gray-500,
+html[data-theme='dark'] .tsa-exam-root .text-gray-400 {
+  color: var(--tsa-muted) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root [class~="text-[#1976D2]"] {
+  color: var(--tsa-blue) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .hover\:bg-gray-50:hover,
+html[data-theme='dark'] .tsa-exam-root .hover\:bg-gray-100:hover,
+html[data-theme='dark'] .tsa-exam-root .hover\:bg-gray-200:hover {
+  background-color: rgba(148, 163, 184, .09) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .hover\:border-gray-200:hover,
+html[data-theme='dark'] .tsa-exam-root .hover\:border-gray-400:hover {
+  border-color: var(--tsa-border) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .group:hover .group-hover\:border-gray-400 {
+  border-color: var(--tsa-muted) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .tsa-sidebar,
+html[data-theme='dark'] .tsa-exam-root .tsa-bottombar {
+  background-color: var(--tsa-surface) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .tsa-sidebar .bg-gray-50 {
+  background-color: var(--tsa-surface-muted) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root .tsa-sidebar .bg-gray-200 {
+  background-color: var(--tsa-progress-track) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root input[type='text'] {
+  background-color: var(--tsa-surface-muted) !important;
+  border-color: var(--tsa-border) !important;
+  color: var(--tsa-text) !important;
+}
+
+html[data-theme='dark'] .tsa-exam-root input[type='text']::placeholder {
+  color: var(--tsa-soft) !important;
 }
 
 /* Hide mobile-only elements on desktop */

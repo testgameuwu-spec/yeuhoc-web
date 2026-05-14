@@ -77,7 +77,7 @@ function renderMathInText(text) {
  */
 function renderKatex(latex, displayMode) {
     try {
-        const html = katex.renderToString(latex, {
+        const html = renderKatexToString(latex, {
             displayMode,
             throwOnError: false,
             strict: false,
@@ -102,5 +102,24 @@ function renderKatex(latex, displayMode) {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
         return `<code class="text-red-400">${escaped}</code>`;
+    }
+}
+
+function renderKatexToString(latex, options) {
+    if (typeof console === 'undefined' || typeof console.warn !== 'function') {
+        return katex.renderToString(latex, options);
+    }
+
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+        const message = typeof args[0] === 'string' ? args[0] : '';
+        if (message.startsWith('No character metrics for ')) return;
+        originalWarn(...args);
+    };
+
+    try {
+        return katex.renderToString(latex, options);
+    } finally {
+        console.warn = originalWarn;
     }
 }
