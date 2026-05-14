@@ -270,14 +270,15 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // Default sidebar state for Reading/Science
   useEffect(() => {
     const t = setTimeout(() => {
-      if (quizPhase === 'quiz' && isTSA && (tsaSectionIndex === 1 || tsaSectionIndex === 2)) {
+      const isTSACheck = isTsaExam(activeExam);
+      if (quizPhase === 'quiz' && isTSACheck && (tsaSectionIndex === 1 || tsaSectionIndex === 2)) {
         setIsSidebarCollapsed(true);
       } else {
         setIsSidebarCollapsed(false);
       }
     }, 0);
     return () => clearTimeout(t);
-  }, [tsaSectionIndex, isTSA, quizPhase]);
+  }, [tsaSectionIndex, activeExam, quizPhase]);
 
   // Preview Stats
   const [examStats, setExamStats] = useState(null);
