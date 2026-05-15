@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
+import { getAdminApiHeaders } from '@/lib/adminApi';
 import { CreditCard, ArrowDownLeft, ArrowUpRight, Search, RefreshCw, Calendar, CheckCircle2, AlertCircle, X, UserCheck } from 'lucide-react';
 
 export default function TransactionManagement() {
@@ -96,7 +97,10 @@ export default function TransactionManagement() {
                 setReidentifying(true);
                 setToast(null);
                 try {
-                  const res = await fetch('/api/admin/reidentify-transactions', { method: 'POST' });
+                  const res = await fetch('/api/admin/reidentify-transactions', {
+                    method: 'POST',
+                    headers: await getAdminApiHeaders(),
+                  });
                   const result = await res.json();
                   if (result.success) {
                     setToast({

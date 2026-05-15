@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,9 @@ export const dynamic = 'force-dynamic';
  * payload size limits.
  */
 export async function GET(req) {
+  const auth = await requireAdmin(req);
+  if (auth.errorResponse) return auth.errorResponse;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

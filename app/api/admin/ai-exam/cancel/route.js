@@ -1,3 +1,5 @@
+import { requireAdmin } from '@/lib/adminAuth';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +31,9 @@ async function upsertOcrLog(payload) {
 }
 
 export async function POST(req) {
+  const auth = await requireAdmin(req);
+  if (auth.errorResponse) return auth.errorResponse;
+
   let body;
   try {
     body = await req.json();

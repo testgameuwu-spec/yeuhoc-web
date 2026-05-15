@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 const FOLLOW_UP_LIMIT = 2;
 const MAX_OUTPUT_TOKENS = 10000;
-const ALLOWED_MODEL = 'deepseek-v4-flash';
+const ALLOWED_MODEL = 'deepseek-chat';
 
 function truncate(value, maxLength = 5000) {
   if (value === null || value === undefined || value === '') return 'Không có';

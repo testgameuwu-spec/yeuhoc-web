@@ -5,6 +5,7 @@ import { PDFParse } from 'pdf-parse';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { parseQuizText } from '@/lib/parser';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -387,7 +388,7 @@ async function callDeepSeekOcr({ file, buffer, onProgress, requestId }) {
   }
 
   const apiKey = process.env.DEEPSEEK_OCR_API_KEY || process.env.DEEPSEEK_API_KEY;
-  const model = process.env.DEEPSEEK_OCR_MODEL || 'deepseek-v4-pro';
+  const model = process.env.DEEPSEEK_OCR_MODEL || 'deepseek-chat';
   const isImage = file.type.startsWith('image/');
   const isPdf = file.type === 'application/pdf' || getExtension(file.name) === 'pdf';
 
@@ -531,6 +532,9 @@ async function repairStructuredText(structuredText, parseNote, originalSourceTex
 }
 
 export async function POST(req) {
+  const auth = await requireAdmin(req);
+  if (auth.errorResponse) return auth.errorResponse;
+
   const startedAt = Date.now();
   let requestId = makeRequestId();
 
@@ -669,7 +673,7 @@ export async function POST(req) {
       extracted_chars: extracted.text.length,
       image_candidate_count: extracted.imageCandidates.length,
       duration_ms: Date.now() - startedAt,
-      ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-v4-pro',
+      ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-chat',
       normalize_model: NORMALIZE_MODEL,
     });
 
@@ -680,7 +684,7 @@ export async function POST(req) {
       used_ocr: extracted.usedOcr,
       extracted_chars: extracted.text.length,
       image_candidate_count: extracted.imageCandidates.length,
-      ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-v4-pro',
+      ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-chat',
       normalize_model: NORMALIZE_MODEL,
     };
 
@@ -706,7 +710,7 @@ export async function POST(req) {
         extracted_chars: extracted.text.length,
         image_candidate_count: extracted.imageCandidates.length,
         duration_ms: Date.now() - startedAt,
-        ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-v4-pro',
+        ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-chat',
         normalize_model: NORMALIZE_MODEL,
       });
       structuredText = await runWithHeartbeat({
@@ -740,7 +744,7 @@ export async function POST(req) {
       structured_text: structuredText,
       image_candidates: extracted.imageCandidates,
       duration_ms: Date.now() - startedAt,
-      ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-v4-pro',
+      ocr_model: process.env.DEEPSEEK_OCR_MODEL || 'deepseek-chat',
       normalize_model: NORMALIZE_MODEL,
       prompt_tokens: tokenAccumulator.promptTokens,
       completion_tokens: tokenAccumulator.completionTokens,

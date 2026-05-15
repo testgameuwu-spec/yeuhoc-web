@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/adminAuth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+export async function POST(req) {
+  const auth = await requireAdmin(req);
+  if (auth.errorResponse) return auth.errorResponse;
 
-export async function POST() {
   try {
     // Lấy tất cả giao dịch chưa có user_id
-    const { data: transactions, error: fetchError } = await supabaseAdmin
+    const { data: transactions, error: fetchError } = await auth.supabaseAdmin
       .from('sepay_transactions')
       .select('id, content')
       .is('user_id', null);
@@ -35,7 +34,7 @@ export async function POST() {
         const identifier = match[1].toLowerCase().trim();
 
         // Tìm theo email prefix
-        const { data: profiles } = await supabaseAdmin
+        const { data: profiles } = await auth.supabaseAdmin
           .from('profiles')
           .select('id, email')
           .ilike('email', `${identifier}@%`);
@@ -49,7 +48,7 @@ export async function POST() {
 
         if (!userId) {
           // Tìm theo UUID prefix
-          const { data: idProfiles } = await supabaseAdmin
+          const { data: idProfiles } = await auth.supabaseAdmin
             .from('profiles')
             .select('id')
             .ilike('id', `${identifier}%`);
@@ -64,7 +63,7 @@ export async function POST() {
         const words = upperContent.split(/[\s.,-]+/).filter(w => w.length >= 4 && /^[A-Z0-9_]+$/i.test(w));
         for (const word of words) {
           if (['YEUHOC', 'TKPYH1', 'UNGHO', 'TPBANK', 'MBBANK', 'VIETCOMBANK', 'TECHCOMBANK'].includes(word)) continue;
-          const { data: fp } = await supabaseAdmin
+          const { data: fp } = await auth.supabaseAdmin
             .from('profiles')
             .select('id, email')
             .ilike('email', `${word.toLowerCase()}@%`);
@@ -76,7 +75,7 @@ export async function POST() {
       }
 
       if (userId) {
-        await supabaseAdmin
+        await auth.supabaseAdmin
           .from('sepay_transactions')
           .update({ user_id: userId })
           .eq('id', tx.id);

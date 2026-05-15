@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getAdminApiHeaders } from '@/lib/adminApi';
 import {
   Activity, CheckCircle2, AlertTriangle, RefreshCw, Search, Clock, FileText,
   Coins, Zap, Check, XCircle
@@ -103,7 +104,7 @@ export default function OcrLogManagement({ showAlert, onTrackRequest }) {
     try {
       const response = await fetch('/api/admin/ai-exam/cancel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAdminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ requestId, cancelledBy: 'admin' }),
       });
       const data = await response.json().catch(() => ({}));
@@ -124,7 +125,7 @@ export default function OcrLogManagement({ showAlert, onTrackRequest }) {
     try {
       const response = await fetch('/api/admin/ai-exam/logs/delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAdminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ requestId }),
       });
       const data = await response.json().catch(() => ({}));

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Bot, CheckCircle2, Copy, FileUp, Loader2, Sparkles } from 'lucide-react';
 import { parseQuizText } from '@/lib/parser';
 import { supabase } from '@/lib/supabase';
+import { getAdminApiHeaders } from '@/lib/adminApi';
 
 const ACCEPTED = '.txt,.pdf,.docx,.png,.jpg,.jpeg';
 
@@ -161,7 +162,10 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
         console.warn('[AIExamGenerator] OCR log success but structured_text is empty/null. question_count from log:', progressLog.question_count);
         // Try fetching structured_text via API fallback
         try {
-          const res = await fetch(`/api/admin/ai-exam/logs/detail?requestId=${encodeURIComponent(progressLog.request_id)}`);
+          const res = await fetch(
+            `/api/admin/ai-exam/logs/detail?requestId=${encodeURIComponent(progressLog.request_id)}`,
+            { headers: await getAdminApiHeaders() },
+          );
           if (res.ok) {
             const detail = await res.json();
             if (detail?.structured_text) {
@@ -342,6 +346,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
 
       const response = await fetch('/api/admin/ai-exam/import', {
         method: 'POST',
+        headers: await getAdminApiHeaders(),
         body: formData,
         signal: controller.signal,
       });
@@ -414,7 +419,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
       scanAbortRef.current?.abort();
       await fetch('/api/admin/ai-exam/cancel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAdminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ requestId: scanRequestId, cancelledBy: 'user' }),
       });
       setProgressLog((prev) => ({
@@ -436,7 +441,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
     try {
       const response = await fetch('/api/admin/ai-exam/logs/delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAdminApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ requestId: scanRequestId }),
       });
       const data = await response.json().catch(() => ({}));
@@ -469,7 +474,7 @@ export default function AIExamGenerator({ onQuestionsReady, trackedRequestId = '
         <div className="min-w-0 flex-1">
           <h3 className="text-base font-bold text-white">Tạo đề bằng AI</h3>
           <p className="text-xs sm:text-sm text-white/45 mt-1 leading-relaxed">
-            Upload PDF/DOCX/PNG/JPG để DeepSeek OCR + DeepSeek V4 Pro chuyển thành định dạng .txt rồi tự parse vào editor.
+            Upload PDF/DOCX/PNG/JPG để DeepSeek OCR chuyển thành định dạng .txt rồi tự parse vào editor.
           </p>
         </div>
       </div>

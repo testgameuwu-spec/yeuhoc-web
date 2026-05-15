@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 45;
 
-const MODEL = process.env.DEEPSEEK_ANALYSIS_MODEL || 'deepseek-v4-flash';
+const MODEL = process.env.DEEPSEEK_ANALYSIS_MODEL || 'deepseek-chat';
 const MAX_OUTPUT_TOKENS = 700;
 
 function truncateText(value, maxLength = 240) {
