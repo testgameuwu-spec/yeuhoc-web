@@ -4000,7 +4000,7 @@ html[data-theme='dark'] .tsa-exam-root input[type='text']::placeholder {
 (orientation: landscape) and (max-height: 500px) {
   .tsa-exam-root {
     zoom: 0.8;
-    overflow-y: auto;
+    overflow-y: hidden;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
@@ -4023,21 +4023,60 @@ html[data-theme='dark'] .tsa-exam-root input[type='text']::placeholder {
   .tsa-navbar-toggle.is-collapsed { top: 0; }
   .tsa-navbar-toggle svg { width: 12px; height: 12px; }
   .tsa-body {
-    flex: none;
-    display: block;
-    min-height: auto;
-    overflow: visible;
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
   }
   .tsa-main-panel {
-    display: block;
-    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     height: auto;
   }
   .tsa-scroll-area {
-    min-height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
     height: auto;
-    overflow: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
     touch-action: pan-y;
+    padding: 16px 18px 96px !important;
+  }
+  @media (min-width: 640px) {
+    .tsa-scroll-inner:has(.tsa-content-split) {
+      height: 100%;
+    }
+
+    .tsa-content-split,
+    .tsa-context-panel,
+    .tsa-questions-panel {
+      min-height: 0;
+      height: 100%;
+    }
+
+    .tsa-context-card,
+    .tsa-questions-panel {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+
+    .tsa-questions-panel {
+      padding-right: 4px;
+    }
+  }
+  @media (max-width: 639px) {
+    .tsa-scroll-area {
+      padding: 14px 14px 96px !important;
+    }
+
+    .tsa-context-card {
+      max-height: none;
+    }
+  }
+  .tsa-scroll-area {
     padding-bottom: 96px !important;
   }
   .tsa-sidebar {
