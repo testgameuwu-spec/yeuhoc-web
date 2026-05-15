@@ -23,6 +23,19 @@ const SCORING_PRESETS = {
   'Tuỳ chỉnh': null,
 };
 
+const getHsaDurationBySubject = (subj) => {
+  const normalized = String(subj || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  if (normalized === 'toan' || normalized === 'tu duy dinh luong') return 75;
+  if (normalized === 'tu duy dinh tinh' || normalized === 'van hoc - ngon ngu') return 60;
+  if (normalized === 'tieng anh') return 60;
+  return null;
+};
+
 export default function ExamEditor({
   exam,
   folders = [],
@@ -139,7 +152,11 @@ export default function ExamEditor({
     setScoringPreset(preset);
     if (SCORING_PRESETS[preset]) {
       setScoringConfig({ ...SCORING_PRESETS[preset] });
-      if (preset === 'TSA') {
+      if (preset === 'HSA') {
+        const hsaDuration = getHsaDurationBySubject(subject);
+        setExamType('HSA');
+        if (hsaDuration) setDuration(hsaDuration);
+      } else if (preset === 'TSA') {
         setExamType('TSA');
         setDuration(TSA_TOTAL_DURATION_MINUTES);
       }
@@ -157,6 +174,10 @@ export default function ExamEditor({
   const handleSubjectChange = (e) => {
     const newSubject = e.target.value;
     setSubject(newSubject);
+    if (examType === 'HSA') {
+      const hsaDuration = getHsaDurationBySubject(newSubject);
+      if (hsaDuration) setDuration(hsaDuration);
+    }
     setHasUnsavedChanges(true);
     updatePreset(newSubject, examType);
   };
@@ -164,7 +185,12 @@ export default function ExamEditor({
   const handleExamTypeChange = (e) => {
     const newType = e.target.value;
     setExamType(newType);
-    if (newType === 'TSA') setDuration(TSA_TOTAL_DURATION_MINUTES);
+    if (newType === 'HSA') {
+      const hsaDuration = getHsaDurationBySubject(subject);
+      if (hsaDuration) setDuration(hsaDuration);
+    } else if (newType === 'TSA') {
+      setDuration(TSA_TOTAL_DURATION_MINUTES);
+    }
     setHasUnsavedChanges(true);
     updatePreset(subject, newType);
   };
