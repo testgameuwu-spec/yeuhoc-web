@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Plus, Search, MoreVertical, Eye, EyeOff, Pencil, Trash2,
-  FileText, Clock, Calendar, GripVertical, Save, X, Folder, ChevronDown, ChevronRight, Lock, Globe, EyeOff as PrivateEye, ArrowRightLeft
+  FileText, Clock, Calendar, GripVertical, Save, X, Folder, ChevronDown, ChevronRight, Lock, Globe, EyeOff as PrivateEye, ArrowRightLeft, Shuffle, AlertTriangle
 } from 'lucide-react';
 import Pagination from '@/components/Pagination';
+import { createMixedExamQuestions, MIX_QUESTION_TYPES } from '@/lib/questionMix';
 
 const SUBJECT_COLORS = {
   'Toán': 'from-indigo-500/20 to-indigo-600/20 text-indigo-400 border-indigo-500/30',
@@ -25,10 +26,31 @@ const VISIBILITY_CONFIG = {
 const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
 const EXAM_TYPES = ['THPT', 'HSA', 'TSA', 'Other'];
 const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+const MIX_EXAM_TYPES = ['HSA', 'TSA'];
+const MIX_INITIAL_QUOTAS = Object.fromEntries(MIX_QUESTION_TYPES.map(type => [type, 0]));
+const MIX_TYPE_LABELS = {
+  MCQ: 'Trắc nghiệm',
+  MA: 'Chọn nhiều',
+  TF: 'Đúng/Sai',
+  SA: 'Trả lời ngắn',
+  DRAG: 'Kéo thả',
+};
+
+function countQuestionsByType(exams) {
+  const counts = { ...MIX_INITIAL_QUOTAS };
+  exams.forEach((exam) => {
+    (exam.questions || []).forEach((question) => {
+      if (MIX_QUESTION_TYPES.includes(question.type)) {
+        counts[question.type] += 1;
+      }
+    });
+  });
+  return counts;
+}
 
 export default function ExamList({ 
   exams, folders = [], onEdit, onDelete, onTogglePublish, onCreateNew, onUpdateOrder,
-  onCreateFolder, onUpdateFolder, onDeleteFolder, onUpdateFoldersOrder, onSaveExam
+  onCreateFolder, onUpdateFolder, onDeleteFolder, onUpdateFoldersOrder, onSaveExam, onCreateMixedExam
 }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -43,6 +65,12 @@ export default function ExamList({
   // Modals
   const [folderModal, setFolderModal] = useState({ isOpen: false, data: null });
   const [moveModal, setMoveModal] = useState({ isOpen: false, exam: null });
+  const [mixModalOpen, setMixModalOpen] = useState(false);
+  const [mixExamType, setMixExamType] = useState('HSA');
+  const [mixSearch, setMixSearch] = useState('');
+  const [mixSelectedIds, setMixSelectedIds] = useState([]);
+  const [mixQuotas, setMixQuotas] = useState({ ...MIX_INITIAL_QUOTAS });
+  const [mixError, setMixError] = useState('');
 
   // Ordering states
   const [isEditingOrder, setIsEditingOrder] = useState(false);
@@ -77,6 +105,22 @@ export default function ExamList({
     if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const mixableExamCount = localExams.filter(exam => MIX_EXAM_TYPES.includes(exam.examType)).length;
+  const mixSourceExams = useMemo(() => {
+    const query = mixSearch.trim().toLowerCase();
+    return localExams.filter((exam) => {
+      if (exam.examType !== mixExamType) return false;
+      if (query && !exam.title.toLowerCase().includes(query)) return false;
+      return true;
+    });
+  }, [localExams, mixExamType, mixSearch]);
+  const selectedMixExams = useMemo(() => {
+    const selectedIdSet = new Set(mixSelectedIds.map(String));
+    return localExams.filter(exam => selectedIdSet.has(String(exam.id)) && exam.examType === mixExamType);
+  }, [localExams, mixExamType, mixSelectedIds]);
+  const selectedMixCounts = useMemo(() => countQuestionsByType(selectedMixExams), [selectedMixExams]);
+  const mixQuotaTotal = MIX_QUESTION_TYPES.reduce((total, type) => total + Number(mixQuotas[type] || 0), 0);
 
   const toggleFolder = (id) => setExpandedFolders(prev => ({ ...prev, [id]: !prev[id] }));
 
@@ -175,6 +219,59 @@ export default function ExamList({
       await onSaveExam({ ...moveModal.exam, folderId: newFolderId });
     }
     setMoveModal({ isOpen: false, exam: null });
+  };
+
+  const openMixModal = () => {
+    const defaultType = localExams.some(exam => exam.examType === 'HSA') ? 'HSA' : 'TSA';
+    setMixExamType(defaultType);
+    setMixSearch('');
+    setMixSelectedIds([]);
+    setMixQuotas({ ...MIX_INITIAL_QUOTAS });
+    setMixError('');
+    setMixModalOpen(true);
+  };
+
+  const handleMixExamTypeChange = (type) => {
+    setMixExamType(type);
+    setMixSearch('');
+    setMixSelectedIds([]);
+    setMixError('');
+  };
+
+  const handleMixQuotaChange = (type, value) => {
+    const nextValue = value === '' ? 0 : Number(value);
+    setMixQuotas(prev => ({ ...prev, [type]: nextValue }));
+    setMixError('');
+  };
+
+  const handleToggleMixSource = (examId) => {
+    setMixSelectedIds(prev => (
+      prev.includes(examId)
+        ? prev.filter(id => id !== examId)
+        : [...prev, examId]
+    ));
+    setMixError('');
+  };
+
+  const handleSubmitMix = () => {
+    const result = createMixedExamQuestions({
+      exams: localExams,
+      examType: mixExamType,
+      sourceExamIds: mixSelectedIds,
+      quotas: mixQuotas,
+    });
+
+    if (result.error) {
+      setMixError(result.error);
+      return;
+    }
+
+    onCreateMixedExam?.({
+      examType: mixExamType,
+      sourceExams: selectedMixExams,
+      questions: result.questions,
+    });
+    setMixModalOpen(false);
   };
 
   // Render a single Exam row
@@ -464,6 +561,14 @@ export default function ExamList({
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs sm:text-sm font-semibold transition-all border border-white/10">
                 <GripVertical className="w-4 h-4" /> <span className="hidden sm:inline">Sắp xếp</span>
               </button>
+              <button onClick={openMixModal} disabled={mixableExamCount === 0}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border ${
+                  mixableExamCount === 0
+                    ? 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed'
+                    : 'bg-cyan-500/10 hover:bg-cyan-500/15 text-cyan-300 hover:text-cyan-200 border-cyan-500/20'
+                }`}>
+                <Shuffle className="w-4 h-4" /> <span className="hidden sm:inline">Tạo đề xáo</span>
+              </button>
               <button onClick={onCreateNew}
                 className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white text-xs sm:text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/25">
                 <Plus className="w-4 h-4" />
@@ -515,6 +620,168 @@ export default function ExamList({
           )}
         </div>
       </div>
+
+      {/* Mixed Exam Modal */}
+      {mixModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-[#14142a] border border-white/10 rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden animate-scaleIn">
+            <div className="flex justify-between items-center p-5 border-b border-white/10 bg-white/[0.02]">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Shuffle className="w-5 h-5 text-cyan-300" /> Tạo đề xáo
+                </h3>
+                <p className="mt-1 text-xs text-white/35">Chọn nhiều đề nguồn cùng loại và nhập số lượng câu cần lấy.</p>
+              </div>
+              <button onClick={() => setMixModalOpen(false)} className="text-white/40 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-0">
+              <div className="p-5 border-b lg:border-b-0 lg:border-r border-white/10 space-y-5">
+                <div>
+                  <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Loại đề mới</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {MIX_EXAM_TYPES.map(type => (
+                      <button key={type} type="button" onClick={() => handleMixExamTypeChange(type)}
+                        className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                          mixExamType === type
+                            ? 'bg-cyan-500/15 text-cyan-200 border-cyan-500/40'
+                            : 'bg-white/5 text-white/45 border-white/10 hover:text-white/70'
+                        }`}>
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider">Quota câu hỏi</label>
+                    <span className={`text-xs font-bold ${mixExamType === 'TSA' && mixQuotaTotal !== 100 ? 'text-amber-300' : 'text-cyan-300'}`}>
+                      Tổng {mixQuotaTotal}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {MIX_QUESTION_TYPES.map(type => (
+                      <div key={type} className="grid grid-cols-[1fr_92px] gap-2 items-center">
+                        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                          <p className="text-sm font-semibold text-white/75">{type}</p>
+                          <p className="text-[11px] text-white/30">{MIX_TYPE_LABELS[type]}</p>
+                        </div>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={mixQuotas[type]}
+                          onChange={e => handleMixQuotaChange(type, e.target.value)}
+                          className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm text-right focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {mixExamType === 'TSA' && mixQuotaTotal !== 100 && (
+                    <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>TSA cần tổng đúng 100 câu để giữ cấu trúc 40/20/40.</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Nguồn đã chọn</span>
+                    <span className="text-xs font-bold text-white/70">{selectedMixExams.length} đề</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MIX_QUESTION_TYPES.map(type => (
+                      <span key={type} className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-semibold text-white/55">
+                        {type}: {selectedMixCounts[type]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {mixError && (
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300 whitespace-pre-wrap">
+                    {mixError}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-white">Đề nguồn {mixExamType}</p>
+                    <p className="text-xs text-white/35">{mixSourceExams.length} đề phù hợp bộ lọc</p>
+                  </div>
+                  <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="text"
+                      value={mixSearch}
+                      onChange={e => setMixSearch(e.target.value)}
+                      placeholder="Tìm đề nguồn..."
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-cyan-500/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-[52vh] overflow-y-auto rounded-2xl border border-white/10 bg-black/10">
+                  {mixSourceExams.length > 0 ? (
+                    mixSourceExams.map((exam) => {
+                      const checked = mixSelectedIds.includes(exam.id);
+                      return (
+                        <label key={exam.id}
+                          className={`flex items-start gap-3 border-b border-white/5 px-4 py-3 cursor-pointer transition-colors ${
+                            checked ? 'bg-cyan-500/10' : 'hover:bg-white/[0.03]'
+                          }`}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleToggleMixSource(exam.id)}
+                            className="mt-1 h-4 w-4 accent-cyan-500"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold text-white/85 truncate">{exam.title}</span>
+                            <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/35">
+                              <span>{exam.subject || 'Không rõ môn'}</span>
+                              <span>·</span>
+                              <span>{exam.totalQ || 0} câu</span>
+                              <span>·</span>
+                              <span>{exam.year || 'Không rõ năm'}</span>
+                              {exam.published ? (
+                                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-emerald-300">Published</span>
+                              ) : (
+                                <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-amber-300">Draft</span>
+                              )}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    <div className="py-14 text-center text-sm text-white/35">
+                      Không có đề {mixExamType} phù hợp.
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
+                  <button type="button" onClick={() => setMixModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-white/60 hover:text-white bg-white/5 hover:bg-white/10 transition-colors">
+                    Hủy
+                  </button>
+                  <button type="button" onClick={handleSubmitMix}
+                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-white bg-cyan-600 hover:bg-cyan-500 transition-colors shadow-lg shadow-cyan-500/20 font-semibold">
+                    <Shuffle className="w-4 h-4" /> Tạo bản nháp
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Folder Modal */}
       {folderModal.isOpen && (

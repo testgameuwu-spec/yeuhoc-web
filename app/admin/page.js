@@ -16,6 +16,7 @@ import PracticeProgressManagement from '@/components/admin/PracticeProgressManag
 import AdminOverview from '@/components/admin/AdminOverview';
 import TargetExamManagement from '@/components/admin/TargetExamManagement';
 import { parseImageMap } from '@/components/ContentWithInlineImage';
+import { TSA_TOTAL_DURATION_MINUTES } from '@/lib/examScoring';
 import {
   BookOpen, Plus, ArrowLeft, Menu,
 } from 'lucide-react';
@@ -130,6 +131,29 @@ export default function AdminDashboard() {
     setEditingExam(null);
     setParsedQuestions([]);
     setParseError('');
+  };
+
+  const handleCreateMixedExam = ({ examType, sourceExams, questions }) => {
+    const firstSource = sourceExams?.[0] || {};
+    const timestamp = new Date().toLocaleString('vi-VN', { hour12: false });
+
+    setParsedQuestions([]);
+    setParseError('');
+    setTrackedOcrRequestId('');
+    setExamEditorTab('questions');
+    setEditingExam({
+      id: null,
+      title: `Đề xáo ${examType} - ${timestamp}`,
+      subject: firstSource.subject || (examType === 'HSA' ? 'Tư duy định lượng' : 'Khác'),
+      examType,
+      year: firstSource.year || new Date().getFullYear(),
+      duration: examType === 'TSA' ? TSA_TOTAL_DURATION_MINUTES : (firstSource.duration || 60),
+      published: false,
+      questions,
+      scoringConfig: null,
+      antiCheatEnabled: firstSource.antiCheatEnabled !== false,
+    });
+    setIsCreating(true);
   };
 
   const openExamTabForOcrRequest = (requestId) => {
@@ -369,6 +393,7 @@ export default function AdminDashboard() {
           onDeleteFolder={handleDeleteFolder}
           onUpdateFoldersOrder={handleUpdateFoldersOrder}
           onSaveExam={handleSaveExam}
+          onCreateMixedExam={handleCreateMixedExam}
         />
       );
     }
