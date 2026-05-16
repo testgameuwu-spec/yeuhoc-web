@@ -47,6 +47,7 @@ export default function ExamEditor({
   defaultTab = 'settings',
   trackedOcrRequestId = '',
   onTrackedOcrRequestChange = null,
+  onDraftChange = null,
 }) {
   const [title, setTitle] = useState(exam?.title || '');
   const [subject, setSubject] = useState(exam?.subject || 'Toán');
@@ -147,6 +148,41 @@ export default function ExamEditor({
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!onDraftChange) return;
+
+    onDraftChange({
+      id: exam?.id || null,
+      title,
+      subject,
+      examType,
+      year,
+      duration,
+      published,
+      note,
+      folderId: folderId === 'root' ? null : folderId,
+      questions,
+      scoringConfig,
+      totalQ: realQuestionCount,
+      antiCheatEnabled,
+    });
+  }, [
+    antiCheatEnabled,
+    duration,
+    exam?.id,
+    examType,
+    folderId,
+    note,
+    onDraftChange,
+    published,
+    questions,
+    realQuestionCount,
+    scoringConfig,
+    subject,
+    title,
+    year,
+  ]);
 
   const handlePresetChange = (preset) => {
     setScoringPreset(preset);

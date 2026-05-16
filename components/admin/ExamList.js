@@ -6,7 +6,7 @@ import {
   FileText, Clock, Calendar, GripVertical, Save, X, Folder, ChevronDown, ChevronRight, Lock, Globe, EyeOff as PrivateEye, ArrowRightLeft, Shuffle, AlertTriangle
 } from 'lucide-react';
 import Pagination from '@/components/Pagination';
-import { createMixedExamQuestions, MIX_QUESTION_TYPES } from '@/lib/questionMix';
+import { createMixedExamVariants, MIX_QUESTION_TYPES } from '@/lib/questionMix';
 
 const SUBJECT_COLORS = {
   'Toán': 'from-indigo-500/20 to-indigo-600/20 text-indigo-400 border-indigo-500/30',
@@ -254,7 +254,7 @@ export default function ExamList({
   };
 
   const handleSubmitMix = () => {
-    const result = createMixedExamQuestions({
+    const result = createMixedExamVariants({
       exams: localExams,
       examType: mixExamType,
       sourceExamIds: mixSelectedIds,
@@ -269,7 +269,7 @@ export default function ExamList({
     onCreateMixedExam?.({
       examType: mixExamType,
       sourceExams: selectedMixExams,
-      questions: result.questions,
+      drafts: result.drafts,
     });
     setMixModalOpen(false);
   };

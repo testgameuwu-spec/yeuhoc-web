@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { parseQuizText } from '@/lib/parser';
 import { getAllExams, saveExam, deleteExam, togglePublish, seedIfEmpty, updateExamsOrder, getAllFolders, createFolder, updateFolder, deleteFolder, updateFoldersOrder } from '@/lib/examStore';
 import FileUpload from '@/components/FileUpload';
@@ -72,6 +72,8 @@ export default function AdminDashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [trackedOcrRequestId, setTrackedOcrRequestId] = useState('');
+  const [mixedDrafts, setMixedDrafts] = useState([]);
+  const [activeMixedDraftId, setActiveMixedDraftId] = useState(null);
 
   // Upload & parse flow
   const [parsedQuestions, setParsedQuestions] = useState([]);
@@ -100,6 +102,11 @@ export default function AdminDashboard() {
   const refreshExams = async () => setExams(await getAllExams());
   const refreshFolders = async () => setFolders(await getAllFolders());
 
+  const clearMixedDrafts = useCallback(() => {
+    setMixedDrafts([]);
+    setActiveMixedDraftId(null);
+  }, []);
+
   const handleFileLoaded = useCallback((text, name) => {
     setParseError('');
     try {
@@ -108,6 +115,7 @@ export default function AdminDashboard() {
         setParseError('Không tìm thấy câu hỏi nào. Kiểm tra định dạng file.');
         return;
       }
+      clearMixedDrafts();
       setParsedQuestions(parsed);
       setIsCreating(true);
       setEditingExam({
@@ -124,41 +132,50 @@ export default function AdminDashboard() {
     } catch (err) {
       setParseError('Lỗi khi đọc file: ' + err.message);
     }
-  }, []);
+  }, [clearMixedDrafts]);
 
   const handleCreateNew = () => {
+    clearMixedDrafts();
     setIsCreating(true);
     setEditingExam(null);
     setParsedQuestions([]);
     setParseError('');
   };
 
-  const handleCreateMixedExam = ({ examType, sourceExams, questions }) => {
+  const handleCreateMixedExam = ({ examType, sourceExams, drafts }) => {
     const firstSource = sourceExams?.[0] || {};
     const timestamp = new Date().toLocaleString('vi-VN', { hour12: false });
-
-    setParsedQuestions([]);
-    setParseError('');
-    setTrackedOcrRequestId('');
-    setExamEditorTab('questions');
-    setEditingExam({
+    const nextDrafts = (drafts || []).map((draft, index) => ({
       id: null,
-      title: `Đề xáo ${examType} - ${timestamp}`,
+      clientId: draft.clientId,
+      label: draft.label || `Đề xáo ${index + 1}`,
+      title: `Đề xáo ${examType} ${index + 1} - ${timestamp}`,
       subject: firstSource.subject || (examType === 'HSA' ? 'Tư duy định lượng' : 'Khác'),
       examType,
       year: firstSource.year || new Date().getFullYear(),
       duration: examType === 'TSA' ? TSA_TOTAL_DURATION_MINUTES : (firstSource.duration || 60),
       published: false,
-      questions,
+      note: '',
+      folderId: null,
+      questions: draft.questions || [],
       scoringConfig: null,
       antiCheatEnabled: firstSource.antiCheatEnabled !== false,
-    });
+    }));
+
+    setParsedQuestions([]);
+    setParseError('');
+    setTrackedOcrRequestId('');
+    setExamEditorTab('questions');
+    setEditingExam(null);
+    setMixedDrafts(nextDrafts);
+    setActiveMixedDraftId(nextDrafts[0]?.clientId || null);
     setIsCreating(true);
   };
 
   const openExamTabForOcrRequest = (requestId) => {
     if (!requestId) return;
     if (!isCreating) {
+      clearMixedDrafts();
       setIsCreating(true);
       setEditingExam({
         id: null,
@@ -178,6 +195,7 @@ export default function AdminDashboard() {
   };
 
   const handleEditExam = (exam) => {
+    clearMixedDrafts();
     setEditingExam({ ...exam, questions: exam.questions || [] });
     setIsCreating(true);
   };
@@ -218,11 +236,12 @@ export default function AdminDashboard() {
   const handleBackToList = () => {
     setIsCreating(false);
     setEditingExam(null);
+    clearMixedDrafts();
     setParsedQuestions([]);
     setParseError('');
   };
 
-  const handleSaveExam = async (examData) => {
+  const handleSaveExam = async (examData, { stayInEditor = false, suppressSuccess = false } = {}) => {
     try {
       // 1. Pre-process and upload images to Supabase Storage
       const updatedQuestions = [...examData.questions];
@@ -281,12 +300,47 @@ export default function AdminDashboard() {
       // 2. Save Exam
       await saveExam(examData);
       await refreshExams();
-      handleBackToList();
-      showAlert('Thành công', 'Lưu đề thi thành công!');
+      if (!stayInEditor) {
+        handleBackToList();
+      }
+      if (!suppressSuccess) {
+        showAlert('Thành công', 'Lưu đề thi thành công!');
+      }
+      return true;
     } catch (error) {
       console.error("Save exam error:", error);
       showAlert('Lỗi', 'Lỗi khi lưu đề thi: ' + (error.message || JSON.stringify(error)));
+      return false;
     }
+  };
+
+  const handleMixedDraftChange = useCallback((draftData) => {
+    if (!activeMixedDraftId) return;
+    setMixedDrafts(prev => prev.map((draft) => (
+      draft.clientId === activeMixedDraftId
+        ? { ...draft, ...draftData, clientId: draft.clientId, label: draft.label }
+        : draft
+    )));
+  }, [activeMixedDraftId]);
+
+  const handleSaveMixedDraft = async (examData) => {
+    const saved = await handleSaveExam(examData, { stayInEditor: true, suppressSuccess: true });
+    if (!saved) return;
+
+    const currentIndex = mixedDrafts.findIndex(draft => draft.clientId === activeMixedDraftId);
+    const nextDrafts = mixedDrafts.filter(draft => draft.clientId !== activeMixedDraftId);
+
+    if (nextDrafts.length === 0) {
+      setMixedDrafts([]);
+      setActiveMixedDraftId(null);
+      handleBackToList();
+      showAlert('Thành công', 'Đã lưu tất cả đề xáo!');
+      return;
+    }
+
+    const nextActiveDraft = nextDrafts[Math.min(Math.max(currentIndex, 0), nextDrafts.length - 1)];
+    setMixedDrafts(nextDrafts);
+    setActiveMixedDraftId(nextActiveDraft.clientId);
   };
 
   const handleDeleteExam = async (examId) => {
@@ -357,6 +411,10 @@ export default function AdminDashboard() {
     }
   };
 
+  const activeMixedDraft = useMemo(() => (
+    mixedDrafts.find(draft => draft.clientId === activeMixedDraftId) || mixedDrafts[0] || null
+  ), [activeMixedDraftId, mixedDrafts]);
+
   // Determine what to render in main content
   const renderContent = () => {
     if (activeTab === 'overview') {
@@ -364,6 +422,55 @@ export default function AdminDashboard() {
     }
     if (activeTab === 'exams') {
       if (isCreating) {
+        if (mixedDrafts.length > 0 && activeMixedDraft) {
+          return (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3">
+                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-cyan-100">Các đề xáo đang chờ lưu</p>
+                    <p className="text-xs text-cyan-200/60">Lưu tab hiện tại xong hệ thống sẽ tự chuyển sang tab kế tiếp.</p>
+                  </div>
+                  <span className="text-xs font-semibold text-cyan-100/80">{mixedDrafts.length} đề còn lại</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {mixedDrafts.map((draft) => {
+                    const realCount = (draft.questions || []).filter(question => question.type !== 'TEXT').length;
+                    const active = draft.clientId === activeMixedDraft.clientId;
+                    return (
+                      <button
+                        key={draft.clientId}
+                        type="button"
+                        onClick={() => setActiveMixedDraftId(draft.clientId)}
+                        className={`shrink-0 rounded-xl border px-4 py-2 text-left text-sm transition-all ${
+                          active
+                            ? 'border-cyan-400/60 bg-cyan-500/20 text-white shadow-lg shadow-cyan-500/10'
+                            : 'border-white/10 bg-white/5 text-white/50 hover:text-white/75'
+                        }`}
+                      >
+                        <span className="block font-bold">{draft.label}</span>
+                        <span className="block text-[11px] opacity-70">{realCount} câu</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <ExamEditor
+                key={activeMixedDraft.clientId}
+                exam={activeMixedDraft}
+                folders={folders}
+                onSave={handleSaveMixedDraft}
+                onBack={handleBackToList}
+                onFileLoaded={handleFileLoaded}
+                parseError={parseError}
+                defaultTab={examEditorTab}
+                trackedOcrRequestId={trackedOcrRequestId}
+                onTrackedOcrRequestChange={setTrackedOcrRequestId}
+                onDraftChange={handleMixedDraftChange}
+              />
+            </div>
+          );
+        }
         return (
           <ExamEditor
             exam={editingExam}
