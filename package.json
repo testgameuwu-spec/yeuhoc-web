@@ -15,11 +15,12 @@
     "@supabase/supabase-js": "^2.104.1",
     "ai": "^6.0.174",
     "katex": "^0.16.45",
+    "isomorphic-dompurify": "^3.13.0",
     "lucide-react": "^1.8.0",
     "mammoth": "^1.12.0",
     "marked": "^18.0.2",
     "medium-zoom": "^1.1.0",
-    "next": "16.2.4",
+    "next": "16.2.6",
     "pdf-parse": "^2.4.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -28,7 +29,10 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.2.6",
     "tailwindcss": "^4"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   }
 }

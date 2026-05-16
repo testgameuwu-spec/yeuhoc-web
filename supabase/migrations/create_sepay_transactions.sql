@@ -29,8 +29,5 @@ USING (
   )
 );
 
--- Cho phép anon INSERT (webhook gọi bằng anon key, bảo mật bởi API Key ở tầng route)
-CREATE POLICY "Cho phép webhook insert giao dịch" ON sepay_transactions
-FOR INSERT
-TO anon
-WITH CHECK (true);
+-- Webhook inserts must use the service role key from the Next.js route.
+REVOKE INSERT ON sepay_transactions FROM anon, authenticated;

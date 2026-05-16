@@ -1,6 +1,41 @@
 import { NextResponse } from 'next/server';
 import { SePayPgClient } from 'sepay-pg-node';
 
+const DEFAULT_SITE_URL = 'https://www.yeuhoc.site';
+
+function getSiteUrl() {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL);
+  } catch {
+    return new URL(DEFAULT_SITE_URL);
+  }
+}
+
+function resolveSafeReturnUrl(redirectUrl) {
+  const siteUrl = getSiteUrl();
+  const fallbackUrl = new URL('/', siteUrl);
+
+  if (typeof redirectUrl !== 'string' || !redirectUrl.trim()) {
+    return fallbackUrl;
+  }
+
+  try {
+    const candidate = new URL(redirectUrl.trim(), siteUrl);
+    if (candidate.origin !== siteUrl.origin) {
+      return fallbackUrl;
+    }
+    return candidate;
+  } catch {
+    return fallbackUrl;
+  }
+}
+
+function withPaymentStatus(returnUrl, status) {
+  const url = new URL(returnUrl.toString());
+  url.searchParams.set('payment', status);
+  return url.toString();
+}
+
 export async function POST(request) {
   try {
     const { amount, description, redirectUrl } = await request.json();
@@ -23,6 +58,7 @@ export async function POST(request) {
 
     const checkoutURL = client.checkout.initCheckoutUrl();
     const invoiceNumber = `DONATE_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const returnUrl = resolveSafeReturnUrl(redirectUrl);
 
     const checkoutFormfields = client.checkout.initOneTimePaymentFields({
       payment_method: 'BANK_TRANSFER',
@@ -30,9 +66,9 @@ export async function POST(request) {
       order_amount: amount || 20000,
       currency: 'VND',
       order_description: description || 'Ung ho YeuHoc',
-      success_url: redirectUrl ? `${redirectUrl}?payment=success` : 'https://www.yeuhoc.site/?payment=success',
-      error_url: redirectUrl ? `${redirectUrl}?payment=error` : 'https://www.yeuhoc.site/?payment=error',
-      cancel_url: redirectUrl ? `${redirectUrl}?payment=cancel` : 'https://www.yeuhoc.site/?payment=cancel',
+      success_url: withPaymentStatus(returnUrl, 'success'),
+      error_url: withPaymentStatus(returnUrl, 'error'),
+      cancel_url: withPaymentStatus(returnUrl, 'cancel'),
     });
 
     return NextResponse.json({

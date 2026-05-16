@@ -39,13 +39,22 @@ CREATE POLICY "Users can view own reports"
   TO authenticated
   USING (auth.uid() = user_id);
 
--- Admins (you can adjust this based on your admin check logic) can do everything
--- For now, using a simple approach: allow all authenticated users to read (adjust as needed)
+-- Admins can manage all reports
 CREATE POLICY "Admins can manage all reports"
   ON question_reports FOR ALL
   TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid() AND profiles.role::text = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid() AND profiles.role::text = 'admin'
+    )
+  );
 
 -- 5. Create indexes for performance
 CREATE INDEX idx_question_reports_status ON question_reports(status);

@@ -4,6 +4,20 @@ import { useMemo } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { marked } from 'marked';
+import DOMPurify from 'isomorphic-dompurify';
+
+const MATH_PLACEHOLDER_PREFIX = 'YEUHOCMATHPLACEHOLDER';
+const MATH_PLACEHOLDER_PATTERN = /YEUHOCMATHPLACEHOLDER(\d+)END/g;
+const MARKDOWN_SANITIZE_CONFIG = {
+    ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'em', 'b', 'i', 'u', 'del', 'code', 'pre',
+        'blockquote', 'ul', 'ol', 'li', 'a', 'table', 'thead', 'tbody',
+        'tr', 'th', 'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
+        'sup', 'sub'
+    ],
+    ALLOWED_ATTR: ['href', 'title', 'align', 'colspan', 'rowspan'],
+    ALLOW_DATA_ATTR: false,
+};
 
 /**
  * Renders text with inline ($...$) and display ($$...$$) LaTeX math.
@@ -29,12 +43,13 @@ export default function MathRenderer({ text, className = '' }) {
  */
 function renderMathInText(text) {
     const placeholders = [];
-    let result = text;
+    // Prevent user text from colliding with generated math placeholders.
+    let result = String(text).replace(MATH_PLACEHOLDER_PATTERN, `${MATH_PLACEHOLDER_PREFIX}&#8203;$1END`);
 
     // Helper: create a placeholder that is purely alphanumeric so marked cannot alter it
     function ph(html) {
         const idx = placeholders.length;
-        const id = `MATHPH${idx}MATHPH`;
+        const id = `${MATH_PLACEHOLDER_PREFIX}${idx}END`;
         placeholders.push({ id, html });
         return id;
     }
@@ -57,12 +72,13 @@ function renderMathInText(text) {
     // Handles patterns like \sqrt{...}, \frac{...}{...}, \boxed{...}
     // Up to two levels of nested braces
     result = result.replace(/\\(?:frac|dfrac|sqrt|boxed|overline|underline|vec|hat|bar|tilde)(?:\[[^\]]*\])?(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})+/g, (match) => {
-        if (match.includes('MATHPH')) return match;
+        if (match.includes(MATH_PLACEHOLDER_PREFIX)) return match;
         return ph(renderKatex(match.trim(), false));
     });
 
     // 6. Render markdown for the non-math content
     result = marked.parse(result, { breaks: true, gfm: true });
+    result = DOMPurify.sanitize(result, MARKDOWN_SANITIZE_CONFIG);
 
     // 7. Restore math from placeholders
     for (const p of placeholders) {
@@ -81,7 +97,7 @@ function renderKatex(latex, displayMode) {
             displayMode,
             throwOnError: false,
             strict: false,
-            trust: true,
+            trust: false,
             macros: {
                 '\\R': '\\mathbb{R}',
                 '\\N': '\\mathbb{N}',

@@ -18,7 +18,7 @@ const ROLE_STYLES = {
     classes: 'bg-red-500/15 text-red-400 border-red-500/30',
     icon: ShieldCheck,
   },
-  student: {
+  user: {
     label: 'Học sinh',
     classes: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
     icon: Shield,
@@ -143,14 +143,14 @@ export default function UserManagement() {
   }, [fetchUsers]);
 
   const handleToggleRole = async (userId, currentRole) => {
-    const newRole = currentRole === 'admin' ? 'student' : 'admin';
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
     const { error } = await supabase
       .from('profiles')
       .update({ role: newRole })
       .eq('id', userId);
 
     if (error) {
-      showAlert("Lỗi", error.message + "\n(Có thể do chưa cấp quyền Admin update trong RLS Policy)");
+      showAlert("Lỗi", "Không thể đổi vai trò: " + error.message);
     } else {
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
       showAlert('Thành công', `Đã đổi vai trò thành ${newRole === 'admin' ? 'Admin' : 'Học sinh'}!`);
@@ -368,7 +368,7 @@ export default function UserManagement() {
           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
             {[
               { key: 'all', label: 'Tất cả' },
-              { key: 'student', label: 'Học sinh' },
+              { key: 'user', label: 'Học sinh' },
               { key: 'admin', label: 'Admin' },
             ].map(f => (
               <button key={f.key} onClick={() => setFilterRole(f.key)}
@@ -408,7 +408,7 @@ export default function UserManagement() {
             <p className="text-sm text-white/40">Đang tải danh sách người dùng...</p>
           </div>
         ) : visibleUsers.length > 0 ? visibleUsers.map(user => {
-          const role = ROLE_STYLES[user.role] || ROLE_STYLES.student;
+          const role = ROLE_STYLES[user.role] || ROLE_STYLES.user;
           const RoleIcon = role.icon;
           const initials = user.name.split(' ').map(w => w[0]).join('').slice(-2).toUpperCase();
 

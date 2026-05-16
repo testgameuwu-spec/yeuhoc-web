@@ -1,22 +1,31 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Ưu tiên dùng Service Role Key để có quyền tra cứu bảng profiles
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-
 export async function POST(request) {
   try {
-    // Kiểm tra API Key (nếu có cấu hình trong .env.local)
+    // Kiểm tra API Key
     const authHeader = request.headers.get('Authorization');
     const expectedApiKey = process.env.SEPAY_API_KEY;
 
-    if (expectedApiKey && authHeader !== `Apikey ${expectedApiKey}`) {
+    if (!expectedApiKey) {
+      console.error('Sepay Webhook: SEPAY_API_KEY is not configured.');
+      return NextResponse.json({ success: false, message: 'Webhook authentication is not configured' }, { status: 500 });
+    }
+
+    if (authHeader !== `Apikey ${expectedApiKey}`) {
       console.error('Sepay Webhook: Unauthorized. Invalid or missing API Key.');
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Sepay Webhook: Supabase service role credentials are not configured.');
+      return NextResponse.json({ success: false, message: 'Database credentials are not configured' }, { status: 500 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     const payload = await request.json();
 
     const {
