@@ -5,6 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { Bot, Loader2, Send, Sparkles, X } from 'lucide-react';
 import MathRenderer from './MathRenderer';
+import { supabase } from '@/lib/supabase';
 
 const FOLLOW_UP_LIMIT = 2;
 
@@ -23,6 +24,8 @@ export default function PracticeAIChatbox({
   onClose,
   questionKey,
   questionData,
+  examId,
+  questionId,
   questionNumber,
 }) {
   const [input, setInput] = useState('');
@@ -38,7 +41,13 @@ export default function PracticeAIChatbox({
   const currentKeyRef = useRef(questionKey);
   const [timeoutError, setTimeoutError] = useState(null);
 
-  const transport = useMemo(() => new DefaultChatTransport({ api: '/api/chat' }), []);
+  const transport = useMemo(() => new DefaultChatTransport({
+    api: '/api/chat',
+    headers: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    },
+  }), []);
 
   const {
     messages,
@@ -124,12 +133,15 @@ export default function PracticeAIChatbox({
       {
         body: {
           questionData,
+          examId,
+          questionId,
+          questionNumber,
           requestType: 'initial-hint',
           followUpCount: 0,
         },
       },
     );
-  }, [isOpen, questionKey, questionData, status, messages.length, sendMessage]);
+  }, [isOpen, questionKey, questionData, examId, questionId, questionNumber, status, messages.length, sendMessage]);
 
   // ── Auto-scroll ──
   useEffect(() => {
@@ -162,6 +174,9 @@ export default function PracticeAIChatbox({
       {
         body: {
           questionData,
+          examId,
+          questionId,
+          questionNumber,
           requestType: 'follow-up',
           followUpCount: nextCount,
         },

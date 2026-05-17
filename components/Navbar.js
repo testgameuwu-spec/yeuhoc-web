@@ -13,10 +13,15 @@ const UserProfile = dynamic(() => import('./UserProfile'), {
   ssr: false,
   loading: () => <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />,
 });
+const HomeNotifications = dynamic(() => import('./HomeNotifications'), {
+  ssr: false,
+  loading: () => null,
+});
 
 export default function Navbar() {
   const pathname = usePathname();
   const normalizedPath = pathname === '/' ? '/' : pathname?.replace(/\/$/, '');
+  const showNotifications = ['/', '/profile', '/profile/phan-tich'].includes(normalizedPath);
   const [unseenResolvedReports, setUnseenResolvedReports] = useState(0);
 
   const refreshReportBadge = useCallback(async () => {
@@ -206,6 +211,7 @@ export default function Navbar() {
 
         {/* ─── Right: Auth State ─── */}
         <div className="flex shrink-0 items-center gap-2">
+          {showNotifications && <HomeNotifications />}
           <ThemeToggle />
           <UserProfile />
         </div>

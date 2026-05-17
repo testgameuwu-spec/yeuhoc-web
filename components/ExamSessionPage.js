@@ -1875,6 +1875,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             onClose={() => setIsAIChatOpen(false)}
             questionKey={q ? `${activeExam.id}-${q.id}` : ''}
             questionData={aiQuestionData}
+            examId={activeExam.id}
+            questionId={q?.id || ''}
             questionNumber={currentQ + 1}
           />
         )}

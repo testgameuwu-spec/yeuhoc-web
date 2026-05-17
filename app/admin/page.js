@@ -10,11 +10,12 @@ import ExamEditor from '@/components/admin/ExamEditor';
 import ScoringConfig from '@/components/admin/ScoringConfig';
 import UserManagement from '@/components/admin/UserManagement';
 import ReportManagement from '@/components/admin/ReportManagement';
-import OcrLogManagement from '@/components/admin/OcrLogManagement';
+import AiLogManagement from '@/components/admin/AiLogManagement';
 import TransactionManagement from '@/components/admin/TransactionManagement';
 import PracticeProgressManagement from '@/components/admin/PracticeProgressManagement';
 import AdminOverview from '@/components/admin/AdminOverview';
 import TargetExamManagement from '@/components/admin/TargetExamManagement';
+import NotificationManagement from '@/components/admin/NotificationManagement';
 import { parseImageMap } from '@/components/ContentWithInlineImage';
 import { TSA_TOTAL_DURATION_MINUTES } from '@/lib/examScoring';
 import {
@@ -63,6 +64,23 @@ const MOCK_USERS = [
   { id: 5, name: 'Hoàng Thu Hà', email: 'ha@gmail.com', createdAt: '2024-04-18', attempts: 15, avatar: null },
 ];
 
+const VALID_ADMIN_TABS = new Set([
+  'overview',
+  'exams',
+  'targetExams',
+  'notifications',
+  'scoring',
+  'reports',
+  'aiLogs',
+  'practice',
+  'users',
+  'transactions',
+]);
+
+const ADMIN_TAB_ALIASES = {
+  ocrLogs: 'aiLogs',
+};
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [examEditorTab, setExamEditorTab] = useState('settings');
@@ -84,6 +102,15 @@ export default function AdminDashboard() {
   const showAlert = (title, message) => setModal({ isOpen: true, type: 'alert', title, message, onConfirm: null });
   const showConfirm = (title, message, onConfirm) => setModal({ isOpen: true, type: 'confirm', title, message, onConfirm });
   const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
+
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    const normalizedTab = ADMIN_TAB_ALIASES[tab] || tab;
+    if (VALID_ADMIN_TABS.has(normalizedTab)) {
+      const timer = setTimeout(() => setActiveTab(normalizedTab), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Load exams from store when tab becomes active
   useEffect(() => {
@@ -510,14 +537,17 @@ export default function AdminDashboard() {
     if (activeTab === 'targetExams') {
       return <TargetExamManagement showAlert={showAlert} showConfirm={showConfirm} />;
     }
+    if (activeTab === 'notifications') {
+      return <NotificationManagement showAlert={showAlert} showConfirm={showConfirm} />;
+    }
     if (activeTab === 'reports') {
       return <ReportManagement onEditExam={handleEditExamById} showAlert={showAlert} showConfirm={showConfirm} />;
     }
     if (activeTab === 'users') {
       return <UserManagement />;
     }
-    if (activeTab === 'ocrLogs') {
-      return <OcrLogManagement showAlert={showAlert} onTrackRequest={openExamTabForOcrRequest} />;
+    if (activeTab === 'aiLogs') {
+      return <AiLogManagement showAlert={showAlert} onTrackRequest={openExamTabForOcrRequest} />;
     }
     if (activeTab === 'practice') {
       return <PracticeProgressManagement />;
@@ -562,9 +592,10 @@ export default function AdminDashboard() {
                 {activeTab === 'overview' ? 'Tổng quan hệ thống' :
                  activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'targetExams' ? 'Quản lý kỳ thi mục tiêu' :
+                 activeTab === 'notifications' ? 'Chỉnh thông báo' :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :
-                 activeTab === 'ocrLogs' ? 'Theo dõi OCR Logs' :
+                 activeTab === 'aiLogs' ? 'AI Logs' :
                  activeTab === 'practice' ? 'Lịch sử ôn luyện' :
                  activeTab === 'transactions' ? 'Lịch sử giao dịch' :
                  'Quản lý người dùng'}
