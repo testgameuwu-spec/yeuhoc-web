@@ -10,6 +10,7 @@ export const maxDuration = 60;
 
 const MODEL = process.env.DEEPSEEK_NOTIFICATION_MODEL || 'deepseek-v4-flash';
 const MAX_ITEMS = 20;
+const MAX_PRIOR_NOTIFICATIONS = 12;
 const MAX_OUTPUT_TOKENS = 1600;
 const GENERATION_TIMEOUT_MS = 55 * 1000;
 
@@ -189,6 +190,16 @@ function compactFolder(row) {
   };
 }
 
+function compactNotification(row) {
+  return {
+    title: truncate(row.title, 120),
+    body: truncate(row.body, 320),
+    status: row.is_published ? 'published' : 'draft',
+    publishedAt: row.published_at || null,
+    createdAt: row.created_at,
+  };
+}
+
 function isAfter(value, cutoffTime) {
   const time = new Date(value || 0).getTime();
   return Number.isFinite(time) && time > cutoffTime;
@@ -239,7 +250,16 @@ export async function POST(req) {
   const cutoff = latestNotification?.published_at || '1970-01-01T00:00:00.000Z';
   const changedAfterFilter = `created_at.gt.${cutoff},updated_at.gt.${cutoff}`;
 
-  const [{ data: visibleFolders, error: foldersError }, { data: changedFolders, error: changedFoldersError }] = await Promise.all([
+  const [
+    { data: previousNotifications, error: previousNotificationsError },
+    { data: visibleFolders, error: foldersError },
+    { data: changedFolders, error: changedFoldersError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('notifications')
+      .select('title, body, is_published, published_at, created_at')
+      .order('created_at', { ascending: false })
+      .limit(MAX_PRIOR_NOTIFICATIONS),
     supabaseAdmin
       .from('folders')
       .select('id, name, visibility')
@@ -252,6 +272,18 @@ export async function POST(req) {
       .order('updated_at', { ascending: false })
       .limit(MAX_ITEMS),
   ]);
+
+  if (previousNotificationsError) {
+    await logDraftAttempt({
+      status: 'failed',
+      errorMessage: previousNotificationsError.message || 'Không thể đọc các thông báo cũ.',
+      metadata: { stage: 'previous_notifications', hasChanges: null },
+    });
+    return NextResponse.json(
+      { error: previousNotificationsError.message || 'Không thể đọc các thông báo cũ.' },
+      { status: 500 }
+    );
+  }
 
   if (foldersError || changedFoldersError) {
     await logDraftAttempt({
@@ -322,9 +354,11 @@ export async function POST(req) {
       newExamsCreatedAfterCutoff: newExamCount,
       updatedExamsAfterCutoff: updatedExamCount,
       foldersInInput: foldersForHome.length,
+      previousNotificationsInInput: previousNotifications?.length || 0,
     },
     exams: examsForHome.map((exam) => compactExam(exam, folderMap)),
     folders: foldersForHome,
+    previousNotifications: (previousNotifications || []).map(compactNotification),
   };
 
   const system = `Bạn viết nháp thông báo cho học sinh Việt Nam trên YeuHoc.
@@ -332,15 +366,16 @@ Quy tắc:
 - Chỉ trả JSON hợp lệ dạng {"title":"...","body":"...","sourceSummary":"..."}.
 - JSON phải nằm trên một object duy nhất, không bọc markdown code fence.
 - Tiêu đề tối đa 12 từ.
-- Body giọng vui vẻ, thân thiện, gần gũi; được dùng emoji phù hợp.
+- Body giọng vui vẻ, thân thiện, gần gũi; xưng hô với người đọc là "anh em", không dùng "bạn", "các bạn", "các em"; được dùng emoji phù hợp.
 - Body được dùng Markdown và xuống dòng bằng ký tự \\n trong JSON string.
 - Không giới hạn số câu trong body, nhưng viết gọn, dễ đọc, không lan man.
 - Nói rõ chi tiết số lượng đề đã tạo mới theo counts.newExamsCreatedAfterCutoff. Nếu có đề cập nhật, nói thêm counts.updatedExamsAfterCutoff.
 - Nêu vài tên đề/thư mục nổi bật nếu dữ liệu có, ưu tiên thông tin hữu ích cho học sinh.
+- Đọc previousNotifications và tạo thông báo mới khác các thông báo cũ; không lặp lại tiêu đề, câu mở đầu, cấu trúc body hoặc góc nhấn chính.
 - sourceSummary tóm tắt nguồn dữ liệu nội bộ thật ngắn.
 - Không nhắc đến API, prompt, model, JSON, admin, hay dữ liệu nội bộ trong title/body.`;
 
-  const prompt = `Dữ liệu đề/thư mục mới hoặc vừa cập nhật đang có thể hiển thị trên trang chủ:
+  const prompt = `Dữ liệu đề/thư mục mới hoặc vừa cập nhật đang có thể hiển thị trên trang chủ, kèm các thông báo cũ để tránh trùng:
 ${JSON.stringify(sourcePayload, null, 2)}
 
 Hãy viết một nháp thông báo để admin review.`;
