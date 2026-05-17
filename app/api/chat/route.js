@@ -9,6 +9,7 @@ export const maxDuration = 60;
 const FOLLOW_UP_LIMIT = 2;
 const MAX_OUTPUT_TOKENS = 10000;
 const ALLOWED_MODEL = 'deepseek-chat';
+const ALLOWED_LOG_SOURCES = new Set(['practice_chat', 'error_log_retry']);
 
 function getBearerToken(req) {
   const authHeader = req.headers.get('authorization') || '';
@@ -96,6 +97,11 @@ function countFollowUpMessages(messages = []) {
   )).length;
 }
 
+function normalizeLogSource(value) {
+  const source = String(value || '').trim();
+  return ALLOWED_LOG_SOURCES.has(source) ? source : 'practice_chat';
+}
+
 export async function POST(req) {
   const auth = await requireChatUser(req);
   if (auth.errorResponse) return auth.errorResponse;
@@ -134,16 +140,21 @@ export async function POST(req) {
     examId,
     questionId,
     questionNumber,
+    logSource,
+    logMetadata,
     model,
   } = body || {};
+  const normalizedLogSource = normalizeLogSource(logSource);
 
   const logContext = {
+    source: normalizedLogSource,
     userId: auth.user.id,
     examId: examId || questionData?.exam?.id,
     questionId: questionId || questionData?.question?.id,
     model: ALLOWED_MODEL,
     metadata: {
       questionNumber: Number.isFinite(Number(questionNumber)) ? Number(questionNumber) : null,
+      ...(logMetadata && typeof logMetadata === 'object' && !Array.isArray(logMetadata) ? logMetadata : {}),
     },
   };
 
@@ -237,7 +248,7 @@ ${formatQuestionData(questionData)}
     onFinish: async ({ totalUsage }) => {
       const usage = getUsageTokenCounts(totalUsage);
       await insertAiUsageLog({
-        source: 'practice_chat',
+        source: normalizedLogSource,
         status: 'success',
         ...baseLogPayload,
         ...usage,
@@ -246,7 +257,7 @@ ${formatQuestionData(questionData)}
     },
     onError: async ({ error }) => {
       await insertAiUsageLog({
-        source: 'practice_chat',
+        source: normalizedLogSource,
         status: 'failed',
         ...baseLogPayload,
         durationMs: Date.now() - startedAt,
@@ -255,7 +266,7 @@ ${formatQuestionData(questionData)}
     },
     onAbort: async () => {
       await insertAiUsageLog({
-        source: 'practice_chat',
+        source: normalizedLogSource,
         status: 'failed',
         ...baseLogPayload,
         durationMs: Date.now() - startedAt,

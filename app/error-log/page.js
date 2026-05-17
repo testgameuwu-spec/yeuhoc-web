@@ -197,6 +197,13 @@ function RetryQuestionOverlay({ entry, onClose }) {
           examId={entry.exam_id}
           questionId={question.id || ''}
           questionNumber={entry.question_number || null}
+          logSource="error_log_retry"
+          logMetadata={{
+            errorLogEntryId: entry.id,
+            examKey: entry.exam_key,
+            subject: entry.subject,
+            sectionLabel: entry.section_label,
+          }}
         />
       )}
     </div>

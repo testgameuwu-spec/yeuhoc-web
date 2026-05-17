@@ -27,6 +27,8 @@ export default function PracticeAIChatbox({
   examId,
   questionId,
   questionNumber,
+  logSource = 'practice_chat',
+  logMetadata = null,
 }) {
   const [input, setInput] = useState('');
   // Global follow-up count — shared across ALL questions, never resets until page unload
@@ -138,10 +140,12 @@ export default function PracticeAIChatbox({
           questionNumber,
           requestType: 'initial-hint',
           followUpCount: 0,
+          logSource,
+          logMetadata,
         },
       },
     );
-  }, [isOpen, questionKey, questionData, examId, questionId, questionNumber, status, messages.length, sendMessage]);
+  }, [isOpen, questionKey, questionData, examId, questionId, questionNumber, logSource, logMetadata, status, messages.length, sendMessage]);
 
   // ── Auto-scroll ──
   useEffect(() => {
@@ -179,6 +183,8 @@ export default function PracticeAIChatbox({
           questionNumber,
           requestType: 'follow-up',
           followUpCount: nextCount,
+          logSource,
+          logMetadata,
         },
       },
     ).catch(() => {

@@ -72,6 +72,13 @@ function matchesText(values, search) {
   return values.some(value => String(value || '').toLowerCase().includes(query));
 }
 
+function getAiSourceLabel(source) {
+  if (source === 'practice_chat') return 'AI ôn luyện';
+  if (source === 'error_log_retry') return 'AI Nhật ký lỗi';
+  if (source === 'notification_draft') return 'AI thông báo';
+  return 'AI Logs';
+}
+
 export default function AiLogManagement({ showAlert, onTrackRequest }) {
   const [activeSubTab, setActiveSubTab] = useState('overview');
   const [logs, setLogs] = useState([]);
@@ -142,6 +149,10 @@ export default function AiLogManagement({ showAlert, onTrackRequest }) {
   }, [fetchLogs]);
 
   const practiceLogs = useMemo(() => logs.filter(log => log.source === 'practice_chat'), [logs]);
+  const errorLogRetryLogs = useMemo(() => logs.filter(log => log.source === 'error_log_retry'), [logs]);
+  const learningAssistantLogs = useMemo(() => (
+    logs.filter(log => log.source === 'practice_chat' || log.source === 'error_log_retry')
+  ), [logs]);
   const notificationLogs = useMemo(() => logs.filter(log => log.source === 'notification_draft'), [logs]);
 
   const stats = useMemo(() => {
@@ -152,23 +163,26 @@ export default function AiLogManagement({ showAlert, onTrackRequest }) {
 
     return {
       totalEvents: logs.length + ocrLogs.length,
-      uniquePracticeUsers: new Set(practiceLogs.map(log => log.user_id).filter(Boolean)).size,
+      uniquePracticeUsers: new Set(learningAssistantLogs.map(log => log.user_id).filter(Boolean)).size,
       practiceCallCount: practiceLogs.length,
+      errorLogRetryCount: errorLogRetryLogs.length,
       notificationDraftCount: notificationLogs.length,
       totalTokens,
       failedCount,
     };
-  }, [logs, notificationLogs, ocrLogs, practiceLogs]);
+  }, [errorLogRetryLogs, learningAssistantLogs, logs, notificationLogs, ocrLogs, practiceLogs]);
 
   const practiceGroups = useMemo(() => {
     const groupMap = new Map();
 
-    practiceLogs.forEach((log) => {
+    learningAssistantLogs.forEach((log) => {
       const key = log.user_id || 'unknown';
       const current = groupMap.get(key) || {
         userId: log.user_id,
         profile: log.profile,
         total: 0,
+        practiceTotal: 0,
+        errorLogRetries: 0,
         initialHints: 0,
         followUps: 0,
         failed: 0,
@@ -178,6 +192,8 @@ export default function AiLogManagement({ showAlert, onTrackRequest }) {
       };
 
       current.total += 1;
+      current.practiceTotal += log.source === 'practice_chat' ? 1 : 0;
+      current.errorLogRetries += log.source === 'error_log_retry' ? 1 : 0;
       current.initialHints += log.request_type === 'initial-hint' ? 1 : 0;
       current.followUps += log.request_type === 'follow-up' ? 1 : 0;
       current.failed += log.status === 'failed' ? 1 : 0;
@@ -200,7 +216,7 @@ export default function AiLogManagement({ showAlert, onTrackRequest }) {
         ...group.exams.values(),
       ], search))
       .sort((a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime());
-  }, [practiceLogs, search]);
+  }, [learningAssistantLogs, search]);
 
   const filteredNotificationLogs = useMemo(() => (
     notificationLogs.filter(log => matchesText([
@@ -215,13 +231,13 @@ export default function AiLogManagement({ showAlert, onTrackRequest }) {
   const recentEvents = useMemo(() => ([
     ...logs.map(log => ({
       id: log.id,
-      label: log.source === 'practice_chat' ? 'AI ôn luyện' : 'AI thông báo',
+      label: getAiSourceLabel(log.source),
       status: log.status,
-      title: log.source === 'practice_chat'
+      title: log.source === 'practice_chat' || log.source === 'error_log_retry'
         ? getDisplayName(log.profile, log.user_id)
         : getDisplayName(log.profile, 'Admin'),
-      detail: log.source === 'practice_chat'
-        ? (log.exam?.title || log.question_id || 'Phòng ôn luyện')
+      detail: log.source === 'practice_chat' || log.source === 'error_log_retry'
+        ? (log.exam?.title || log.question_id || (log.source === 'error_log_retry' ? 'Làm lại Nhật ký lỗi' : 'Phòng ôn luyện'))
         : (log.metadata?.hasChanges === false ? 'Không có thay đổi mới' : 'Tạo nháp thông báo'),
       tokens: log.total_tokens,
       createdAt: log.created_at,
@@ -322,10 +338,11 @@ export default function AiLogManagement({ showAlert, onTrackRequest }) {
 function OverviewTab({ stats, recentEvents, loading }) {
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-7 gap-4">
         <StatCard icon={Activity} label="Tổng AI events" value={formatNumber(stats.totalEvents)} tone="indigo" />
-        <StatCard icon={Users} label="User dùng AI ôn luyện" value={formatNumber(stats.uniquePracticeUsers)} tone="emerald" />
+        <StatCard icon={Users} label="User dùng AI học tập" value={formatNumber(stats.uniquePracticeUsers)} tone="emerald" />
         <StatCard icon={Bot} label="Lượt AI ôn luyện" value={formatNumber(stats.practiceCallCount)} tone="sky" />
+        <StatCard icon={Sparkles} label="AI Nhật ký lỗi" value={formatNumber(stats.errorLogRetryCount)} tone="cyan" />
         <StatCard icon={Bell} label="AI thông báo" value={formatNumber(stats.notificationDraftCount)} tone="violet" />
         <StatCard icon={Zap} label="Tổng tokens" value={formatNumber(stats.totalTokens)} tone="amber" />
         <StatCard icon={AlertTriangle} label="Thất bại" value={formatNumber(stats.failedCount)} tone="red" />
@@ -395,14 +412,16 @@ function PracticeTab({ groups, loading, search, onSearchChange }) {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-1">Đề đã dùng AI</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-1">Đề/câu đã dùng AI</p>
                   <p className="text-sm text-black [html[data-theme=dark]_&]:text-white/65 line-clamp-2">
                     {[...group.exams.values()].join(', ') || 'Chưa gắn đề thi'}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
                   <Metric label="Tổng lượt" value={formatNumber(group.total)} />
+                  <Metric label="Ôn luyện" value={formatNumber(group.practiceTotal)} />
+                  <Metric label="Nhật ký lỗi" value={formatNumber(group.errorLogRetries)} />
                   <Metric label="Gợi ý đầu" value={formatNumber(group.initialHints)} />
                   <Metric label="Hỏi thêm" value={formatNumber(group.followUps)} />
                   <Metric label="Tokens" value={formatNumber(group.totalTokens)} className="text-amber-300" />
@@ -487,6 +506,7 @@ function StatCard({ icon: Icon, label, value, tone }) {
     emerald: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
     sky: 'border-sky-500/20 bg-sky-500/10 text-sky-300',
     violet: 'border-violet-500/20 bg-violet-500/10 text-violet-300',
+    cyan: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300',
     amber: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
     red: 'border-red-500/20 bg-red-500/10 text-red-300',
   }[tone];
