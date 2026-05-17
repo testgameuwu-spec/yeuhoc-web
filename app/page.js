@@ -1,21 +1,30 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Folder, Loader2, Lock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import FilterBar from '@/components/FilterBar';
-import ExamCard from '@/components/ExamCard';
 import Pagination from '@/components/Pagination';
-import DonateWidget from '@/components/DonateWidget';
-import ContinueExamsPanel from '@/components/ContinueExamsPanel';
-import { getAllFolders, getPublishedExams } from '@/lib/examStore';
-import { getContinueExamItems, readSavedExams } from '@/lib/continueExamStore';
-import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
 import { findNearestTargetExam, formatTargetExamDate, getCountdownSentence, getRandomWish } from '@/lib/targetExamDisplay';
-import { supabase } from '@/lib/supabase';
 
 const FOLDERS_PER_PAGE = 5;
+const FilterBar = dynamic(() => import('@/components/FilterBar'), {
+  ssr: false,
+  loading: () => <div className="home-box h-16 rounded-2xl border border-gray-100 bg-white animate-pulse" />,
+});
+const ExamCard = dynamic(() => import('@/components/ExamCard'), {
+  ssr: false,
+  loading: () => <div className="home-box min-h-40 rounded-2xl border border-gray-100 bg-white animate-pulse" />,
+});
+const DonateWidget = dynamic(() => import('@/components/DonateWidget'), {
+  ssr: false,
+  loading: () => null,
+});
+const ContinueExamsPanel = dynamic(() => import('@/components/ContinueExamsPanel'), {
+  ssr: false,
+  loading: () => <div className="home-box h-36 rounded-2xl border border-gray-100 bg-white animate-pulse" />,
+});
 const HOME_BADGE_TONES = {
   default: { dark: '#cbd5e1' },
   target: { dark: '#a5b4fc' },
@@ -86,31 +95,47 @@ export default function HomePage() {
   const [browsePage, setBrowsePage] = useState(1);
 
   useEffect(() => {
+    let cancelled = false;
     async function init() {
       try {
+        const { getPublishedExams, getAllFolders } = await import('@/lib/examStore');
         const [exams, folders] = await Promise.all([
           getPublishedExams(),
           getAllFolders(),
         ]);
+        if (cancelled) return;
         setAllExams(exams);
         setAllFolders(folders || []);
         setExpandedFolders({});
       } finally {
-        setCatalogLoaded(true);
+        if (!cancelled) setCatalogLoaded(true);
       }
     }
     init();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     let isMounted = true;
     let targetLoadSeq = 0;
+    let authSubscription = null;
 
     const loadTargetData = async (sessionUser) => {
       if (!sessionUser) return;
       const loadSeq = ++targetLoadSeq;
       setTargetDataLoaded(false);
       try {
+        const [
+          { supabase },
+          { getTargetExams, getUserTargetExams },
+        ] = await Promise.all([
+          import('@/lib/supabase'),
+          import('@/lib/targetExamStore'),
+        ]);
+        if (!isMounted || loadSeq !== targetLoadSeq) return;
+
         const profilePromise = supabase
           .from('profiles')
           .select('full_name, username')
@@ -145,7 +170,14 @@ export default function HomePage() {
       if (!isMounted) return;
       const sessionUser = session?.user || null;
       setUser(sessionUser);
-      setSavedExams(sessionUser ? readSavedExams(sessionUser.id) : new Set());
+      if (sessionUser) {
+        const sessionUserId = sessionUser.id;
+        import('@/lib/continueExamStore').then(({ readSavedExams }) => {
+          if (isMounted) setSavedExams(readSavedExams(sessionUserId));
+        });
+      } else {
+        setSavedExams(new Set());
+      }
 
       if (!sessionUser) {
         targetLoadSeq++;
@@ -166,17 +198,25 @@ export default function HomePage() {
       void loadTargetData(sessionUser);
     };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session);
-    });
+    const initAuth = async () => {
+      const { supabase } = await import('@/lib/supabase');
+      if (!isMounted) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      applySession(session);
-    });
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        applySession(session);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        applySession(session);
+      });
+      authSubscription = subscription;
+    };
+
+    initAuth();
 
     return () => {
       isMounted = false;
-      if (subscription) subscription.unsubscribe();
+      if (authSubscription) authSubscription.unsubscribe();
     };
   }, [router]);
 
@@ -191,6 +231,8 @@ export default function HomePage() {
       }
 
       setContinueLoading(true);
+      const { getContinueExamItems } = await import('@/lib/continueExamStore');
+      if (cancelled) return;
       const nextItems = await getContinueExamItems(user.id, allExams, allFolders);
 
       if (!cancelled) {
@@ -246,6 +288,7 @@ export default function HomePage() {
     setTargetSaving(true);
     setTargetError('');
     try {
+      const { getUserTargetExams, syncUserTargetExams } = await import('@/lib/targetExamStore');
       await syncUserTargetExams(user.id, targetDraftIds);
       const nextTargets = await getUserTargetExams(user.id);
       setSelectedTargetExams(nextTargets);

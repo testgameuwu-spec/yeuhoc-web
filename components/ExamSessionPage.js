@@ -45,19 +45,63 @@ const PREVIEW_BADGE_TONES = {
 
 const PracticeAIChatbox = dynamic(() => import('@/components/PracticeAIChatbox'), { ssr: false });
 const EXAM_IMAGE_PRELOAD_TIMEOUT_MS = 15000;
+const EXAM_IMAGE_PRELOAD_BATCH_SIZE = 3;
 
-function getExamImageUrls(questions = []) {
+function addQuestionImageUrls(urls, question) {
+  const imageMap = parseImageMap(question?.image);
+  Object.values(imageMap).forEach((src) => {
+    const imageSrc = getRenderableImageSrc(src);
+    if (imageSrc) urls.add(imageSrc);
+  });
+}
+
+function getExamImageUrls(questions = [], startQuestionIndex = 0, limit = null) {
   const urls = new Set();
+  const normalizedLimit = Number(limit);
+  if (!Number.isFinite(normalizedLimit) || normalizedLimit <= 0) {
+    questions.forEach((question) => addQuestionImageUrls(urls, question));
+    return [...urls];
+  }
 
-  questions.forEach((question) => {
-    const imageMap = parseImageMap(question?.image);
-    Object.values(imageMap).forEach((src) => {
-      const imageSrc = getRenderableImageSrc(src);
-      if (imageSrc) urls.add(imageSrc);
-    });
+  const realQuestions = questions.filter((question) => question?.type !== 'TEXT');
+  if (realQuestions.length === 0) return [];
+
+  const startIndex = Math.min(Math.max(Number(startQuestionIndex) || 0, 0), realQuestions.length - 1);
+  const selected = realQuestions.slice(startIndex, startIndex + normalizedLimit);
+
+  selected.forEach((question) => {
+    if (question?.linkedTo) {
+      addQuestionImageUrls(urls, questions.find((item) => item.id === question.linkedTo && item.type === 'TEXT'));
+    }
+    addQuestionImageUrls(urls, question);
   });
 
   return [...urls];
+}
+
+function getBrowserConnection() {
+  if (typeof navigator === 'undefined') return null;
+  return navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+}
+
+function isLikelyMobileDevice() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  if (navigator.userAgentData?.mobile) return true;
+  if (window.matchMedia?.('(hover: none) and (pointer: coarse) and (max-width: 767px)').matches) return true;
+  return /Android|iPhone|iPod|IEMobile|Mobile/i.test(navigator.userAgent || '');
+}
+
+function shouldUseBatchedExamImagePreload() {
+  if (!isLikelyMobileDevice()) return false;
+
+  const connection = getBrowserConnection();
+  if (!connection) return false;
+
+  const connectionType = String(connection.type || '').toLowerCase();
+  if (connectionType === 'wifi') return false;
+  if (connectionType && connectionType !== 'unknown') return true;
+
+  return connection.saveData === true;
 }
 
 function preloadExamImage(src) {
@@ -343,6 +387,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const resumeHandledRef = useRef(false);
   const practiceResumeHandledRef = useRef(false);
   const exitViolationRecordedRef = useRef(false);
+  const preloadedExamImageUrlsRef = useRef(new Set());
 
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
@@ -394,28 +439,47 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setIsAIChatOpen(true);
   }, []);
 
-  const preloadExamImages = useCallback(async (loadingPhase) => {
-    const imageUrls = getExamImageUrls(activeExam?.questions || []);
+  const preloadExamImages = useCallback(async (loadingPhase, startQuestionIndex = 0, { showLoading = true } = {}) => {
+    const preloadLimit = shouldUseBatchedExamImagePreload() ? EXAM_IMAGE_PRELOAD_BATCH_SIZE : null;
+    const imageUrls = getExamImageUrls(activeExam?.questions || [], startQuestionIndex, preloadLimit)
+      .filter((src) => !preloadedExamImageUrlsRef.current.has(src));
     if (imageUrls.length === 0) return;
 
-    setImagePreloadProgress({ loaded: 0, total: imageUrls.length, failed: 0 });
-    setQuizPhase(loadingPhase);
+    imageUrls.forEach((src) => preloadedExamImageUrlsRef.current.add(src));
+
+    if (showLoading) {
+      setImagePreloadProgress({ loaded: 0, total: imageUrls.length, failed: 0 });
+      setQuizPhase(loadingPhase);
+    }
 
     const results = await Promise.all(imageUrls.map(async (src) => {
       const result = await preloadExamImage(src);
-      setImagePreloadProgress(prev => ({
-        loaded: Math.min(prev.loaded + 1, prev.total),
-        total: prev.total,
-        failed: prev.failed + (result.ok ? 0 : 1),
-      }));
+      if (showLoading) {
+        setImagePreloadProgress(prev => ({
+          loaded: Math.min(prev.loaded + 1, prev.total),
+          total: prev.total,
+          failed: prev.failed + (result.ok ? 0 : 1),
+        }));
+      }
       return result;
     }));
 
     const failedCount = results.filter(result => !result.ok).length;
+    results.forEach((result) => {
+      if (!result.ok) preloadedExamImageUrlsRef.current.delete(result.src);
+    });
     if (failedCount > 0) {
       console.warn(`Exam image preload completed with ${failedCount} failed image(s).`);
     }
   }, [activeExam?.questions]);
+
+  useEffect(() => {
+    if (quizPhase !== 'quiz' && quizPhase !== 'practice') return;
+    if (!activeExam?.questions?.length) return;
+    if (!shouldUseBatchedExamImagePreload()) return;
+
+    void preloadExamImages(null, currentQ, { showLoading: false });
+  }, [activeExam?.questions, currentQ, preloadExamImages, quizPhase]);
 
   // Fetch preview stats
   useEffect(() => {
@@ -467,6 +531,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     async function init() {
       resumeHandledRef.current = false;
       practiceResumeHandledRef.current = false;
+      preloadedExamImageUrlsRef.current = new Set();
       setLoadingExam(true);
       setExamLoadError('');
       const ex = await getExamById(examId);
@@ -514,7 +579,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         isAdvancingTsaSectionRef.current = false;
         exitViolationRecordedRef.current = false;
         setTimerRunning(false);
-        await preloadExamImages('quiz-loading');
+        await preloadExamImages('quiz-loading', data.currentQ || 0);
         setQuizPhase('quiz');
         setTimerRunning(true);
         setStartTime(() => Date.now());
@@ -694,7 +759,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const applyPracticeSnapshot = async (snapshot) => {
-    await preloadExamImages('practice-loading');
+    await preloadExamImages('practice-loading', snapshot?.currentQ || 0);
     setAnswers(snapshot?.answers || {});
     setBookmarks(new Set(snapshot?.bookmarks || []));
     setCurrentQ(Math.min(Math.max(Number(snapshot?.currentQ) || 0, 0), Math.max(realQuestions.length - 1, 0)));
@@ -704,7 +769,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const startFreshPractice = async () => {
-    await preloadExamImages('practice-loading');
+    await preloadExamImages('practice-loading', 0);
     setAnswers({});
     setBookmarks(new Set());
     setCurrentQ(0);
@@ -810,7 +875,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       );
 
       if (!hasSavedProgress) return;
-      await preloadExamImages('practice-loading');
+      await preloadExamImages('practice-loading', saved?.currentQ || 0);
       setAnswers(saved?.answers || {});
       setBookmarks(new Set(saved?.bookmarks || []));
       setCurrentQ(Math.min(Math.max(Number(saved?.currentQ) || 0, 0), Math.max(questionCount - 1, 0)));
@@ -913,7 +978,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     exitViolationRecordedRef.current = false;
     setTimerRunning(false);
     if (isAntiCheatEnabled && !isTSA) requestFullscreen();
-    await preloadExamImages('quiz-loading');
+    await preloadExamImages('quiz-loading', 0);
     setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
     setTimerRunning(!isTSA);
     setStartTime(() => Date.now());
@@ -950,7 +1015,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             exitViolationRecordedRef.current = false;
             setTimerRunning(false);
             if (isAntiCheatEnabled && !isTSA) requestFullscreen();
-            await preloadExamImages('quiz-loading');
+            await preloadExamImages('quiz-loading', data.currentQ || 0);
             setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
             setTimerRunning(!isTSA);
             setStartTime(() => Date.now());
@@ -1619,6 +1684,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       className="text-sm leading-relaxed text-gray-700"
                       imageWrapperClassName="mt-3"
                       imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
+                      preload
                     />
                   </div>
                 </div>
@@ -1641,6 +1707,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           showResult={isRev}
                           disabled={isRev}
                           isBookmarked={bookmarks.has(gq.id)}
+                          preloadImages={rqIndex === currentQ}
                           onToggleBookmark={() => {
                             const next = new Set(bookmarks);
                             if (next.has(gq.id)) next.delete(gq.id);
@@ -1694,6 +1761,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     showResult={isRevealed}
                     disabled={isRevealed}
                     isBookmarked={bookmarks.has(q.id)}
+                    preloadImages
                     onToggleBookmark={() => {
                       const next = new Set(bookmarks);
                       if (next.has(q.id)) next.delete(q.id);
@@ -2230,6 +2298,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                       selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)}
                                       onAnswerChange={(val) => handleAnswerChange(qObj.id, val)}
                                       disabled={false}
+                                      preloadImages={qIndex === currentQ}
                                     />
                                   </div>
                                 ) : (
@@ -2240,6 +2309,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     imageWrapperClassName="mt-3 border border-gray-100 rounded-xl p-2 inline-block"
                                     imageClassName="max-w-full max-h-[350px] w-auto object-contain rounded-lg"
                                     sizes="(max-width: 1024px) 100vw, 60vw"
+                                    preload={qIndex === currentQ}
                                   />
                                 )}
                              </div>
@@ -2318,6 +2388,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                  className="text-[15px] leading-relaxed text-gray-700"
                                  imageWrapperClassName="mt-3"
                                  imageClassName="rounded-xl max-h-[400px] w-auto max-w-full object-contain"
+                                 preload
                                />
                              </div>
                            </div>
@@ -2708,6 +2779,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 className="text-sm leading-relaxed text-gray-700"
                                 imageWrapperClassName="mt-3"
                                 imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
+                                preload={group.children.some((childQ) => childQ._globalIndex === currentQ)}
                               />
                             </div>
                           </div>
@@ -2724,6 +2796,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     selectedAnswer={answers[childQ.id] ?? getEmptyAnswerForType(childQ.type)}
                                     onAnswerChange={(val) => handleAnswerChange(childQ.id, val)}
                                     isBookmarked={bookmarks.has(childQ.id)}
+                                    preloadImages={currentI === currentQ}
                                     onToggleBookmark={() => {
                                       const next = new Set(bookmarks);
                                       if (next.has(childQ.id)) next.delete(childQ.id);
@@ -2761,6 +2834,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         selectedAnswer={answers[firstChild.id] ?? getEmptyAnswerForType(firstChild.type)}
                         onAnswerChange={(val) => handleAnswerChange(firstChild.id, val)}
                         isBookmarked={bookmarks.has(firstChild.id)}
+                        preloadImages={currentI === currentQ}
                         onToggleBookmark={() => {
                           const next = new Set(bookmarks);
                           if (next.has(firstChild.id)) next.delete(firstChild.id);

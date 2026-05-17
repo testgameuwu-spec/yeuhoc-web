@@ -19,6 +19,7 @@ export default function QuestionCard({
     isBookmarked = false,
     onToggleBookmark = null,
     onReport = null,
+    preloadImages = false,
 }) {
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [modalImageSrc, setModalImageSrc] = useState(null);
@@ -165,6 +166,7 @@ export default function QuestionCard({
                             width={700}
                             height={400}
                             sizes="(max-width: 768px) 100vw, 700px"
+                            preload={preloadImages}
                             onImageClick={(src) => {
                                 setModalImageSrc(src);
                                 setImageModalOpen(true);
@@ -191,6 +193,7 @@ export default function QuestionCard({
                         width={700}
                         height={400}
                         sizes="(max-width: 768px) 100vw, 700px"
+                        preload={preloadImages}
                         onImageClick={(src) => {
                             setModalImageSrc(src);
                             setImageModalOpen(true);

@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ChartBar, House, User as UserIcon } from '@phosphor-icons/react';
+import { ChartBar, House, User as UserIcon } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import UserProfile from './UserProfile';
-import { supabase } from '@/lib/supabase';
 import { countUnseenResolvedReports } from '@/lib/reportSeenStorage';
 import LogoIcon from './LogoIcon';
 import ThemeToggle from './ThemeToggle';
+
+const UserProfile = dynamic(() => import('./UserProfile'), {
+  ssr: false,
+  loading: () => <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />,
+});
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -17,6 +21,7 @@ export default function Navbar() {
 
   const refreshReportBadge = useCallback(async () => {
     try {
+      const { supabase } = await import('@/lib/supabase');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         setUnseenResolvedReports(0);
@@ -35,7 +40,7 @@ export default function Navbar() {
   useEffect(() => {
     const refreshTimer = setTimeout(() => {
       refreshReportBadge();
-    }, 1500);
+    }, 2500);
     const onSeen = () => refreshReportBadge();
     const onFocus = () => refreshReportBadge();
     window.addEventListener('yeuhoc-reports-seen', onSeen);
@@ -52,10 +57,19 @@ export default function Navbar() {
     let subscribedUserId = null;
     let subscribeRequestId = 0;
     let isMounted = true;
+    let supabaseClient = null;
+    let authSubscription = null;
     const getReportChannelTopic = (userId) => `navbar-question-reports-${userId}`;
+    const getSupabase = async () => {
+      if (!supabaseClient) {
+        supabaseClient = (await import('@/lib/supabase')).supabase;
+      }
+      return supabaseClient;
+    };
 
     const removeReportChannel = async () => {
       if (!reportChannel) return;
+      const supabase = await getSupabase();
       const channel = reportChannel;
       reportChannel = null;
       subscribedUserId = null;
@@ -63,6 +77,7 @@ export default function Navbar() {
     };
 
     const removeExistingReportChannel = async (userId) => {
+      const supabase = await getSupabase();
       const existingChannel = supabase
         .getChannels()
         .find((channel) => channel.topic === `realtime:${getReportChannelTopic(userId)}`);
@@ -83,6 +98,7 @@ export default function Navbar() {
       await removeExistingReportChannel(userId);
       if (!isMounted || requestId !== subscribeRequestId) return;
 
+      const supabase = await getSupabase();
       subscribedUserId = userId;
       reportChannel = supabase
         .channel(getReportChannelTopic(userId))
@@ -102,26 +118,33 @@ export default function Navbar() {
     };
 
     const initRealtime = async () => {
+      const supabase = await getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       if (!isMounted) return;
       await subscribeForUser(session?.user?.id || null);
     };
 
+    const initAuthListener = async () => {
+      const supabase = await getSupabase();
+      if (!isMounted) return;
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        await subscribeForUser(session?.user?.id || null);
+        refreshReportBadge();
+      });
+      authSubscription = subscription;
+    };
+
     const initTimer = setTimeout(() => {
       initRealtime();
-    }, 2000);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      await subscribeForUser(session?.user?.id || null);
-      refreshReportBadge();
-    });
+      initAuthListener();
+    }, 2500);
 
     return () => {
       isMounted = false;
       clearTimeout(initTimer);
-      subscription.unsubscribe();
-      if (reportChannel) {
-        supabase.removeChannel(reportChannel);
+      if (authSubscription) authSubscription.unsubscribe();
+      if (reportChannel && supabaseClient) {
+        supabaseClient.removeChannel(reportChannel);
       }
     };
   }, [refreshReportBadge]);
@@ -152,7 +175,7 @@ export default function Navbar() {
             prefetch={false}
             className={linkClass(normalizedPath === '/')}
           >
-            <House weight="duotone" className="w-[18px] h-[18px]" />
+            <House className="w-[18px] h-[18px]" />
             <span className="hidden sm:inline">Đề thi</span>
           </Link>
           <Link
@@ -160,7 +183,7 @@ export default function Navbar() {
             prefetch={false}
             className={linkClass(normalizedPath === '/profile/phan-tich')}
           >
-            <ChartBar weight="duotone" className="w-[18px] h-[18px]" />
+            <ChartBar className="w-[18px] h-[18px]" />
             <span className="hidden sm:inline">Phân tích</span>
           </Link>
           <Link
@@ -168,7 +191,7 @@ export default function Navbar() {
             prefetch={false}
             className={linkClass(normalizedPath === '/profile', 'relative')}
           >
-            <UserIcon weight="duotone" className="w-[18px] h-[18px]" />
+            <UserIcon className="w-[18px] h-[18px]" />
             <span className="hidden sm:inline">Hồ sơ</span>
             {unseenResolvedReports > 0 && (
               <span

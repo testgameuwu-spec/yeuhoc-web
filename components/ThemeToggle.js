@@ -1,6 +1,6 @@
 'use client';
 
-import { Moon, Sun } from '@phosphor-icons/react';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 
 export default function ThemeToggle({ showLabel = false, variant = 'icon', className = '' }) {
@@ -17,7 +17,7 @@ export default function ThemeToggle({ showLabel = false, variant = 'icon', class
       aria-label={label}
       title={label}
     >
-      <Icon weight="duotone" className="theme-toggle-icon" />
+      <Icon className="theme-toggle-icon" />
       {showLabel && (
         <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
       )}

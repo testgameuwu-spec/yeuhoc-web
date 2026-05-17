@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider, themeInitScript } from "@/components/ThemeProvider";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["vietnamese", "latin"],
+  subsets: ["vietnamese"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",

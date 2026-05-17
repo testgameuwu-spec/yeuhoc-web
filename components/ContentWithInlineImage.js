@@ -84,6 +84,7 @@ export default function ContentWithInlineImage({
   width = 900,
   height = 500,
   sizes = '(max-width: 1024px) 100vw, 50vw',
+  preload = false,
   onImageClick = null,
 }) {
   const imageMap = parseImageMap(image);
@@ -101,6 +102,7 @@ export default function ContentWithInlineImage({
         width={width}
         height={height}
         sizes={sizes}
+        preload={preload}
         className={imageClassName}
       />
     );
