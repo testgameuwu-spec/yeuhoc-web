@@ -6,11 +6,12 @@ import { getUsageTokenCounts, insertAiUsageLog } from '@/lib/aiUsageLogger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 45;
+export const maxDuration = 60;
 
 const MODEL = process.env.DEEPSEEK_NOTIFICATION_MODEL || 'deepseek-v4-pro';
 const MAX_ITEMS = 20;
 const MAX_OUTPUT_TOKENS = 1600;
+const GENERATION_TIMEOUT_MS = 55 * 1000;
 
 function getBearerToken(req) {
   const authHeader = req.headers.get('authorization') || '';
@@ -20,6 +21,18 @@ function getBearerToken(req) {
 
 function jsonError(message, status) {
   return NextResponse.json({ error: message }, { status });
+}
+
+function getGenerationErrorMessage(error) {
+  const message = error?.message || '';
+  if (
+    error?.name === 'TimeoutError'
+    || message.toLowerCase().includes('timeout')
+    || message.toLowerCase().includes('aborted')
+  ) {
+    return 'AI viết nháp quá lâu và đã hết thời gian chờ. Vui lòng thử lại sau ít phút.';
+  }
+  return message || 'Không thể tạo nháp thông báo.';
 }
 
 async function requireNotificationAdmin(req) {
@@ -339,7 +352,7 @@ Hãy viết một nháp thông báo để admin review.`;
       prompt,
       temperature: 0.2,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
-      abortSignal: AbortSignal.timeout(35 * 1000),
+      abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
     });
 
     const draft = parseDraft(result.text);
@@ -374,9 +387,10 @@ Hãy viết một nháp thông báo để admin review.`;
     });
   } catch (error) {
     console.error('Notification draft generation error:', error);
+    const message = getGenerationErrorMessage(error);
     await logDraftAttempt({
       status: 'failed',
-      errorMessage: error.message || 'Không thể tạo nháp thông báo.',
+      errorMessage: message,
       metadata: {
         hasChanges: true,
         counts: sourcePayload.counts,
@@ -384,7 +398,7 @@ Hãy viết một nháp thông báo để admin review.`;
       },
     });
     return NextResponse.json(
-      { error: error.message || 'Không thể tạo nháp thông báo.' },
+      { error: message },
       { status: 500 }
     );
   }
