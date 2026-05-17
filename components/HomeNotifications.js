@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { createPortal } from 'react-dom';
 import { Bell, ExternalLink, Inbox, Loader2, PlayCircle, Video, X } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'isomorphic-dompurify';
@@ -53,6 +54,7 @@ export default function HomeNotifications() {
   const [error, setError] = useState('');
   const [activeVideoId, setActiveVideoId] = useState(null);
   const wrapperRef = useRef(null);
+  const panelRef = useRef(null);
   const autoOpenedIdsRef = useRef(new Set());
   const markingRef = useRef(false);
   const userId = user?.id || null;
@@ -206,7 +208,9 @@ export default function HomeNotifications() {
       if (event.key === 'Escape') setOpen(false);
     };
     const onPointerDown = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      const clickedTrigger = wrapperRef.current?.contains(event.target);
+      const clickedPanel = panelRef.current?.contains(event.target);
+      if (!clickedTrigger && !clickedPanel) {
         setOpen(false);
       }
     };
@@ -234,6 +238,89 @@ export default function HomeNotifications() {
 
   if (!authLoaded || !user) return null;
 
+  const panel = open ? (
+    <>
+      <div className="fixed inset-0 z-[9997] bg-black/20 sm:hidden" onClick={() => setOpen(false)} />
+      <section
+        ref={panelRef}
+        className="home-notification-panel fixed inset-x-3 bottom-3 z-[9998] flex max-h-[min(72vh,520px)] flex-col overflow-hidden rounded-2xl border shadow-2xl sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-16 sm:w-[380px] sm:max-h-[520px]"
+      >
+        <div className="home-notification-panel-header flex items-center justify-between gap-3 border-b px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-black text-[var(--app-text)]">Thông báo</h2>
+            <p className="mt-0.5 text-xs font-medium text-[var(--app-muted)]">
+              {unreadCount > 0 ? `${unreadCount} thông báo chưa xem` : 'Bạn đã xem hết thông báo'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="shrink-0 rounded-lg p-1.5 text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)] transition-colors"
+            aria-label="Đóng thông báo"
+            title="Đóng"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="home-notification-panel-body min-h-0 flex-1 overflow-y-auto p-3 sm:max-h-[380px]">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-7 w-7 animate-spin text-[var(--home-brand-primary)]" />
+            </div>
+          ) : error ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm font-medium text-rose-600">
+              {error}
+            </div>
+          ) : notifications.length > 0 ? (
+            <div className="space-y-2">
+              {notifications.map((notification) => (
+                <article
+                  key={notification.id}
+                  className="home-notification-item overflow-hidden rounded-xl border p-3 shadow-sm"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className={`mt-1.5 h-2 w-2 rounded-full ${notification.isUnread ? 'bg-rose-500' : 'bg-gray-300'}`} />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words text-sm font-bold leading-snug text-[var(--app-text)]">{notification.title}</h3>
+                      <NotificationMarkdown text={notification.body} />
+                      <NotificationMedia
+                        notification={notification}
+                        active={activeVideoId === notification.id}
+                        onActivate={() => setActiveVideoId(notification.id)}
+                      />
+                      <p className="mt-2 text-[11px] font-semibold text-[var(--app-muted)]">
+                        {formatNotificationTime(notification.publishedAt || notification.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="home-notification-empty rounded-xl border border-dashed px-4 py-9 text-center">
+              <Inbox className="mx-auto mb-3 h-9 w-9 text-[var(--app-muted-2)]" />
+              <p className="text-sm font-semibold text-[var(--app-text-soft)]">Chưa có thông báo nào.</p>
+            </div>
+          )}
+        </div>
+
+        {isAdmin && (
+          <div className="home-notification-panel-footer border-t px-3 py-3">
+            <Link
+              href="/admin?tab=notifications"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--home-brand-primary)] px-4 py-2.5 text-sm font-bold text-white no-underline transition-colors hover:bg-[var(--home-brand-hover)]"
+              onClick={() => setOpen(false)}
+            >
+              Chỉnh thông báo
+              <ExternalLink className="h-4 w-4" />
+            </Link>
+          </div>
+        )}
+      </section>
+    </>
+  ) : null;
+
   return (
     <div className="relative" ref={wrapperRef}>
       <button
@@ -252,85 +339,7 @@ export default function HomeNotifications() {
         )}
       </button>
 
-      {open && (
-        <>
-          <div className="fixed inset-0 z-[9997] bg-black/20 sm:hidden" onClick={() => setOpen(false)} />
-          <section className="home-notification-panel fixed inset-x-3 bottom-3 z-[9998] max-h-[min(72vh,520px)] overflow-hidden rounded-2xl border shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-auto sm:top-full sm:mt-3 sm:w-[380px] sm:max-h-[520px]">
-            <div className="home-notification-panel-header flex items-center justify-between gap-3 border-b px-4 py-3">
-              <div className="min-w-0">
-                <h2 className="text-sm font-black text-[var(--app-text)]">Thông báo</h2>
-                <p className="mt-0.5 text-xs font-medium text-[var(--app-muted)]">
-                  {unreadCount > 0 ? `${unreadCount} thông báo chưa xem` : 'Bạn đã xem hết thông báo'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="shrink-0 rounded-lg p-1.5 text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)] transition-colors"
-                aria-label="Đóng thông báo"
-                title="Đóng"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="max-h-[calc(min(72vh,520px)-116px)] overflow-y-auto p-3 sm:max-h-[380px]">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-7 w-7 animate-spin text-[var(--home-brand-primary)]" />
-                </div>
-              ) : error ? (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm font-medium text-rose-600">
-                  {error}
-                </div>
-              ) : notifications.length > 0 ? (
-                <div className="space-y-2">
-                  {notifications.map((notification) => (
-                    <article
-                      key={notification.id}
-                      className="home-notification-item rounded-xl border p-3 shadow-sm"
-                    >
-                      <div className="flex items-start gap-2">
-                        <span className={`mt-1.5 h-2 w-2 rounded-full ${notification.isUnread ? 'bg-rose-500' : 'bg-gray-300'}`} />
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-bold leading-snug text-[var(--app-text)]">{notification.title}</h3>
-                          <NotificationMarkdown text={notification.body} />
-                          <NotificationMedia
-                            notification={notification}
-                            active={activeVideoId === notification.id}
-                            onActivate={() => setActiveVideoId(notification.id)}
-                          />
-                          <p className="mt-2 text-[11px] font-semibold text-[var(--app-muted)]">
-                            {formatNotificationTime(notification.publishedAt || notification.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="home-notification-empty rounded-xl border border-dashed px-4 py-9 text-center">
-                  <Inbox className="mx-auto mb-3 h-9 w-9 text-[var(--app-muted-2)]" />
-                  <p className="text-sm font-semibold text-[var(--app-text-soft)]">Chưa có thông báo nào.</p>
-                </div>
-              )}
-            </div>
-
-            {isAdmin && (
-              <div className="home-notification-panel-footer border-t px-3 py-3">
-                <Link
-                  href="/admin?tab=notifications"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--home-brand-primary)] px-4 py-2.5 text-sm font-bold text-white no-underline transition-colors hover:bg-[var(--home-brand-hover)]"
-                  onClick={() => setOpen(false)}
-                >
-                  Chỉnh thông báo
-                  <ExternalLink className="h-4 w-4" />
-                </Link>
-              </div>
-            )}
-          </section>
-        </>
-      )}
+      {panel && typeof document !== 'undefined' ? createPortal(panel, document.body) : null}
     </div>
   );
 }
@@ -343,7 +352,7 @@ function NotificationMarkdown({ text }) {
 
   return (
     <div
-      className="markdown-content mt-1 text-sm leading-relaxed text-[var(--app-text-soft)]"
+      className="markdown-content home-notification-markdown mt-1 text-sm leading-relaxed text-[var(--app-text-soft)]"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

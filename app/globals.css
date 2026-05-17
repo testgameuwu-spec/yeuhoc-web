@@ -217,17 +217,47 @@ select {
   background: var(--app-surface);
   border-color: var(--app-border);
   color: var(--app-text);
+  max-width: calc(100vw - 1.5rem);
 }
 
 .home-notification-panel-header,
 .home-notification-panel-footer {
   background: color-mix(in srgb, var(--app-surface-2) 86%, transparent);
   border-color: var(--app-border);
+  flex-shrink: 0;
 }
 
 .home-notification-item {
   background: var(--app-surface);
   border-color: var(--app-border);
+}
+
+.home-notification-panel-body {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-notification-markdown,
+.home-notification-markdown :where(p, li, blockquote, code, a) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 639px) {
+  .home-notification-panel {
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 16px;
+  }
+
+  .home-notification-panel-body {
+    max-height: none;
+  }
 }
 
 .home-notification-empty {
