@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const MODEL = process.env.DEEPSEEK_NOTIFICATION_MODEL || 'deepseek-v4-pro';
+const MODEL = process.env.DEEPSEEK_NOTIFICATION_MODEL || 'deepseek-v4-flash';
 const MAX_ITEMS = 20;
 const MAX_OUTPUT_TOKENS = 1600;
 const GENERATION_TIMEOUT_MS = 55 * 1000;
