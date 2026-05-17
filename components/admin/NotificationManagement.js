@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import {
-  Bell, CheckCircle2, Edit3, EyeOff, ImageIcon, Loader2, PlayCircle, Plus, Save, Search, Send, Trash2, Video, WandSparkles, XCircle
+  Bell, CalendarClock, CheckCircle2, Edit3, EyeOff, ImageIcon, Loader2, PlayCircle, Plus, Save, Search, Send, Trash2, Video, WandSparkles, XCircle
 } from 'lucide-react';
 import { getAdminApiHeaders } from '@/lib/adminApi';
 import { supabase } from '@/lib/supabase';
@@ -249,42 +249,52 @@ export default function NotificationManagement({ showAlert, showConfirm }) {
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-5">
         <section className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
-          <div className="p-4 sm:p-5 border-b border-white/10 flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Bell className="w-5 h-5 text-indigo-400" />
-                Chỉnh thông báo
-              </h2>
-              <p className="text-sm text-white/40 mt-1">Quản lý thông báo xuất hiện trên trang chủ.</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative">
-                <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Tìm thông báo..."
-                  className="w-full sm:w-64 pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-sm focus:outline-none focus:border-indigo-500/50"
-                />
+          <div className="p-4 sm:p-5 border-b border-white/10 space-y-4">
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-indigo-400" />
+                  Chỉnh thông báo
+                </h2>
+                <p className="text-sm text-white/40 mt-1">Quản lý thông báo xuất hiện trên trang chủ.</p>
               </div>
-              <button
-                type="button"
-                onClick={openCreateForm}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm font-semibold hover:bg-white/10 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Tạo mới
-              </button>
-              <button
-                type="button"
-                onClick={handleGenerateDraft}
-                disabled={generating}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold hover:from-indigo-400 hover:to-purple-500 disabled:opacity-60 transition-all"
-              >
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <WandSparkles className="w-4 h-4" />}
-                AI viết nháp
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Tìm thông báo..."
+                    className="w-full sm:w-64 pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/25 text-sm focus:outline-none focus:border-indigo-500/50"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={openCreateForm}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm font-semibold hover:bg-white/10 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Tạo mới
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGenerateDraft}
+                  disabled={generating}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold hover:from-indigo-400 hover:to-purple-500 disabled:opacity-60 transition-all"
+                >
+                  {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <WandSparkles className="w-4 h-4" />}
+                  AI viết nháp
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-2xl border border-amber-300/60 bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-white shadow-lg shadow-amber-500/20">
+              <CalendarClock className="h-6 w-6 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-black uppercase tracking-wide">Admin nhớ cập nhật thông báo</p>
+                <p className="mt-0.5 text-sm font-semibold opacity-95">Nên tạo và publish thông báo mới vào mỗi tối thứ 6 hàng tuần.</p>
+              </div>
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import {
   Activity, AlertTriangle, Bell, Bot, CheckCircle2, Clock, FileText,
   RefreshCw, Search, Sparkles, Users, XCircle, Zap,
@@ -283,7 +284,7 @@ export default function AiLogManagement({ showAlert, onTrackRequest }) {
       </div>
 
       {errorMessage && activeSubTab !== 'ocr' && (
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-black [html[data-theme=dark]_&]:text-amber-100">
           <AlertTriangle className="inline-block w-4 h-4 mr-2 text-amber-300" />
           {errorMessage}
         </div>
@@ -373,9 +374,20 @@ function PracticeTab({ groups, loading, search, onSearchChange }) {
             <div key={group.userId || 'unknown'} className="p-4 sm:p-5">
               <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,520px)] gap-4 xl:items-center">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-full bg-indigo-500/20 text-indigo-200 flex items-center justify-center font-black shrink-0">
-                    {getDisplayName(group.profile, 'U').charAt(0).toUpperCase()}
-                  </div>
+                  {group.profile?.avatar_url ? (
+                    <Image
+                      src={group.profile.avatar_url}
+                      alt={getDisplayName(group.profile)}
+                      width={44}
+                      height={44}
+                      sizes="44px"
+                      className="w-11 h-11 rounded-full object-cover ring-2 ring-white/10 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-indigo-500/20 text-indigo-200 flex items-center justify-center font-black shrink-0">
+                      {getDisplayName(group.profile, 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="font-bold text-white truncate">{getDisplayName(group.profile)}</p>
                     <p className="text-xs text-white/40 truncate">{group.profile?.email || group.userId || 'Không có user_id'}</p>
@@ -384,7 +396,7 @@ function PracticeTab({ groups, loading, search, onSearchChange }) {
 
                 <div className="min-w-0">
                   <p className="text-xs font-bold uppercase tracking-wider text-white/30 mb-1">Đề đã dùng AI</p>
-                  <p className="text-sm text-white/65 line-clamp-2">
+                  <p className="text-sm text-black [html[data-theme=dark]_&]:text-white/65 line-clamp-2">
                     {[...group.exams.values()].join(', ') || 'Chưa gắn đề thi'}
                   </p>
                 </div>

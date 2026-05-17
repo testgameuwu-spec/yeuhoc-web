@@ -32,7 +32,7 @@ const CustomModal = ({ isOpen, type, title, message, onConfirm, onClose }) => {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
       <div className="bg-[#14142a] border border-white/10 rounded-2xl w-[90%] max-w-sm p-6 shadow-xl transform transition-all scale-100">
         <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-        <p className="text-sm text-white/60 mb-6 whitespace-pre-wrap">{message}</p>
+        <p className="text-sm text-black [html[data-theme=dark]_&]:text-white/60 mb-6 whitespace-pre-wrap">{message}</p>
         <div className="flex justify-end gap-3">
           {type === 'confirm' && (
             <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-white/60 bg-white/5 hover:bg-white/10 transition-colors">

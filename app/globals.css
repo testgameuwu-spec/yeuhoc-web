@@ -3115,6 +3115,10 @@ html[data-theme='light'] .admin-shell [class~="text-white/70"] {
   color: var(--app-text) !important;
 }
 
+html[data-theme='light'] .admin-shell [class~="text-white/65"] {
+  color: var(--app-text-soft) !important;
+}
+
 html[data-theme='light'] .admin-shell [class~="text-white/60"],
 html[data-theme='light'] .admin-shell [class~="text-white/55"],
 html[data-theme='light'] .admin-shell [class~="text-white/50"],
@@ -3136,6 +3140,7 @@ html[data-theme='light'] .admin-shell [class~="placeholder-white/15"]::placehold
 html[data-theme='light'] .admin-shell [class~="placeholder-white/20"]::placeholder,
 html[data-theme='light'] .admin-shell [class~="placeholder-white/25"]::placeholder,
 html[data-theme='light'] .admin-shell [class~="placeholder-white/30"]::placeholder,
+html[data-theme='light'] .admin-shell [class~="placeholder-white/35"]::placeholder,
 html[data-theme='light'] .admin-shell [class~="placeholder-white/40"]::placeholder {
   color: var(--app-muted-2) !important;
 }
@@ -3156,6 +3161,7 @@ html[data-theme='light'] .admin-shell table [class~="sticky"][class~="top-0"] {
 
 html[data-theme='light'] .admin-shell .text-indigo-300,
 html[data-theme='light'] .admin-shell .text-indigo-400,
+html[data-theme='light'] .admin-shell .text-indigo-200,
 html[data-theme='light'] .admin-shell [class~="text-indigo-300/70"],
 html[data-theme='light'] .admin-shell [class~="text-indigo-400/60"] {
   color: #4f46e5 !important;
