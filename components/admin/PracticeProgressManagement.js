@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
   Activity, AlertCircle, BookOpen, CheckCircle2, Clock,
-  RefreshCw, Search, ShieldAlert, Trophy, User,
+  RefreshCw, Search, ShieldAlert, Trash2, Trophy, User,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -62,7 +62,7 @@ const matchesSearch = (row, searchTerm) => {
   ].some(value => value?.toLowerCase().includes(query));
 };
 
-export default function PracticeProgressManagement() {
+export default function PracticeProgressManagement({ showAlert, showConfirm }) {
   const [mode, setMode] = useState('practice');
   const [progressRows, setProgressRows] = useState([]);
   const [attemptRows, setAttemptRows] = useState([]);
@@ -72,6 +72,7 @@ export default function PracticeProgressManagement() {
   const [examError, setExamError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [deletingKey, setDeletingKey] = useState('');
 
   const fetchProgress = useCallback(async () => {
     setPracticeLoading(true);
@@ -183,6 +184,75 @@ export default function PracticeProgressManagement() {
   const loading = mode === 'practice' ? practiceLoading : examLoading;
   const errorMessage = mode === 'practice' ? practiceError : examError;
   const refreshActiveMode = mode === 'practice' ? fetchProgress : fetchExamAttempts;
+
+  const notify = useCallback((title, message) => {
+    if (showAlert) showAlert(title, message);
+    else window.alert(`${title}\n\n${message}`);
+  }, [showAlert]);
+
+  const confirmAction = useCallback((title, message, action) => {
+    if (showConfirm) {
+      showConfirm(title, message, action);
+      return;
+    }
+    if (window.confirm(`${title}\n\n${message}`)) action();
+  }, [showConfirm]);
+
+  const deletePracticeProgress = useCallback((row) => {
+    if (!row?.id) return;
+    const studentName = row.profile?.full_name || row.profile?.email || 'học sinh này';
+    const examTitle = row.exam?.title || 'đề thi đã chọn';
+
+    confirmAction(
+      'Xóa lịch sử ôn luyện',
+      `Xóa tiến trình ôn luyện của ${studentName} trong "${examTitle}"?\n\nThao tác này không thể hoàn tác.`,
+      async () => {
+        const key = `practice:${row.id}`;
+        setDeletingKey(key);
+        const { error } = await supabase
+          .from('practice_progress')
+          .delete()
+          .eq('id', row.id);
+
+        setDeletingKey('');
+        if (error) {
+          notify('Lỗi xóa lịch sử ôn luyện', `${error.message}\n\nHãy kiểm tra RLS Policy: admin cần quyền DELETE trên bảng practice_progress.`);
+          return;
+        }
+
+        setProgressRows(current => current.filter(item => item.id !== row.id));
+        notify('Đã xóa', 'Đã xóa lịch sử ôn luyện.');
+      }
+    );
+  }, [confirmAction, notify]);
+
+  const deleteExamAttempt = useCallback((row) => {
+    if (!row?.id) return;
+    const studentName = row.profile?.full_name || row.profile?.email || 'học sinh này';
+    const examTitle = row.exam?.title || 'đề thi đã chọn';
+
+    confirmAction(
+      'Xóa lịch sử thi nghiêm túc',
+      `Xóa lượt thi nghiêm túc của ${studentName} trong "${examTitle}"?\n\nThao tác này không thể hoàn tác.`,
+      async () => {
+        const key = `exam:${row.id}`;
+        setDeletingKey(key);
+        const { error } = await supabase
+          .from('exam_attempts')
+          .delete()
+          .eq('id', row.id);
+
+        setDeletingKey('');
+        if (error) {
+          notify('Lỗi xóa lịch sử thi', `${error.message}\n\nHãy kiểm tra RLS Policy: admin cần quyền DELETE trên bảng exam_attempts.`);
+          return;
+        }
+
+        setAttemptRows(current => current.filter(item => item.id !== row.id));
+        notify('Đã xóa', 'Đã xóa lịch sử thi nghiêm túc.');
+      }
+    );
+  }, [confirmAction, notify]);
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
@@ -347,17 +417,24 @@ export default function PracticeProgressManagement() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center gap-3">
+                      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                         <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
                           <div className="h-full rounded-full bg-emerald-400" style={{ width: `${percent}%` }} />
                         </div>
-                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
-                          row.completed
-                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                        }`}>
-                          {row.completed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                          {row.completed ? 'Hoàn thành' : `${percent}%`}
+                        <div className="flex shrink-0 items-center gap-2">
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                            row.completed
+                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                              : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                          }`}>
+                            {row.completed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                            {row.completed ? 'Hoàn thành' : `${percent}%`}
+                          </div>
+                          <DeleteButton
+                            label="Xóa lịch sử ôn luyện"
+                            loading={deletingKey === `practice:${row.id}`}
+                            onClick={() => deletePracticeProgress(row)}
+                          />
                         </div>
                       </div>
                     </div>
@@ -391,17 +468,24 @@ export default function PracticeProgressManagement() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                       <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
                         <div className="h-full rounded-full bg-indigo-400" style={{ width: `${accuracy}%` }} />
                       </div>
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
-                        violationCount > 0
-                          ? 'bg-red-500/10 text-red-300 border-red-500/20'
-                          : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                      }`}>
-                        {violationCount > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                        {violationCount > 0 ? `Vi phạm ${violationCount}` : 'Không vi phạm'}
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                          violationCount > 0
+                            ? 'bg-red-500/10 text-red-300 border-red-500/20'
+                            : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                        }`}>
+                          {violationCount > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          {violationCount > 0 ? `Vi phạm ${violationCount}` : 'Không vi phạm'}
+                        </div>
+                        <DeleteButton
+                          label="Xóa lịch sử thi nghiêm túc"
+                          loading={deletingKey === `exam:${row.id}`}
+                          onClick={() => deleteExamAttempt(row)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -456,6 +540,19 @@ const Metric = ({ label, value, className = 'text-white/90 font-bold', compact =
     <p className="text-xs text-white/30 mb-0.5">{label}</p>
     <p className={`${compact ? 'text-xs leading-tight' : 'text-sm'} ${className} break-words`}>{value}</p>
   </div>
+);
+
+const DeleteButton = ({ label, loading, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={loading}
+    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-2.5 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+    title={label}
+  >
+    <Trash2 className={`w-3.5 h-3.5 ${loading ? 'animate-pulse' : ''}`} />
+    <span>Xóa</span>
+  </button>
 );
 
 const EmptyState = ({ mode }) => (

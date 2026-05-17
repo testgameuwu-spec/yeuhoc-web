@@ -5,12 +5,14 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
+import { AlertTriangle as AlertTriangleIcon, Loader2 } from 'lucide-react';
 import ImageModal from '@/components/ImageModal';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
 import QuestionCard from '@/components/QuestionCard';
 import ContentWithInlineImage, { getRenderableImageSrc, parseImageMap } from '@/components/ContentWithInlineImage';
 import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
+import { ErrorLogBatchModal, ErrorLogSaveModal } from '@/components/ErrorLogSaveModal';
 import MathRenderer from '@/components/MathRenderer';
 import ResultsView from '@/components/ResultsView';
 import Timer from '@/components/Timer';
@@ -18,6 +20,13 @@ import ThemeToggle from '@/components/ThemeToggle';
 import LogoIcon from '@/components/LogoIcon';
 import { supabase } from '@/lib/supabase';
 import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
+import {
+  buildErrorLogEntriesForMode,
+  buildErrorLogEntry,
+  getErrorLogQuestionEntriesForMode,
+  upsertErrorLogEntries,
+  upsertErrorLogEntry,
+} from '@/lib/errorLogStore';
 import {
   calculateExamResult,
   getTsaSectionByIndex,
@@ -397,10 +406,15 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   // Report modal states
   const [reportModal, setReportModal] = useState({ isOpen: false, question: null });
+  const [errorLogModal, setErrorLogModal] = useState({ isOpen: false, question: null, questionIndex: null, source: 'manual' });
+  const [errorLogBatchModal, setErrorLogBatchModal] = useState({ isOpen: false, exitAfterSave: false });
+  const [errorLogSaving, setErrorLogSaving] = useState(false);
+  const [savedAttemptId, setSavedAttemptId] = useState(null);
 
   const handleOpenReport = (question) => {
     setReportModal({ isOpen: true, question });
   };
+
 
   const mainRef = useRef(null);
 
@@ -665,6 +679,34 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     .filter(({ i }) => getTsaSectionIndex(i) === tsaSectionIndex);
   const tsaSectionQuestionIds = new Set(tsaSectionQuestionEntries.map(({ q }) => q.id));
 
+  const getQuestionIndex = (question) => {
+    if (Number.isInteger(question?._globalIndex)) return question._globalIndex;
+    return Math.max(0, realQuestions.findIndex((item) => String(item.id) === String(question?.id)));
+  };
+
+  const handleOpenErrorLog = (question, questionIndex = null, source = 'manual') => {
+    if (!user?.id) {
+      showAlert('Cần đăng nhập', 'Vui lòng đăng nhập để lưu câu hỏi vào Nhật ký lỗi.');
+      return;
+    }
+    setErrorLogModal({
+      isOpen: true,
+      question,
+      questionIndex: Number.isInteger(questionIndex) ? questionIndex : getQuestionIndex(question),
+      source,
+    });
+  };
+
+  const getErrorLogSaveHandler = (question, questionIndex, { visible = true, source = 'manual' } = {}) => {
+    if (!visible || !question || question.type === 'TEXT') return null;
+
+    const selectedAnswer = answers[question.id] ?? getEmptyAnswerForType(question.type);
+    const resultState = getQuestionResultState(question, selectedAnswer);
+    if (resultState !== 'wrong' && resultState !== 'unanswered') return null;
+
+    return (questionToSave) => handleOpenErrorLog(questionToSave, questionIndex, source);
+  };
+
   // Logic gộp nhóm (Grouping)
   const groupedQuestions = [];
   let currentGroup = null;
@@ -706,6 +748,146 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || realQuestions[i - 1].type !== 'SA');
     q._isFirstDRAG = isTHPT && q.type === 'DRAG' && (i === 0 || realQuestions[i - 1].type !== 'DRAG');
   });
+
+  const handleSaveSingleErrorLog = async ({ reason, note }) => {
+    if (!user?.id || !activeExam?.id || !errorLogModal.question) return;
+
+    setErrorLogSaving(true);
+    try {
+      const entry = buildErrorLogEntry({
+        userId: user.id,
+        exam: activeExam,
+        question: errorLogModal.question,
+        questionIndex: errorLogModal.questionIndex ?? getQuestionIndex(errorLogModal.question),
+        answers,
+        reason,
+        note,
+        source: errorLogModal.source || 'manual',
+        attemptId: savedAttemptId,
+      });
+      await upsertErrorLogEntry(entry);
+      setErrorLogModal({ isOpen: false, question: null, questionIndex: null, source: 'manual' });
+      showAlert('Đã lưu vào Nhật ký lỗi', 'Câu hỏi đã được lưu để bạn ôn lại sau.');
+    } catch (error) {
+      console.error('Save error log failed:', error);
+      showAlert('Lỗi lưu Nhật ký lỗi', 'Không lưu được câu hỏi: ' + (error.message || 'Vui lòng thử lại.'));
+    } finally {
+      setErrorLogSaving(false);
+    }
+  };
+
+  const getResultErrorLogCount = (mode = 'wrong_unanswered') => (
+    activeExam ? getErrorLogQuestionEntriesForMode(activeExam, answers, mode).length : 0
+  );
+
+  const getErrorLogModeText = (mode) => {
+    if (mode === 'wrong_only') return 'câu sai';
+    if (mode === 'unanswered_only') return 'câu chưa làm';
+    return 'câu sai hoặc chưa làm';
+  };
+
+  const saveResultErrorLogByMode = async (mode) => {
+    if (!user?.id || !activeExam?.id) {
+      return {
+        ok: false,
+        title: 'Cần đăng nhập',
+        message: 'Vui lòng đăng nhập để lưu câu hỏi vào Nhật ký lỗi.',
+      };
+    }
+
+    const matchingEntries = getErrorLogQuestionEntriesForMode(activeExam, answers, mode);
+    if (!matchingEntries.length) {
+      return {
+        ok: false,
+        title: 'Không có câu phù hợp',
+        message: `Không có ${getErrorLogModeText(mode)} để lưu.`,
+      };
+    }
+
+    setErrorLogSaving(true);
+    try {
+      const entries = buildErrorLogEntriesForMode({
+        userId: user.id,
+        exam: activeExam,
+        answers,
+        mode,
+        source: 'exam_result',
+        attemptId: savedAttemptId,
+      });
+      const result = await upsertErrorLogEntries(entries);
+      return { ok: true, count: result.count };
+    } catch (error) {
+      console.error('Save result error log failed:', error);
+      return {
+        ok: false,
+        title: 'Lỗi lưu Nhật ký lỗi',
+        message: 'Không lưu được câu hỏi: ' + (error.message || 'Vui lòng thử lại.'),
+      };
+    } finally {
+      setErrorLogSaving(false);
+    }
+  };
+
+  const openResultErrorLogBatchModal = ({ exitAfterSave = false } = {}) => {
+    if (getResultErrorLogCount() === 0) {
+      if (exitAfterSave) {
+        performResetHome();
+      } else {
+        showAlert('Không có câu phù hợp', 'Không có câu sai hoặc chưa làm để lưu.');
+      }
+      return;
+    }
+
+    setErrorLogBatchModal({ isOpen: true, exitAfterSave });
+  };
+
+  const handleSelectResultErrorLogMode = async (mode) => {
+    const shouldExit = errorLogBatchModal.exitAfterSave;
+
+    if (mode === 'none') {
+      setErrorLogBatchModal({ isOpen: false, exitAfterSave: false });
+      if (shouldExit) performResetHome();
+      return;
+    }
+
+    const result = await saveResultErrorLogByMode(mode);
+    setErrorLogBatchModal({ isOpen: false, exitAfterSave: false });
+
+    if (!result.ok) {
+      showAlert(result.title, result.message);
+      return;
+    }
+
+    if (shouldExit) {
+      performResetHome();
+      return;
+    }
+
+    showAlert('Đã lưu vào Nhật ký lỗi', `Đã lưu ${result.count} ${getErrorLogModeText(mode)} để bạn ôn lại sau.`);
+  };
+
+  const renderErrorLogModals = () => (
+    <>
+      <ErrorLogSaveModal
+        isOpen={errorLogModal.isOpen}
+        question={errorLogModal.question}
+        saving={errorLogSaving}
+        onClose={() => setErrorLogModal({ isOpen: false, question: null, questionIndex: null, source: 'manual' })}
+        onSave={handleSaveSingleErrorLog}
+      />
+      <ErrorLogBatchModal
+        isOpen={errorLogBatchModal.isOpen}
+        saving={errorLogSaving}
+        message={errorLogBatchModal.exitAfterSave
+          ? 'Trước khi rời khỏi bài thi, bạn muốn lưu những câu nào để ôn lại sau?'
+          : 'Bạn muốn lưu những câu nào để ôn lại sau?'}
+        onClose={() => {
+          if (!errorLogSaving) setErrorLogBatchModal({ isOpen: false, exitAfterSave: false });
+        }}
+        onSelect={handleSelectResultErrorLogMode}
+      />
+    </>
+  );
 
   // ── Practice mode (ôn luyện) ──
   const [practiceRevealed, setPracticeRevealed] = useState({});
@@ -972,6 +1154,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setIsPaused(false);
     setViolationCount(0);
     setShowViolationWarning(false);
+    setSavedAttemptId(null);
     setIsTsaNavbarCollapsed(false);
     isSubmittingRef.current = false;
     isAdvancingTsaSectionRef.current = false;
@@ -1066,7 +1249,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         )
         : (savedSecondsLeft !== null ? (activeExam.duration * 60 - savedSecondsLeft) : (startTime ? Math.floor((Date.now() - startTime) / 1000) : 0));
 
-      const { error } = await supabase.from('exam_attempts').insert({
+      const { data, error } = await supabase.from('exam_attempts').insert({
         user_id: user.id,
         exam_id: activeExam.id,
         score: result.score,
@@ -1075,11 +1258,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         time_spent: timeSpentSecs,
         user_answers: answers,
         violation_count: finalViolationCount,
-      });
+      }).select('id').single();
 
       if (error) {
         console.error("Error saving exam attempt:", error);
         showAlert("Lỗi lưu kết quả", "Không lưu được kết quả bài thi: " + error.message + "\n(Hãy kiểm tra RLS Policy)");
+      } else {
+        setSavedAttemptId(data?.id || null);
       }
     }
   }, [activeExam, answers, exitFullscreen, getProgressKey, savedSecondsLeft, showAlert, startTime, tsaElapsedSeconds, tsaSectionIndex, user, violationCount]);
@@ -1271,7 +1456,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
     handleSubmit();
   };
-  const handleReset = () => {
+  const performResetHome = () => {
     if (quizPhase === 'practice') {
       savePracticeProgress();
     }
@@ -1288,11 +1473,20 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setIsPaused(false);
     setViolationCount(0);
     setShowViolationWarning(false);
+    setSavedAttemptId(null);
     // Reset ref after fullscreenchange event has fired
     setTimeout(() => { isSubmittingRef.current = false; }, 300);
     router.push('/');
   };
-  const handleExitQuiz = () => {
+  const handleReset = () => {
+    if ((quizPhase === 'results' || quizPhase === 'results-detail') && getResultErrorLogCount() > 0) {
+      openResultErrorLogBatchModal({ exitAfterSave: true });
+      return;
+    }
+
+    performResetHome();
+  };
+  const performExitQuiz = () => {
     if (!isAntiCheatEnabled || !activeExam || !user) {
       handleReset();
       return;
@@ -1318,6 +1512,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
 
     handleReset();
+  };
+  const handleExitQuiz = () => {
+    performExitQuiz();
   };
   const confirmTsaExit = () => {
     if (quizPhase === 'quiz') {
@@ -1715,6 +1912,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                             setBookmarks(next);
                           }}
                           onReport={handleOpenReport}
+                          onSaveErrorLog={getErrorLogSaveHandler(gq, rqIndex, { visible: isRev })}
                         />
                         <div className="px-6 pb-6 pt-2 flex items-center justify-between gap-3 border-t border-gray-50 mt-4">
                           <button
@@ -1769,6 +1967,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       setBookmarks(next);
                     }}
                     onReport={handleOpenReport}
+                    onSaveErrorLog={getErrorLogSaveHandler(q, currentQ, { visible: isRevealed })}
                   />
                 </div>
               )
@@ -1881,6 +2080,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           />
         )}
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
+        {renderErrorLogModals()}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
         {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
@@ -2060,6 +2260,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </div>
           </div>
         </div>
+        {renderErrorLogModals()}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
         {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
@@ -2160,6 +2361,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </div>
           </div>
         </div>
+        {renderErrorLogModals()}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
         {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
@@ -2301,6 +2503,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                       onAnswerChange={(val) => handleAnswerChange(qObj.id, val)}
                                       disabled={false}
                                       preloadImages={qIndex === currentQ}
+                                      onReport={handleOpenReport}
                                     />
                                   </div>
                                 ) : (
@@ -2315,12 +2518,25 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                   />
                                 )}
                              </div>
-                             <button
-                               onClick={() => { const next = new Set(bookmarks); if (next.has(qObj.id)) next.delete(qObj.id); else next.add(qObj.id); setBookmarks(next); }}
-                               className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors border ${bookmarks.has(qObj.id) ? 'bg-[#e3f2fd] border-[#90caf9] text-[#1976D2]' : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'}`}
-                             >
-                               <svg viewBox="0 0 24 24" fill={bookmarks.has(qObj.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
-                             </button>
+                             <div className="flex shrink-0 flex-col gap-2">
+                               {qObj.type !== 'DRAG' && (
+                                 <button
+                                   type="button"
+                                   onClick={() => handleOpenReport(qObj)}
+                                   className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors border bg-white border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500"
+                                   title="Báo cáo câu hỏi có vấn đề"
+                                 >
+                                   <AlertTriangleIcon className="w-4 h-4" />
+                                 </button>
+                               )}
+                               <button
+                                 onClick={() => { const next = new Set(bookmarks); if (next.has(qObj.id)) next.delete(qObj.id); else next.add(qObj.id); setBookmarks(next); }}
+                                 className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors border ${bookmarks.has(qObj.id) ? 'bg-[#e3f2fd] border-[#90caf9] text-[#1976D2]' : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'}`}
+                                 title="Đánh dấu câu hỏi này"
+                               >
+                                 <svg viewBox="0 0 24 24" fill={bookmarks.has(qObj.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                               </button>
+                             </div>
                            </div>
                            {/* Answer */}
                            <div className="ml-12">
@@ -2545,6 +2761,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
         </div>
         
+        {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
+        {renderErrorLogModals()}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
         {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
@@ -3000,6 +3218,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
         </div>
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
+        {renderErrorLogModals()}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
         {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
@@ -3013,7 +3232,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         <Topbar activeExam={activeExam} handleReset={handleReset} />
         <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-3xl bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-sm text-center animate-fadeIn">
-            <ResultsView questions={questions} answers={answers} onReset={handleRetry} scoringConfig={activeExam.scoringConfig} examType={activeExam.examType} subject={activeExam.subject} />
+            <ResultsView
+              questions={questions}
+              answers={answers}
+              onReset={handleRetry}
+              scoringConfig={activeExam.scoringConfig}
+              examType={activeExam.examType}
+              subject={activeExam.subject}
+            />
             <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
               <button
                 onClick={() => setQuizPhase('results-detail')}
@@ -3028,6 +3254,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
         </div>
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
+        {renderErrorLogModals()}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
         {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>
@@ -3046,6 +3273,20 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const resultScoreText = isTSA
       ? `${detailResult.score}/${detailResult.maxScore}`
       : detailResult.score.toFixed(1);
+    const resultErrorLogCount = getResultErrorLogCount();
+    const renderResultErrorLogButton = (className = '') => (
+      resultErrorLogCount > 0 ? (
+        <button
+          type="button"
+          onClick={() => openResultErrorLogBatchModal()}
+          disabled={errorLogSaving}
+          className={`${className} w-full justify-center px-4 py-2.5 rounded-xl font-bold text-[var(--home-brand-primary)] bg-[var(--home-brand-soft)] hover:bg-[var(--home-brand-border)] border border-[var(--home-brand-border)] transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70`}
+        >
+          {errorLogSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FloppyDisk weight="duotone" className="w-4 h-4" />}
+          {errorLogSaving ? 'Đang lưu...' : 'Lưu vào Nhật ký lỗi'}
+        </button>
+      ) : null
+    );
 
     return (
       <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
@@ -3148,6 +3389,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     showResult
                                     disabled
                                     onReport={handleOpenReport}
+                                    onSaveErrorLog={getErrorLogSaveHandler(childQ, currentI)}
                                   />
                                 </div>
                               );
@@ -3180,6 +3422,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         showResult
                         disabled
                         onReport={handleOpenReport}
+                        onSaveErrorLog={getErrorLogSaveHandler(firstChild, currentI)}
                       />
                     </div>
                   );
@@ -3224,6 +3467,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 <div className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm số</div>
               </div>
             </div>
+            {renderResultErrorLogButton('mb-5')}
 
             <div className="mb-4">
               {renderNavButtons((q, i) => {
@@ -3274,6 +3518,11 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mt-1">Điểm</div>
               </div>
             </div>
+            {resultErrorLogCount > 0 && (
+              <div className="px-[17px] mb-2">
+                {renderResultErrorLogButton()}
+              </div>
+            )}
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
               {renderNavButtons((q, i) => {
@@ -3293,6 +3542,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </div>
         </div>
         {reportModal.isOpen && <ReportModal reportModal={reportModal} setReportModal={setReportModal} user={user} activeExam={activeExam} showAlert={showAlert} reportReasons={REPORT_REASONS} />}
+        {renderErrorLogModals()}
         {modal.isOpen && <CustomModal {...modal} onClose={closeModal} />}
         {globalImageModal.isOpen && <ImageModal isOpen={globalImageModal.isOpen} onClose={() => setGlobalImageModal({ ...globalImageModal, isOpen: false })} src={globalImageModal.src} alt={globalImageModal.alt} />}
       </div>

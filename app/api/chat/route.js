@@ -33,16 +33,16 @@ async function requireChatUser(req) {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
     return { errorResponse: jsonError('Thiếu cấu hình Supabase trên server.', 500) };
   }
 
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
   const user = userData?.user;
   if (userError || !user) {
     return { errorResponse: jsonError('Phiên đăng nhập không hợp lệ.', 401) };

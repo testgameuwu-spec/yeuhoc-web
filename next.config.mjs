@@ -2,6 +2,15 @@
 const nextConfig = {
   trailingSlash: true,
   allowedDevOrigins: ['127.0.0.1'],
+  async redirects() {
+    return [
+      {
+        source: '/profile/phan-tich',
+        destination: '/phan-tich',
+        permanent: false,
+      },
+    ];
+  },
   experimental: {
     optimizePackageImports: ['lucide-react', '@phosphor-icons/react'],
   },

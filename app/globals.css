@@ -1214,6 +1214,79 @@ html[data-theme='dark'] .ep-lb-score-val {
   padding: 15px 17px;
 }
 
+.error-log-retry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 15px 10px;
+  border: 1px solid var(--et-gray-200);
+  border-bottom: 0;
+  border-radius: var(--et-r) var(--et-r) 0 0;
+  background: var(--et-gray-50);
+}
+
+.error-log-retry-eyebrow {
+  margin: 0 0 3px;
+  color: var(--home-brand-primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .4px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.error-log-retry-title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--et-gray-800);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error-log-retry-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--et-gray-400);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .18s ease, color .18s ease;
+}
+
+.error-log-retry-close:hover {
+  background: var(--app-hover);
+  color: var(--et-gray-800);
+}
+
+.error-log-retry-shell .et-q-card {
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-bottom: 0;
+}
+
+.error-log-retry-shell:has(.et-q-card.correct) .error-log-retry-header {
+  border-color: var(--et-green);
+}
+
+.error-log-retry-shell:has(.et-q-card.wrong) .error-log-retry-header {
+  border-color: var(--et-red);
+}
+
+.error-log-retry-shell:has(.et-q-card.unanswered) .error-log-retry-header {
+  border-color: var(--et-amber);
+}
+
 .et-q-text {
   font-size: 14.5px;
   line-height: 1.8;
@@ -2478,6 +2551,20 @@ html[data-theme='dark'] .ep-lb-score-val {
   .et-q-card {
     border-radius: 12px;
     scroll-margin-top: 64px;
+  }
+
+  .error-log-retry-header {
+    border-radius: 12px 12px 0 0;
+    padding: 10px 12px 9px;
+  }
+
+  .error-log-retry-title {
+    font-size: 14px;
+  }
+
+  .error-log-retry-close {
+    width: 34px;
+    height: 34px;
   }
 
   .et-q-card-hd {

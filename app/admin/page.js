@@ -550,7 +550,7 @@ export default function AdminDashboard() {
       return <AiLogManagement showAlert={showAlert} onTrackRequest={openExamTabForOcrRequest} />;
     }
     if (activeTab === 'practice') {
-      return <PracticeProgressManagement />;
+      return <PracticeProgressManagement showAlert={showAlert} showConfirm={showConfirm} />;
     }
     if (activeTab === 'transactions') {
       return <TransactionManagement />;

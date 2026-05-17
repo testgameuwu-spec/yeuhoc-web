@@ -12,6 +12,7 @@ import {
   History,
   Lightbulb,
   Loader2,
+  NotebookText,
   Sparkles,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -1027,8 +1028,19 @@ export default function PersonalAnalysisPage() {
       <main>
         <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">Phân tích cá nhân</h1>
-            <p className="mt-3 text-base font-medium text-slate-500">Xem điểm mạnh, điểm yếu và gợi ý ôn tập thông minh theo từng kỳ thi.</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">Phân tích cá nhân</h1>
+                <p className="mt-3 text-base font-medium text-slate-500">Xem điểm mạnh, điểm yếu và gợi ý ôn tập thông minh theo từng kỳ thi.</p>
+              </div>
+              <Link
+                href="/error-log/"
+                className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-[var(--home-brand-border)] bg-white px-4 py-2.5 text-sm font-extrabold text-[var(--home-brand-primary)] shadow-sm no-underline transition-colors hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-hover)]"
+              >
+                <NotebookText className="h-4 w-4" />
+                Nhật ký lỗi
+              </Link>
+            </div>
             <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-900 shadow-sm [html[data-theme=dark]_&]:text-amber-100">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 [html[data-theme=dark]_&]:text-amber-200" />
               <p className="text-sm font-extrabold leading-relaxed sm:text-base">

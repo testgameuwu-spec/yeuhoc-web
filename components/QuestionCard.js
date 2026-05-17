@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
 import ContentWithInlineImage, { parseImageMap } from './ContentWithInlineImage';
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle, BookMarked } from 'lucide-react';
 import { getDragBlankIds, getQuestionResultState, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
 
 const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', MA: 'Chọn nhiều đáp án', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', DRAG: 'Kéo thả', TEXT: 'Ngữ liệu' };
@@ -19,6 +19,7 @@ export default function QuestionCard({
     isBookmarked = false,
     onToggleBookmark = null,
     onReport = null,
+    onSaveErrorLog = null,
     preloadImages = false,
 }) {
     const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -104,6 +105,21 @@ export default function QuestionCard({
                             onMouseOut={e => e.currentTarget.style.color = '#9ca3af'}
                         >
                             <AlertTriangle width={17} height={17} />
+                        </button>
+                    )}
+                    {onSaveErrorLog && !isTextBlock && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onSaveErrorLog(question); }}
+                            title="Lưu vào Nhật ký lỗi"
+                            style={{
+                                background: 'none', border: 'none', padding: 4, cursor: 'pointer',
+                                color: '#9ca3af',
+                                display: 'flex', alignItems: 'center', transition: 'color 0.2s',
+                            }}
+                            onMouseOver={e => e.currentTarget.style.color = 'var(--home-brand-primary)'}
+                            onMouseOut={e => e.currentTarget.style.color = '#9ca3af'}
+                        >
+                            <BookMarked width={17} height={17} />
                         </button>
                     )}
                     {onToggleBookmark && (

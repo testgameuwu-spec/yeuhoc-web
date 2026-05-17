@@ -36,7 +36,7 @@ function ScoreRing({ score, maxScore }) {
     );
 }
 
-export default function ResultsView({ questions, answers, onReset, scoringConfig, examType, subject }) {
+export default function ResultsView({ questions, answers, onReset, scoringConfig, examType, subject, footerAction = null }) {
     const {
         total,
         correct,
@@ -119,6 +119,12 @@ export default function ResultsView({ questions, answers, onReset, scoringConfig
                     Làm lại
                 </button>
             </div>
+
+            {footerAction && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14, width: '100%' }}>
+                    {footerAction}
+                </div>
+            )}
         </div>
     );
 }

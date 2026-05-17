@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ChartBar, House, User as UserIcon } from 'lucide-react';
+import { BookX, ChartBar, House, User as UserIcon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -21,7 +21,7 @@ const HomeNotifications = dynamic(() => import('./HomeNotifications'), {
 export default function Navbar() {
   const pathname = usePathname();
   const normalizedPath = pathname === '/' ? '/' : pathname?.replace(/\/$/, '');
-  const showNotifications = ['/', '/profile', '/profile/phan-tich'].includes(normalizedPath);
+  const showNotifications = ['/', '/profile', '/phan-tich', '/error-log'].includes(normalizedPath);
   const [unseenResolvedReports, setUnseenResolvedReports] = useState(0);
 
   const refreshReportBadge = useCallback(async () => {
@@ -184,12 +184,20 @@ export default function Navbar() {
             <span className="hidden sm:inline">Đề thi</span>
           </Link>
           <Link
-            href="/profile/phan-tich/"
+            href="/phan-tich/"
             prefetch={false}
-            className={linkClass(normalizedPath === '/profile/phan-tich')}
+            className={linkClass(normalizedPath === '/phan-tich')}
           >
             <ChartBar className="w-[18px] h-[18px]" />
             <span className="hidden sm:inline">Phân tích</span>
+          </Link>
+          <Link
+            href="/error-log/"
+            prefetch={false}
+            className={linkClass(normalizedPath === '/error-log')}
+          >
+            <BookX className="w-[18px] h-[18px]" />
+            <span className="hidden sm:inline">Nhật ký lỗi</span>
           </Link>
           <Link
             href={unseenResolvedReports > 0 ? '/profile/?tab=reports' : '/profile/'}
