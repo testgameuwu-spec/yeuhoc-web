@@ -2526,6 +2526,87 @@ html[data-theme='dark'] .ep-lb-score-val {
   font-size: 14.5px;
   padding: 16px 20px;
 }
+.practice-card-wrap.error-log-retry-question {
+  font-size: 1.1em;
+}
+.error-log-retry-shell .practice-card-wrap.error-log-retry-question .et-q-card {
+  border-top-width: 2px;
+  border-top-style: solid;
+  border-top-color: var(--et-gray-200);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+.practice-action-btn {
+  --practice-action-bg: var(--practice-nav-bg);
+  --practice-action-text: var(--practice-nav-text);
+  --practice-action-border: var(--practice-nav-border);
+  --practice-action-shadow: var(--practice-nav-shadow);
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--practice-action-border);
+  border-radius: 12px;
+  background: var(--practice-action-bg);
+  color: var(--practice-action-text);
+  box-shadow: 0 8px 20px var(--practice-action-shadow);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease, opacity .18s ease;
+}
+.practice-action-btn.is-nav {
+  --practice-action-bg: var(--practice-nav-bg);
+  --practice-action-text: var(--practice-nav-text);
+  --practice-action-border: var(--practice-nav-border);
+  --practice-action-shadow: var(--practice-nav-shadow);
+  font-weight: 700;
+}
+.practice-action-btn.is-hint {
+  --practice-action-bg: var(--practice-hint-bg);
+  --practice-action-text: var(--practice-hint-text);
+  --practice-action-border: var(--practice-hint-border);
+  --practice-action-shadow: var(--practice-hint-shadow);
+}
+.practice-action-btn.is-answer {
+  --practice-action-bg: var(--practice-answer-bg);
+  --practice-action-text: var(--practice-answer-text);
+  --practice-action-border: var(--practice-answer-border);
+  --practice-action-shadow: var(--practice-answer-shadow);
+}
+.practice-action-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px var(--practice-action-shadow);
+}
+.practice-action-btn:disabled {
+  border-color: var(--practice-button-disabled-border);
+  background: var(--practice-button-disabled-bg);
+  color: var(--practice-button-disabled-text);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: .68;
+  transform: none;
+}
+.practice-retry-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--et-gray-50);
+}
+@media (min-width: 640px) {
+  .practice-retry-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
 
 /* Practice Mode - Mobile overrides */
 @media (max-width: 640px) {

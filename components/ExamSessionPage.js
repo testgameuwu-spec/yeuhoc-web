@@ -4,8 +4,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Eye, Robot, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
-import { AlertTriangle as AlertTriangleIcon, Loader2 } from 'lucide-react';
+import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
+import { AlertTriangle as AlertTriangleIcon, Bot, Eye, Loader2 } from 'lucide-react';
 import ImageModal from '@/components/ImageModal';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
@@ -19,7 +19,7 @@ import Timer from '@/components/Timer';
 import ThemeToggle from '@/components/ThemeToggle';
 import LogoIcon from '@/components/LogoIcon';
 import { supabase } from '@/lib/supabase';
-import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
+import { getEmptyAnswerForType, getQuestionResultState, hasCompletedAnswer } from '@/lib/questionResult';
 import {
   buildErrorLogEntriesForMode,
   buildErrorLogEntry,
@@ -36,12 +36,6 @@ import {
   TSA_SECTIONS,
   TSA_TOTAL_DURATION_MINUTES,
 } from '@/lib/examScoring';
-
-const PRACTICE_BUTTON_TONES = {
-  nav: { bg: 'var(--practice-nav-bg)', color: 'var(--practice-nav-text)', border: 'var(--practice-nav-border)', shadow: 'var(--practice-nav-shadow)' },
-  hint: { bg: 'var(--practice-hint-bg)', color: 'var(--practice-hint-text)', border: 'var(--practice-hint-border)', shadow: 'var(--practice-hint-shadow)' },
-  answer: { bg: 'var(--practice-answer-bg)', color: 'var(--practice-answer-text)', border: 'var(--practice-answer-border)', shadow: 'var(--practice-answer-shadow)' },
-};
 
 const PREVIEW_BADGE_TONES = {
   subject: { bg: 'var(--et-blue-lt)', color: 'var(--et-blue)', dark: '#60a5fa' },
@@ -140,21 +134,6 @@ function preloadExamImage(src) {
       finish(true, 'cached');
     }
   });
-}
-
-function getPracticeButtonStyle(toneKey, disabled = false) {
-  const tone = PRACTICE_BUTTON_TONES[toneKey] || PRACTICE_BUTTON_TONES.nav;
-  const color = disabled ? 'var(--practice-button-disabled-text)' : tone.color;
-  const borderColor = disabled ? 'var(--practice-button-disabled-border)' : tone.border;
-
-  return {
-    background: disabled ? 'var(--practice-button-disabled-bg)' : tone.bg,
-    color,
-    border: `1.5px solid ${borderColor}`,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    boxShadow: disabled ? 'none' : `0 8px 20px ${tone.shadow}`,
-    opacity: disabled ? .68 : 1,
-  };
 }
 
 function getPreviewBadgeStyle(toneKey) {
@@ -1763,8 +1742,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   if (quizPhase === 'practice' && activeExam) {
     const q = realQuestions[currentQ];
     const isRevealed = practiceRevealed[currentQ] || false;
-    const ua = answers[q?.id];
-    const hasAnswered = ua !== undefined && ua !== '' && (typeof ua !== 'object' || Object.keys(ua).length > 0);
+    const currentAnswer = q ? (answers[q.id] ?? getEmptyAnswerForType(q.type)) : undefined;
+    const hasAnswered = q ? hasCompletedAnswer(q, currentAnswer) : false;
 
     // Check correctness for dot colors
     const checkCorrect = (qItem, idx) => {
@@ -1891,8 +1870,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   {groupQuestions.map((gq) => {
                     const rqIndex = realQuestions.findIndex(x => x.id === gq.id);
                     const isRev = practiceRevealed[rqIndex] || false;
-                    const ua = answers[gq.id];
-                    const hasAns = ua !== undefined && ua !== '' && (typeof ua !== 'object' || Object.keys(ua).length > 0);
+                    const selectedAnswer = answers[gq.id] ?? getEmptyAnswerForType(gq.type);
+                    const hasAns = hasCompletedAnswer(gq, selectedAnswer);
 
                     return (
                       <div key={gq.id} className={`practice-card-wrap bg-white rounded-3xl shadow-sm border ${rqIndex === currentQ ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-gray-100'}`} style={{ fontSize: '1.1em' }} id={`practice-q-${rqIndex}`}>
@@ -1922,22 +1901,20 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                               openAIChat();
                             }}
                             disabled={isRev}
-                            className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                            style={getPracticeButtonStyle('hint', isRev)}
+                            className="practice-action-btn is-hint"
                             type="button"
                           >
-                            <Robot weight="duotone" className="w-4 h-4" /> Xem gợi ý
+                            <Bot className="w-4 h-4" /> Xem gợi ý
                           </button>
-                          {!isRev && (
+                          {!isRev && hasAns && (
                             <button
                               onClick={() => {
                                 setPracticeRevealed(prev => ({ ...prev, [rqIndex]: true }));
                                 setIsAIChatOpen(false);
                                 setCurrentQ(rqIndex); // Cập nhật currentQ để dot sáng lên
                               }}
-                              disabled={!hasAns}
-                              className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                              style={getPracticeButtonStyle('answer', !hasAns)}
+                              className="practice-action-btn is-answer"
+                              type="button"
                             >
                               <Eye className="w-4 h-4" /> Xem đáp án
                             </button>
@@ -1982,8 +1959,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={firstIndex === 0}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
-                style={getPracticeButtonStyle('nav', firstIndex === 0)}
+                className="practice-action-btn is-nav"
+                type="button"
               >
                 <CaretLeft weight="bold" className="w-4 h-4" /> <span className="hidden sm:inline">Câu trước</span>
               </button>
@@ -1995,18 +1972,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     openAIChat();
                   }}
                   disabled={isRevealed}
-                  className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                  style={getPracticeButtonStyle('hint', isRevealed)}
+                  className="practice-action-btn is-hint"
                   type="button"
                 >
-                  <Robot weight="duotone" className="w-4 h-4" /> Xem gợi ý
+                  <Bot className="w-4 h-4" /> Xem gợi ý
                 </button>
-                {!contextQ && !isRevealed && (
+                {!contextQ && !isRevealed && hasAnswered && (
                   <button
                     onClick={handlePracticeReveal}
-                    disabled={!hasAnswered}
-                    className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all"
-                    style={getPracticeButtonStyle('answer', !hasAnswered)}
+                    className="practice-action-btn is-answer"
+                    type="button"
                   >
                     <Eye className="w-4 h-4" /> Xem đáp án
                   </button>
@@ -2021,8 +1996,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={lastIndex === realQuestions.length - 1}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-all"
-                style={getPracticeButtonStyle('nav', lastIndex === realQuestions.length - 1)}
+                className="practice-action-btn is-nav"
+                type="button"
               >
                 <span className="hidden sm:inline">Câu tiếp</span> <CaretRight weight="bold" className="w-4 h-4" />
               </button>
@@ -2139,7 +2114,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   </div>
                   <div className="ep-mode-body">
                     <div className="ep-mode-title">Ôn luyện</div>
-                    <div className="ep-mode-desc">Xem đáp án ngay · Không giới hạn thời gian · AI hỗ trợ</div>
+                    <div className="ep-mode-desc">Làm xong rồi xem đáp án · Không giới hạn thời gian · AI hỗ trợ</div>
                   </div>
                   <CaretRight weight="bold" size={18} className="ep-mode-arrow" />
                 </button>

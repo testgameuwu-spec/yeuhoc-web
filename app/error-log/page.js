@@ -5,15 +5,16 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
+  Bot,
   BookMarked,
   BookOpen,
   ChevronDown,
   ChevronRight,
   Clock,
+  Eye,
   Filter,
   Loader2,
   RotateCcw,
-  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
@@ -22,7 +23,7 @@ import QuestionCard from '@/components/QuestionCard';
 import ContentWithInlineImage from '@/components/ContentWithInlineImage';
 import { supabase } from '@/lib/supabase';
 import { ERROR_LOG_REASONS, formatAnswerForDisplay } from '@/lib/errorLogStore';
-import { getEmptyAnswerForType, hasSubmittedAnswer } from '@/lib/questionResult';
+import { getEmptyAnswerForType, hasCompletedAnswer } from '@/lib/questionResult';
 
 const PracticeAIChatbox = dynamic(() => import('@/components/PracticeAIChatbox'), { ssr: false });
 
@@ -76,7 +77,7 @@ function RetryQuestionOverlay({ entry, onClose }) {
   const [revealed, setRevealed] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [aiChatMounted, setAiChatMounted] = useState(false);
-  const canReveal = hasSubmittedAnswer(question, answer);
+  const canReveal = hasCompletedAnswer(question, answer);
 
   const aiQuestionData = {
     exam: {
@@ -146,41 +147,44 @@ function RetryQuestionOverlay({ entry, onClose }) {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <QuestionCard
-                question={question}
-                index={(entry.question_number || 1) - 1}
-                selectedAnswer={answer}
-                onAnswerChange={(value) => {
-                  if (!revealed) setAnswer(value);
-                }}
-                showResult={revealed}
-                disabled={revealed}
-                preloadImages
-              />
+              <div className="practice-card-wrap error-log-retry-question">
+                <QuestionCard
+                  question={question}
+                  index={(entry.question_number || 1) - 1}
+                  selectedAnswer={answer}
+                  onAnswerChange={(value) => {
+                    if (!revealed) setAnswer(value);
+                  }}
+                  showResult={revealed}
+                  disabled={revealed}
+                  preloadImages
+                />
+              </div>
 
-              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 [html[data-theme=dark]_&]:border-white/10 [html[data-theme=dark]_&]:bg-slate-800 sm:flex-row sm:items-center sm:justify-between">
+              <div className="practice-retry-actions mt-4">
                 <div className="text-sm font-semibold text-gray-500 [html[data-theme=dark]_&]:text-white/60">
-                  {revealed ? 'Bạn đang xem đáp án và lời giải của câu này.' : 'Làm lại câu hỏi, sau đó xem đáp án hoặc hỏi gợi ý AI.'}
+                  {revealed ? 'Bạn đang xem đáp án và lời giải của câu này.' : 'Làm lại câu hỏi, sau đó xem gợi ý hoặc xem đáp án khi đã hoàn thành.'}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={openAIChat}
                     disabled={revealed}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-700 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60 [html[data-theme=dark]_&]:border-violet-300/40 [html[data-theme=dark]_&]:bg-slate-900 [html[data-theme=dark]_&]:text-violet-200"
+                    className="practice-action-btn is-hint"
                   >
-                    <Sparkles className="h-4 w-4" />
-                    Gợi ý AI
+                    <Bot className="h-4 w-4" />
+                    Xem gợi ý
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setRevealed(true)}
-                    disabled={!canReveal || revealed}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--home-brand-primary)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--home-brand-hover)] disabled:cursor-not-allowed disabled:bg-gray-300"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Xem đáp án
-                  </button>
+                  {canReveal && !revealed && (
+                    <button
+                      type="button"
+                      onClick={() => setRevealed(true)}
+                      className="practice-action-btn is-answer"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Xem đáp án
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
