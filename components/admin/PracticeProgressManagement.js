@@ -105,6 +105,7 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
   const [detailExam, setDetailExam] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
+  const [detailMode, setDetailMode] = useState('practice');
   const detailRequestRef = useRef(0);
 
   const fetchProgress = useCallback(async () => {
@@ -138,7 +139,7 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
     try {
       const { data, error } = await supabase
         .from('exam_attempts')
-        .select('id, user_id, exam_id, score, correct_answers, total_questions, time_spent, created_at, violation_count')
+        .select('id, user_id, exam_id, score, correct_answers, total_questions, time_spent, created_at, violation_count, user_answers')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -247,6 +248,7 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
 
     const requestId = detailRequestRef.current + 1;
     detailRequestRef.current = requestId;
+    setDetailMode('practice');
     setDetailRow(row);
     setDetailExam(null);
     setDetailError('');
@@ -264,6 +266,37 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
       if (detailRequestRef.current !== requestId) return;
       console.error('Fetch practice detail error:', error);
       setDetailError(error.message || 'Không tải được chi tiết bài ôn luyện.');
+    } finally {
+      if (detailRequestRef.current === requestId) setDetailLoading(false);
+    }
+  }, [notify]);
+
+  const openExamAttemptDetail = useCallback(async (row) => {
+    if (!row?.exam_id) {
+      notify('Không thể mở chi tiết', 'Lượt thi này không có mã đề thi.');
+      return;
+    }
+
+    const requestId = detailRequestRef.current + 1;
+    detailRequestRef.current = requestId;
+    setDetailMode('exam');
+    setDetailRow(row);
+    setDetailExam(null);
+    setDetailError('');
+    setDetailLoading(true);
+
+    try {
+      const exam = await getExamById(row.exam_id);
+      if (detailRequestRef.current !== requestId) return;
+      if (!exam) {
+        setDetailError('Không tải được dữ liệu đề thi hoặc đề thi đã bị xóa.');
+        return;
+      }
+      setDetailExam(exam);
+    } catch (error) {
+      if (detailRequestRef.current !== requestId) return;
+      console.error('Fetch exam attempt detail error:', error);
+      setDetailError(error.message || 'Không tải được chi tiết lượt thi.');
     } finally {
       if (detailRequestRef.current === requestId) setDetailLoading(false);
     }
@@ -502,7 +535,8 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
                             {row.completed ? 'Hoàn thành' : `${percent}%`}
                           </div>
                           <DetailButton
-                            loading={detailLoading && detailRow?.id === row.id}
+                            loading={detailLoading && detailMode === 'practice' && detailRow?.id === row.id}
+                            title="Xem chi tiết bài ôn luyện"
                             onClick={() => openPracticeDetail(row)}
                           />
                           <DeleteButton
@@ -554,8 +588,13 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
                             : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                         }`}>
                           {violationCount > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                          {violationCount > 0 ? `Vi phạm ${violationCount}` : 'Không vi phạm'}
+                        {violationCount > 0 ? `Vi phạm ${violationCount}` : 'Không vi phạm'}
                         </div>
+                        <DetailButton
+                          loading={detailLoading && detailMode === 'exam' && detailRow?.id === row.id}
+                          title="Xem chi tiết bài thi"
+                          onClick={() => openExamAttemptDetail(row)}
+                        />
                         <DeleteButton
                           label="Xóa lịch sử thi nghiêm túc"
                           loading={deletingKey === `exam:${row.id}`}
@@ -573,8 +612,18 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
         </div>
       </div>
 
-      {detailRow && (
+      {detailRow && detailMode === 'practice' && (
         <PracticeDetailModal
+          row={detailRow}
+          exam={detailExam}
+          loading={detailLoading}
+          error={detailError}
+          onClose={closePracticeDetail}
+        />
+      )}
+
+      {detailRow && detailMode === 'exam' && (
+        <ExamAttemptDetailModal
           row={detailRow}
           exam={detailExam}
           loading={detailLoading}
@@ -627,13 +676,13 @@ const Metric = ({ label, value, className = 'text-white/90 font-bold', compact =
   </div>
 );
 
-const DetailButton = ({ loading, onClick }) => (
+const DetailButton = ({ loading, onClick, title }) => (
   <button
     type="button"
     onClick={onClick}
     disabled={loading}
     className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-2.5 text-xs font-bold text-indigo-300 transition-colors hover:bg-indigo-500/20 hover:text-indigo-200 disabled:cursor-wait disabled:opacity-60"
-    title="Xem chi tiết bài ôn luyện"
+    title={title}
   >
     {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
     <span>Chi tiết</span>
@@ -767,6 +816,122 @@ const PracticeDetailModal = ({ row, exam, loading, error, onClose }) => {
                               Câu hiện tại
                             </span>
                           )}
+                        </>
+                      )}
+                    </div>
+                    <div className="overflow-hidden rounded-xl bg-white">
+                      <QuestionCard
+                        question={question}
+                        index={displayIndex}
+                        selectedAnswer={selectedAnswer}
+                        onAnswerChange={() => {}}
+                        showResult={!isTextBlock}
+                        disabled
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ExamAttemptDetailModal = ({ row, exam, loading, error, onClose }) => {
+  const answers = getJsonObject(row.user_answers);
+  const questions = exam?.questions || [];
+  const realQuestions = questions.filter(question => question.type !== 'TEXT');
+  const score = Number(row.score) || 0;
+  const correct = Number(row.correct_answers) || 0;
+  const total = Number(row.total_questions) || realQuestions.length;
+  const violationCount = Number(row.violation_count) || 0;
+
+  const resultStats = realQuestions.reduce((stats, question) => {
+    const selectedAnswer = answers[question.id] ?? getEmptyAnswerForType(question.type);
+    const state = getQuestionResultState(question, selectedAnswer);
+    if (state === 'wrong') stats.wrong += 1;
+    else if (state === 'unanswered') stats.unanswered += 1;
+    return stats;
+  }, { wrong: 0, unanswered: 0 });
+
+  let realQuestionIndex = 0;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 backdrop-blur-sm p-0 sm:items-center sm:p-4 animate-fadeIn" onClick={onClose}>
+      <div
+        className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#14142a] shadow-2xl sm:max-h-[90vh] sm:rounded-2xl"
+        onClick={event => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-white/[0.03] px-4 py-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-indigo-300">Chi tiết bài thi</p>
+            <h3 className="truncate text-lg font-black text-white">{exam?.title || row.exam?.title || 'Đề thi'}</h3>
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-white/45">
+              <span>{row.profile?.full_name || row.profile?.email || 'Người dùng ẩn danh'}</span>
+              <span>{row.profile?.email || row.user_id}</span>
+              <span>Nộp bài {formatDateTime(row.created_at)}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-xl p-2 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+            title="Đóng"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {loading ? (
+            <div className="py-16 text-center">
+              <Loader2 className="mx-auto mb-4 h-9 w-9 animate-spin text-indigo-300" />
+              <p className="text-sm font-medium text-white/60">Đang tải chi tiết bài thi...</p>
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
+              {error}
+            </div>
+          ) : realQuestions.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center text-sm text-white/50">
+              Không có dữ liệu câu hỏi cho lượt thi này.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-3 lg:grid-cols-6">
+                <Metric label="Điểm" value={score.toFixed(1)} className="text-emerald-300 font-black" />
+                <Metric label="Đúng" value={`${correct}/${total}`} className="text-emerald-300 font-black" />
+                <Metric label="Sai" value={resultStats.wrong} className="text-red-300 font-black" />
+                <Metric label="Chưa làm" value={resultStats.unanswered} className="text-amber-300 font-black" />
+                <Metric label="Thời gian" value={formatDuration(row.time_spent)} />
+                <Metric label="Vi phạm" value={violationCount} className={violationCount > 0 ? 'text-red-300 font-black' : 'text-white/90 font-bold'} />
+              </div>
+
+              {questions.map((question, questionListIndex) => {
+                const isTextBlock = question.type === 'TEXT';
+                const displayIndex = isTextBlock ? realQuestionIndex : realQuestionIndex++;
+                const selectedAnswer = isTextBlock ? '' : (answers[question.id] ?? getEmptyAnswerForType(question.type));
+                const resultState = isTextBlock ? '' : getQuestionResultState(question, selectedAnswer);
+                const resultBadge = getResultBadge(resultState);
+
+                return (
+                  <div key={question.id || questionListIndex} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      {isTextBlock ? (
+                        <span className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-bold text-white/60">
+                          Ngữ liệu
+                        </span>
+                      ) : (
+                        <>
+                          <span className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-bold text-white/70">
+                            Câu {displayIndex + 1}
+                          </span>
+                          <span className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${resultBadge.className}`}>
+                            {resultBadge.label}
+                          </span>
                         </>
                       )}
                     </div>
