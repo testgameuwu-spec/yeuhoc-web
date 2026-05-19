@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { key: 'exams', label: 'Đề thi', icon: FileText },
   { key: 'targetExams', label: 'Kỳ thi', icon: CalendarDays },
   { key: 'notifications', label: 'Chỉnh thông báo', icon: Bell },
+  { key: 'recap', label: 'Recap Slides', icon: Bot },
   { key: 'scoring', label: 'Điểm số', icon: Trophy },
   { key: 'reports', label: 'Báo cáo', icon: AlertTriangle },
   { key: 'aiLogs', label: 'AI Logs', icon: Bot },
