@@ -213,6 +213,22 @@ select {
   height: 18px;
 }
 
+@media (max-width: 369px) {
+  .theme-toggle.theme-toggle-icon,
+  .home-notification-trigger {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .theme-toggle > .theme-toggle-icon,
+  .home-notification-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
 .home-notification-panel {
   background: var(--app-surface);
   border-color: var(--app-border);

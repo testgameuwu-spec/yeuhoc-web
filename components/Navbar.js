@@ -155,7 +155,7 @@ export default function Navbar() {
   }, [refreshReportBadge]);
 
   const linkClass = (active, extra = '') => (
-    `${extra} flex shrink-0 items-center gap-1.5 px-2 sm:px-3 py-1.5 min-h-9 rounded-lg text-sm font-medium transition-all no-underline ${
+    `${extra} flex shrink-0 items-center gap-1.5 px-2 sm:px-3 py-1.5 min-h-9 rounded-lg text-sm font-medium transition-all no-underline max-[369px]:px-1 max-[369px]:py-1 max-[369px]:min-h-8 max-[369px]:rounded-md ${
       active
         ? 'text-[var(--home-brand-primary)] bg-[var(--home-brand-soft)] [html[data-theme=dark]_&]:bg-black [html[data-theme=dark]_&]:text-[var(--home-brand-primary)]'
         : 'text-gray-600 hover:text-[var(--home-brand-primary)] hover:bg-[var(--home-brand-soft)] [html[data-theme=dark]_&]:text-gray-300 [html[data-theme=dark]_&]:hover:bg-black [html[data-theme=dark]_&]:hover:text-[var(--home-brand-primary)] [html[data-theme=dark]_&]:active:bg-black'
@@ -164,48 +164,48 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200" style={{ isolation: 'isolate' }}>
-      <div className="px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-3 min-w-0">
+      <div className="px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-3 min-w-0 max-[369px]:h-14 max-[369px]:px-2 max-[369px]:gap-1">
         {/* ─── Left: Logo ─── */}
-        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 no-underline group">
-          <LogoIcon size={26} color="var(--home-brand-primary)" className="shrink-0" />
-          <span className="site-logo-text text-xl transition-colors font-extrabold text-[var(--home-brand-primary)] group-hover:text-[var(--home-brand-hover)]">
+        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 no-underline group max-[369px]:gap-1">
+          <LogoIcon size={26} color="var(--home-brand-primary)" className="shrink-0 max-[369px]:h-5 max-[369px]:w-5" />
+          <span className="site-logo-text hidden min-[900px]:inline text-xl transition-colors font-extrabold text-[var(--home-brand-primary)] group-hover:text-[var(--home-brand-hover)]">
             YeuHoc
           </span>
         </Link>
 
         {/* ─── Center: Nav Links ─── */}
-        <nav className="flex min-w-0 items-center justify-center gap-0.5 sm:gap-1">
+        <nav className="flex min-w-0 items-center justify-center gap-0.5 sm:gap-1 max-[369px]:gap-0">
           <Link
             href="/"
             prefetch={false}
             className={linkClass(normalizedPath === '/')}
           >
-            <House className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline">Đề thi</span>
+            <House className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
+            <span className="hidden min-[900px]:inline">Đề thi</span>
           </Link>
           <Link
             href="/phan-tich/"
             prefetch={false}
             className={linkClass(normalizedPath === '/phan-tich')}
           >
-            <ChartBar className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline">Phân tích</span>
+            <ChartBar className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
+            <span className="hidden min-[900px]:inline">Phân tích</span>
           </Link>
           <Link
             href="/error-log/"
             prefetch={false}
             className={linkClass(normalizedPath === '/error-log')}
           >
-            <BookX className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline">Nhật ký lỗi</span>
+            <BookX className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
+            <span className="hidden min-[900px]:inline">Nhật ký lỗi</span>
           </Link>
           <Link
             href={unseenResolvedReports > 0 ? '/profile/?tab=reports' : '/profile/'}
             prefetch={false}
             className={linkClass(normalizedPath === '/profile', 'relative')}
           >
-            <UserIcon className="w-[18px] h-[18px]" />
-            <span className="hidden sm:inline">Hồ sơ</span>
+            <UserIcon className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
+            <span className="hidden min-[900px]:inline">Hồ sơ</span>
             {unseenResolvedReports > 0 && (
               <span
                 className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white"
@@ -218,7 +218,7 @@ export default function Navbar() {
         </nav>
 
         {/* ─── Right: Auth State ─── */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-[369px]:gap-1">
           {showNotifications && <HomeNotifications />}
           <ThemeToggle />
           <UserProfile />

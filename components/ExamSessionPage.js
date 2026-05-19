@@ -1806,7 +1806,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         </Topbar>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" id="practice-scroll-container">
-          <div className={`mx-auto transition-all duration-300 ${contextQ ? 'max-w-6xl' : 'max-w-2xl'}`}>
+          <div className={`mx-auto transition-all duration-300 ${contextQ ? 'max-w-6xl' : 'w-full lg:w-[75vw]'}`}>
             {/* Progress dots */}
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
@@ -1845,7 +1845,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               <div className="flex flex-col landscape:flex-row lg:flex-row gap-6 mt-4 items-start">
                 {/* Left side: Context */}
                 <div className="landscape:w-1/2 lg:w-1/2 w-full lg:sticky lg:top-4">
-                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm max-h-[40vh] landscape:max-h-[70vh] lg:max-h-none overflow-y-auto">
+                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm max-h-[40vh] landscape:max-h-[70vh] lg:max-h-[calc(100dvh-300px)] overflow-y-auto overscroll-contain">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
                     </div>
@@ -1862,7 +1862,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 </div>
 
                 {/* Right side: Questions */}
-                <div className="landscape:w-1/2 lg:w-1/2 w-full flex flex-col gap-6 max-h-[50vh] overflow-y-auto landscape:max-h-[70vh] lg:max-h-none lg:overflow-visible pr-1 pb-1">
+                <div className="landscape:w-1/2 lg:w-1/2 w-full flex flex-col gap-6 max-h-[50vh] overflow-y-auto landscape:max-h-[70vh] lg:max-h-[calc(100dvh-300px)] lg:overflow-y-auto overscroll-contain pr-1 pb-1">
                   {groupQuestions.map((gq) => {
                     const rqIndex = realQuestions.findIndex(x => x.id === gq.id);
                     const isRev = practiceRevealed[rqIndex] || false;
@@ -1962,17 +1962,19 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </button>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <button
-                  onClick={() => {
-                    if (isRevealed) return;
-                    openAIChat();
-                  }}
-                  disabled={isRevealed}
-                  className="practice-action-btn is-hint"
-                  type="button"
-                >
-                  <Bot className="w-4 h-4" /> Xem gợi ý
-                </button>
+                {!contextQ && (
+                  <button
+                    onClick={() => {
+                      if (isRevealed) return;
+                      openAIChat();
+                    }}
+                    disabled={isRevealed}
+                    className="practice-action-btn is-hint"
+                    type="button"
+                  >
+                    <Bot className="w-4 h-4" /> Xem gợi ý
+                  </button>
+                )}
                 {!contextQ && !isRevealed && hasAnswered && (
                   <button
                     onClick={handlePracticeReveal}
@@ -2955,8 +2957,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
                         <div className="flex flex-col landscape:flex-row lg:flex-row gap-6 items-start">
                           {/* Left: Context / Ngữ liệu */}
-                          <div className="landscape:w-1/2 lg:w-1/2 w-full lg:sticky lg:top-4 lg:h-[calc(100dvh-120px)]">
-                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm h-full max-h-[40vh] landscape:max-h-[70vh] lg:max-h-none overflow-y-auto">
+                          <div className="landscape:w-1/2 lg:w-1/2 w-full lg:sticky lg:top-4">
+                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm h-full max-h-[40vh] landscape:max-h-[70vh] lg:max-h-[calc(100dvh-260px)] overflow-y-auto overscroll-contain">
                               <div className="flex items-center gap-2 mb-3">
                                 <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Dựa vào thông tin sau để trả lời các câu hỏi bên phải</span>
@@ -2974,7 +2976,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           </div>
 
                           {/* Right: Questions */}
-                          <div className="landscape:w-1/2 lg:w-1/2 w-full flex flex-col gap-5 max-h-[50vh] overflow-y-auto landscape:max-h-[70vh] lg:max-h-none lg:overflow-visible pr-1 pb-1">
+                          <div className="landscape:w-1/2 lg:w-1/2 w-full flex flex-col gap-5 max-h-[50vh] overflow-y-auto landscape:max-h-[70vh] lg:max-h-[calc(100dvh-260px)] lg:overflow-y-auto overscroll-contain pr-1 pb-1">
                             {group.children.map(childQ => {
                               const currentI = Number.isInteger(childQ._globalIndex) ? childQ._globalIndex : realQIndex++;
                               return (
@@ -3327,8 +3329,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       <div className="mb-8 border-2 border-dashed border-indigo-200/80 rounded-2xl p-4 sm:p-6 bg-transparent transition-all">
                         <div className="flex flex-col landscape:flex-row lg:flex-row gap-6 items-start">
                           {/* Left: Context */}
-                          <div className="landscape:w-1/2 lg:w-1/2 w-full lg:sticky lg:top-4 lg:h-[calc(100dvh-120px)]">
-                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm h-full max-h-[40vh] landscape:max-h-[70vh] lg:max-h-none overflow-y-auto">
+                          <div className="landscape:w-1/2 lg:w-1/2 w-full lg:sticky lg:top-4">
+                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-sm h-full max-h-[40vh] landscape:max-h-[70vh] lg:max-h-[calc(100dvh-260px)] overflow-y-auto overscroll-contain">
                               <div className="flex items-center gap-2 mb-3">
                                 <BookOpen weight="duotone" className="w-4 h-4 text-indigo-500" />
                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase">ℹ️ Ngữ liệu</span>
@@ -3345,7 +3347,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           </div>
 
                           {/* Right: Questions */}
-                          <div className="landscape:w-1/2 lg:w-1/2 w-full flex flex-col gap-5 max-h-[50vh] overflow-y-auto landscape:max-h-[70vh] lg:max-h-none lg:overflow-visible pr-1 pb-1">
+                          <div className="landscape:w-1/2 lg:w-1/2 w-full flex flex-col gap-5 max-h-[50vh] overflow-y-auto landscape:max-h-[70vh] lg:max-h-[calc(100dvh-260px)] lg:overflow-y-auto overscroll-contain pr-1 pb-1">
                             {group.children.map(childQ => {
                               const currentI = realQIndex++;
                               return (

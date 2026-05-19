@@ -135,21 +135,21 @@ export default function UserProfile() {
   };
 
   if (loading) {
-    return <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />;
+    return <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse max-[369px]:h-6 max-[369px]:w-6" />;
   }
 
   if (!user) {
     return (
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 max-[369px]:gap-0.5">
         <a
           href="/login/"
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:text-[var(--home-brand-primary)] hover:bg-[var(--home-brand-soft)] transition-all no-underline border border-transparent hover:border-[var(--home-brand-border)]"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-gray-600 hover:text-[var(--home-brand-primary)] hover:bg-[var(--home-brand-soft)] transition-all no-underline border border-transparent hover:border-[var(--home-brand-border)] max-[369px]:px-1.5 max-[369px]:py-1 max-[369px]:text-[10px] max-[369px]:rounded-md"
         >
           Đăng nhập
         </a>
         <a
           href="/register/"
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-[var(--home-brand-primary)] text-white hover:bg-[var(--home-brand-hover)] shadow-sm transition-all no-underline"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-[var(--home-brand-primary)] text-white hover:bg-[var(--home-brand-hover)] shadow-sm transition-all no-underline max-[369px]:px-1.5 max-[369px]:py-1 max-[369px]:text-[10px] max-[369px]:rounded-md"
         >
           Đăng ký
         </a>
@@ -166,17 +166,17 @@ export default function UserProfile() {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setDropdownOpen(!dropdownOpen); }}
-        className="flex min-w-0 items-center gap-2 px-1.5 sm:px-2 py-1.5 rounded-xl text-sm font-medium bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all cursor-pointer relative z-[60]"
+        className="flex min-w-0 items-center gap-2 px-1.5 sm:px-2 py-1.5 rounded-xl text-sm font-medium bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all cursor-pointer relative z-[60] max-[369px]:gap-1 max-[369px]:rounded-lg max-[369px]:px-1 max-[369px]:py-1"
       >
         {avatarUrl ? (
-          <Image src={avatarUrl} alt={displayName} width={28} height={28} sizes="28px" className="w-7 h-7 rounded-full object-cover ring-2 ring-white" />
+          <Image src={avatarUrl} alt={displayName} width={28} height={28} sizes="(max-width: 369px) 24px, 28px" className="w-7 h-7 rounded-full object-cover ring-2 ring-white max-[369px]:h-6 max-[369px]:w-6" />
         ) : (
-          <div className="w-7 h-7 rounded-full bg-[var(--home-brand-primary)] flex items-center justify-center text-white text-xs font-bold ring-2 ring-white">
+          <div className="w-7 h-7 rounded-full bg-[var(--home-brand-primary)] flex items-center justify-center text-white text-xs font-bold ring-2 ring-white max-[369px]:h-6 max-[369px]:w-6">
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
-        <span className="hidden sm:inline max-w-[100px] truncate">{displayName}</span>
-        <ChevronDown weight="bold" className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+        <span className="hidden min-[900px]:inline max-w-[100px] truncate">{displayName}</span>
+        <ChevronDown weight="bold" className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 max-[369px]:h-3 max-[369px]:w-3 ${dropdownOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {dropdownOpen && (

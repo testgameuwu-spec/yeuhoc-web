@@ -70,18 +70,19 @@ export default function ExamEditor({
   const realQuestionCount = questions.filter(q => q.type !== 'TEXT').length;
 
   useEffect(() => {
-    if (defaultTab) {
+    if (!defaultTab) return undefined;
+
+    const timer = setTimeout(() => {
       setActiveSection(defaultTab);
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [defaultTab]);
 
   // Scroll to a specific question when requested from report tracking
   useEffect(() => {
     if (!scrollToQuestionId) return;
 
-    // Switch to questions tab first
-    setActiveSection('questions');
-
+    let timer;
     let attempts = 0;
     const maxAttempts = 25;
     const tryScroll = () => {
@@ -105,12 +106,16 @@ export default function ExamEditor({
         });
         if (onScrollToQuestionDone) onScrollToQuestionDone();
       } else if (attempts < maxAttempts) {
-        setTimeout(tryScroll, 150);
+        timer = setTimeout(tryScroll, 150);
       } else {
         if (onScrollToQuestionDone) onScrollToQuestionDone();
       }
     };
-    const timer = setTimeout(tryScroll, 100);
+    timer = setTimeout(() => {
+      // Switch to questions tab first
+      setActiveSection('questions');
+      timer = setTimeout(tryScroll, 100);
+    }, 0);
     return () => clearTimeout(timer);
   }, [scrollToQuestionId, onScrollToQuestionDone]);
 
