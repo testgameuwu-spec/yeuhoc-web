@@ -12,6 +12,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
     const [displaySeconds, setDisplaySeconds] = useState(() =>
         initialSeconds !== null ? initialSeconds : totalDuration
     );
+    const displaySecondsRef = useRef(displaySeconds);
     const timeUpFiredRef = useRef(false);
 
     // Keep callback refs fresh without causing re-renders
@@ -19,12 +20,23 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
     useEffect(() => { onTimeUpRef.current = onTimeUp; }, [onTimeUp]);
 
     // When initialSeconds changes from parent (e.g. resume), reset the anchor
-    const prevInitialSecondsRef = useRef(initialSeconds);
+    const prevInitialConfigRef = useRef({ initialSeconds, initialMinutes });
     useEffect(() => {
         const nextVal = initialSeconds !== null ? initialSeconds : initialMinutes * 60;
-        // Only reset if the value actually changed from outside
-        if (prevInitialSecondsRef.current !== initialSeconds) {
-            prevInitialSecondsRef.current = initialSeconds;
+        const prevConfig = prevInitialConfigRef.current;
+        const initialConfigChanged = (
+            prevConfig.initialSeconds !== initialSeconds
+            || prevConfig.initialMinutes !== initialMinutes
+        );
+
+        // Only reset if the value actually changed from outside.
+        if (initialConfigChanged) {
+            prevInitialConfigRef.current = { initialSeconds, initialMinutes };
+            const currentDisplay = displaySecondsRef.current;
+            const isLiveTickFromParent = isRunning && nextVal <= currentDisplay && currentDisplay - nextVal <= 1;
+            if (isLiveTickFromParent) return;
+
+            displaySecondsRef.current = nextVal;
             setDisplaySeconds(nextVal);
             timeUpFiredRef.current = false;
             // Reset anchor so next tick calculates from new value
@@ -58,6 +70,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
 
             setDisplaySeconds(prev => {
                 if (prev === newVal) return prev;
+                displaySecondsRef.current = newVal;
                 return newVal;
             });
 

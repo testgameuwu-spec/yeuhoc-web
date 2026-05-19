@@ -1319,7 +1319,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const handleTick = (sec) => {
-    setSavedSecondsLeft(sec);
+    setSavedSecondsLeft(prev => {
+      if (prev === null) return sec;
+      return sec < prev ? sec : prev;
+    });
   };
 
   const handlePause = () => {
