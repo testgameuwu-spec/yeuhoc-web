@@ -15,7 +15,7 @@ const MARKDOWN_SANITIZE_CONFIG = {
         'tr', 'th', 'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
         'sup', 'sub'
     ],
-    ALLOWED_ATTR: ['href', 'title', 'align', 'colspan', 'rowspan'],
+    ALLOWED_ATTR: ['href', 'title', 'align', 'colspan', 'rowspan', 'start'],
     ALLOW_DATA_ATTR: false,
 };
 
@@ -23,11 +23,11 @@ const MARKDOWN_SANITIZE_CONFIG = {
  * Renders text with inline ($...$) and display ($$...$$) LaTeX math.
  * Non-math text is rendered as plain text; math is rendered via KaTeX.
  */
-export default function MathRenderer({ text, className = '' }) {
+export default function MathRenderer({ text, className = '', inline = false }) {
     const renderedHTML = useMemo(() => {
         if (!text) return '';
-        return renderMathInText(text);
-    }, [text]);
+        return renderMathInText(text, { inline });
+    }, [text, inline]);
 
     return (
         <div
@@ -41,7 +41,7 @@ export default function MathRenderer({ text, className = '' }) {
  * Process text and render LaTeX expressions.
  * Uses a placeholder system to avoid interfering with already-rendered HTML.
  */
-function renderMathInText(text) {
+function renderMathInText(text, { inline = false } = {}) {
     const placeholders = [];
     // Prevent user text from colliding with generated math placeholders.
     let result = String(text).replace(MATH_PLACEHOLDER_PATTERN, `${MATH_PLACEHOLDER_PREFIX}&#8203;$1END`);
@@ -77,7 +77,9 @@ function renderMathInText(text) {
     });
 
     // 6. Render markdown for the non-math content
-    result = marked.parse(result, { breaks: true, gfm: true });
+    result = inline
+        ? marked.parseInline(result, { breaks: true, gfm: true })
+        : marked.parse(result, { breaks: true, gfm: true });
     result = DOMPurify.sanitize(result, MARKDOWN_SANITIZE_CONFIG);
 
     // 7. Restore math from placeholders

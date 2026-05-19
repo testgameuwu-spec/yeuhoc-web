@@ -257,7 +257,7 @@ export default function QuestionCard({
                                         style={{ display: 'none' }}
                                     />
                                     <span className={`et-mc-ltr`}>{letter}</span>
-                                    <div className="et-mc-text"><MathRenderer text={opt} /></div>
+                                    <div className="et-mc-text"><MathRenderer text={opt} inline /></div>
                                 </label>
                             );
                         })}
@@ -294,7 +294,7 @@ export default function QuestionCard({
                                     />
                                     <span className="et-mc-ltr">{letter}</span>
                                     <div className="et-mc-text with-tag">
-                                        <div className="et-mc-text-main"><MathRenderer text={opt} /></div>
+                                        <div className="et-mc-text-main"><MathRenderer text={opt} inline /></div>
                                         {resultLabel && (
                                             <span className={`et-option-tag ${isCorrectOpt ? 'correct' : 'wrong'}`}>
                                                 {resultLabel}
@@ -333,7 +333,7 @@ export default function QuestionCard({
                         {showResult && !isCorrect && answer && (
                             <div style={{ marginTop: 6, fontSize: 13, color: 'var(--et-green)', fontWeight: 600 }}>
                                 <span>Đáp án đúng:</span>
-                                <MathRenderer text={answer} />
+                                <MathRenderer text={answer} inline />
                             </div>
                         )}
                     </div>
@@ -522,7 +522,7 @@ function DragQuestion({
                     if (part.type === 'text') {
                         return (
                             <span key={`text-${index}`} className="et-drag-text">
-                                <MathRenderer text={part.text} />
+                                <MathRenderer text={part.text} inline />
                             </span>
                         );
                     }
@@ -549,20 +549,20 @@ function DragQuestion({
                                 title={selectedLetter && !disabled ? 'Bấm để xoá đáp án' : 'Thả đáp án vào đây'}
                             >
                                 {label ? (
-                                    <MathRenderer text={label} />
+                                    <MathRenderer text={label} inline />
                                 ) : (
                                     <span className="et-drag-placeholder">____</span>
                                 )}
                             </button>
                             {showResult && correctLetter && selectedLetter !== correctLetter && (
                                 <span className="et-drag-correct">
-                                    Đúng: <MathRenderer text={optionText(correctLetter)} />
+                                    Đúng: <MathRenderer text={optionText(correctLetter)} inline />
                                 </span>
                             )}
                         </span>
                     );
                 })}
-                {parts.length === 0 && <MathRenderer text={content} />}
+                {parts.length === 0 && <MathRenderer text={content} inline />}
             </div>
 
             <div className="et-drag-bank" aria-label="Ngân hàng đáp án kéo thả">
@@ -591,7 +591,7 @@ function DragQuestion({
                             onDragEnd={() => setActiveLetter(null)}
                             title={disabled ? '' : isUsed ? 'Đáp án này đã được dùng. Bấm ô trống để xoá trước khi dùng lại.' : 'Kéo hoặc bấm để chọn'}
                         >
-                            <span className="et-drag-chip-text"><MathRenderer text={option} /></span>
+                            <span className="et-drag-chip-text"><MathRenderer text={option} inline /></span>
                         </button>
                     );
                 })}
@@ -609,7 +609,7 @@ function DragQuestion({
                     style={{ left: touchDrag.x, top: touchDrag.y }}
                     aria-hidden="true"
                 >
-                    <span className="et-drag-chip-text"><MathRenderer text={optionText(touchDrag.letter)} /></span>
+                    <span className="et-drag-chip-text"><MathRenderer text={optionText(touchDrag.letter)} inline /></span>
                 </div>
             )}
         </div>
@@ -648,7 +648,7 @@ function TFTable({ statements, tfAnswer, tfSelected, showResult, disabled, onCha
                                     background: 'var(--et-gray-200)', fontSize: 10, fontWeight: 700,
                                     color: 'var(--et-gray-600)', marginRight: 6,
                                 }}>{key}</span>
-                                <MathRenderer text={stmt.text || stmt} />
+                                <MathRenderer text={stmt.text || stmt} inline />
                             </td>
                             <td style={{ textAlign: 'center' }}>
                                 <TFRadio

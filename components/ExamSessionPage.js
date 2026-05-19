@@ -2519,7 +2519,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors ${isSelected ? 'border-[#1976D2] bg-[#1976D2]' : 'border-gray-300 group-hover:border-gray-400'}`}>
                                          {isSelected && <div className="w-2 h-2 bg-white rounded-full"></div>}
                                        </div>
-                                       <div className="flex-1 text-gray-800 text-[15px] leading-relaxed"><MathRenderer text={opt} /></div>
+                                       <div className="flex-1 text-gray-800 text-[15px] leading-relaxed"><MathRenderer text={opt} inline /></div>
                                      </label>
                                    );
                                  })}
@@ -2535,7 +2535,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors ${isSelected ? 'border-[#1976D2] bg-[#1976D2]' : 'border-gray-300 group-hover:border-gray-400'}`}>
                                          {isSelected && <svg viewBox="0 0 10 10" className="w-3 h-3"><polyline points="1,5 4,8 9,2" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>}
                                        </div>
-                                       <div className="flex-1 text-gray-800 text-[15px] leading-relaxed"><MathRenderer text={opt} /></div>
+                                       <div className="flex-1 text-gray-800 text-[15px] leading-relaxed"><MathRenderer text={opt} inline /></div>
                                      </label>
                                    );
                                  })}
@@ -2544,7 +2544,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                              {qObj.type === 'TF' && qObj.statements && (
                                <table className="w-full border-collapse">
                                  <thead><tr><th className="text-left py-2 px-3 text-sm font-bold text-gray-700 border-b border-gray-200">Phát biểu</th><th className="py-2 px-3 text-sm font-bold text-gray-700 border-b border-gray-200 w-16 text-center">Đúng</th><th className="py-2 px-3 text-sm font-bold text-gray-700 border-b border-gray-200 w-16 text-center">Sai</th></tr></thead>
-                                 <tbody>{qObj.statements.map((stmt, si) => { const sKey = si < 26 ? String.fromCharCode(97 + si) : String(si + 1); const sVal = tfSel[sKey]; const radio = (val) => (<button onClick={() => handleAnswerChange(qObj.id, { ...tfSel, [sKey]: val })} className={`w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors ${sVal === val ? 'border-[#1976D2] bg-[#1976D2]' : 'border-gray-300 hover:border-gray-400'}`}>{sVal === val && <svg viewBox="0 0 10 10" className="w-3 h-3"><polyline points="1,5 4,8 9,2" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>}</button>); return (<tr key={si} className="border-b border-gray-100"><td className="py-3 px-3 text-sm text-gray-800"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 mr-2">{sKey}</span><MathRenderer text={stmt.text || stmt} /></td><td className="py-3 px-3 text-center">{radio('D')}</td><td className="py-3 px-3 text-center">{radio('S')}</td></tr>); })}</tbody>
+                                 <tbody>{qObj.statements.map((stmt, si) => { const sKey = si < 26 ? String.fromCharCode(97 + si) : String(si + 1); const sVal = tfSel[sKey]; const radio = (val) => (<button onClick={() => handleAnswerChange(qObj.id, { ...tfSel, [sKey]: val })} className={`w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors ${sVal === val ? 'border-[#1976D2] bg-[#1976D2]' : 'border-gray-300 hover:border-gray-400'}`}>{sVal === val && <svg viewBox="0 0 10 10" className="w-3 h-3"><polyline points="1,5 4,8 9,2" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>}</button>); return (<tr key={si} className="border-b border-gray-100"><td className="py-3 px-3 text-sm text-gray-800"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 mr-2">{sKey}</span><MathRenderer text={stmt.text || stmt} inline /></td><td className="py-3 px-3 text-center">{radio('D')}</td><td className="py-3 px-3 text-center">{radio('S')}</td></tr>); })}</tbody>
                                </table>
                              )}
                              {qObj.type === 'SA' && (
