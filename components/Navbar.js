@@ -167,7 +167,7 @@ export default function Navbar() {
       <div className="px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-3 min-w-0">
         {/* ─── Left: Logo ─── */}
         <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 no-underline group">
-          <LogoIcon size={38} color="var(--home-brand-primary)" className="shrink-0" />
+          <LogoIcon size={26} color="var(--home-brand-primary)" className="shrink-0" />
           <span className="site-logo-text text-xl transition-colors font-extrabold text-[var(--home-brand-primary)] group-hover:text-[var(--home-brand-hover)]">
             YeuHoc
           </span>

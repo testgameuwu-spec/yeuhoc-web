@@ -7,7 +7,7 @@ export default function AuthHeader({ active = 'login' }) {
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200" style={{ isolation: 'isolate' }}>
       <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-3">
         <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2.5 no-underline group">
-          <LogoIcon size={32} color="var(--home-brand-primary)" className="shrink-0" />
+          <LogoIcon size={26} color="var(--home-brand-primary)" className="shrink-0" />
           <span className="site-logo-text font-extrabold text-[17px] text-[var(--home-brand-primary)] group-hover:text-[var(--home-brand-hover)] transition-colors">
             YeuHoc
           </span>

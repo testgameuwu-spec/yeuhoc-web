@@ -591,7 +591,6 @@ function DragQuestion({
                             onDragEnd={() => setActiveLetter(null)}
                             title={disabled ? '' : isUsed ? 'Đáp án này đã được dùng. Bấm ô trống để xoá trước khi dùng lại.' : 'Kéo hoặc bấm để chọn'}
                         >
-                            <span className="et-drag-chip-letter">{letter}</span>
                             <span className="et-drag-chip-text"><MathRenderer text={option} /></span>
                         </button>
                     );
@@ -610,7 +609,6 @@ function DragQuestion({
                     style={{ left: touchDrag.x, top: touchDrag.y }}
                     aria-hidden="true"
                 >
-                    <span className="et-drag-chip-letter">{touchDrag.letter}</span>
                     <span className="et-drag-chip-text"><MathRenderer text={optionText(touchDrag.letter)} /></span>
                 </div>
             )}

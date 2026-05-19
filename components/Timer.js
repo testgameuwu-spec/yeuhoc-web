@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true, compact = false }) {
     const totalDuration = initialMinutes * 60;
@@ -13,6 +13,8 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
         initialSeconds !== null ? initialSeconds : totalDuration
     );
     const timeUpFiredRef = useRef(false);
+    // Revision counter to force interval restart when anchor changes
+    const [anchorRevision, setAnchorRevision] = useState(0);
 
     // Keep callback refs fresh without causing re-renders
     useEffect(() => { onTickRef.current = onTick; }, [onTick]);
@@ -30,6 +32,8 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
             // Reset anchor so next tick calculates from new value
             if (isRunning) {
                 anchorRef.current = { startedAt: Date.now(), startValue: nextVal };
+                // Bump revision to restart the interval with the new anchor
+                setAnchorRevision(r => r + 1);
             } else {
                 anchorRef.current = null;
             }
@@ -44,9 +48,10 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
             return;
         }
 
-        // Set anchor to current display value
-        const startValue = displaySeconds;
-        anchorRef.current = { startedAt: Date.now(), startValue };
+        // Set anchor to current display value (only if no anchor exists yet)
+        if (!anchorRef.current) {
+            anchorRef.current = { startedAt: Date.now(), startValue: displaySeconds };
+        }
 
         const tick = () => {
             const anchor = anchorRef.current;
@@ -71,7 +76,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
         const id = setInterval(tick, 250);
         return () => clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isRunning]);
+    }, [isRunning, anchorRevision]);
 
     // Notify parent whenever displayed seconds changes
     useEffect(() => {

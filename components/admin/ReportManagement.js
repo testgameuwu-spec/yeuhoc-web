@@ -579,7 +579,7 @@ export default function ReportManagement({ onEditExam, showAlert, showConfirm })
                 <button
                   onClick={() => {
                     if (onEditExam && selectedReport.exam_id) {
-                       onEditExam(selectedReport.exam_id, selectedReport.question_id);
+                       onEditExam(selectedReport.exam_id, selectedReport.question_id, selectedReport.question_content);
                        setSelectedReport(null); // Đóng modal báo cáo
                     }
                   }}

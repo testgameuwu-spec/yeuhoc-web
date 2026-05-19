@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { parseQuizText } from '@/lib/parser';
-import { getAllExams, saveExam, deleteExam, togglePublish, seedIfEmpty, updateExamsOrder, getAllFolders, createFolder, updateFolder, deleteFolder, updateFoldersOrder } from '@/lib/examStore';
+import { getAllExams, saveExam, deleteExam, togglePublish, seedIfEmpty, updateExamsOrder, getAllFolders, createFolder, updateFolder, deleteFolder, updateFoldersOrder, getExamById } from '@/lib/examStore';
 import FileUpload from '@/components/FileUpload';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import ExamList from '@/components/admin/ExamList';
@@ -92,6 +92,7 @@ export default function AdminDashboard() {
   const [trackedOcrRequestId, setTrackedOcrRequestId] = useState('');
   const [mixedDrafts, setMixedDrafts] = useState([]);
   const [activeMixedDraftId, setActiveMixedDraftId] = useState(null);
+  const [scrollToQuestionId, setScrollToQuestionId] = useState(null);
 
   // Upload & parse flow
   const [parsedQuestions, setParsedQuestions] = useState([]);
@@ -227,36 +228,43 @@ export default function AdminDashboard() {
     setIsCreating(true);
   };
 
-  const handleEditExamById = async (examId, questionIdToScroll) => {
-    let exam = exams.find(e => e.id === examId);
-    if (!exam) {
-      try {
-        const { data } = await supabase.from('exams').select('*').eq('id', examId).single();
-        if (data) exam = data;
-      } catch (err) {
-        console.error("Error fetching exam:", err);
-      }
+  const handleEditExamById = async (examId, questionIdToScroll, questionContent) => {
+    // Always fetch the full exam with questions to ensure data is complete
+    let exam = null;
+    try {
+      exam = await getExamById(examId);
+    } catch (err) {
+      console.error("Error fetching exam:", err);
     }
     
-    if (exam) {
-      handleEditExam(exam);
-      setActiveTab('exams');
-      
-      if (questionIdToScroll) {
-        setExamEditorTab('questions');
-        setTimeout(() => {
-          const el = document.getElementById(`editor-question-${questionIdToScroll}`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.classList.add('ring-4', 'ring-amber-500', 'ring-offset-2', 'ring-offset-[#0b0b19]', 'transition-all');
-            setTimeout(() => el.classList.remove('ring-4', 'ring-amber-500', 'ring-offset-2', 'ring-offset-[#0b0b19]'), 3000);
-          }
-        }, 500);
-      } else {
-        setExamEditorTab('settings');
-      }
-    } else {
+    if (!exam) {
       showAlert('Lỗi', "Không tìm thấy đề thi này (có thể đã bị xóa)!");
+      return;
+    }
+
+    handleEditExam(exam);
+    setActiveTab('exams');
+      
+    if (questionIdToScroll) {
+      // Check if the question_id exists in the loaded exam
+      let targetId = questionIdToScroll;
+      const hasExactMatch = exam.questions?.some(q => q.id === questionIdToScroll);
+      
+      if (!hasExactMatch && questionContent && exam.questions?.length > 0) {
+        // Fallback: find question by content match (for reports with stale IDs)
+        const contentSnippet = questionContent.substring(0, 100).toLowerCase();
+        const matchedQuestion = exam.questions.find(q => 
+          q.content && q.content.substring(0, 100).toLowerCase() === contentSnippet
+        );
+        if (matchedQuestion) {
+          targetId = matchedQuestion.id;
+        }
+      }
+      
+      setExamEditorTab('questions');
+      setScrollToQuestionId(targetId);
+    } else {
+      setExamEditorTab('settings');
     }
   };
 
@@ -510,6 +518,8 @@ export default function AdminDashboard() {
             defaultTab={examEditorTab}
             trackedOcrRequestId={trackedOcrRequestId}
             onTrackedOcrRequestChange={setTrackedOcrRequestId}
+            scrollToQuestionId={scrollToQuestionId}
+            onScrollToQuestionDone={() => setScrollToQuestionId(null)}
           />
         );
       }

@@ -48,6 +48,8 @@ export default function ExamEditor({
   trackedOcrRequestId = '',
   onTrackedOcrRequestChange = null,
   onDraftChange = null,
+  scrollToQuestionId = null,
+  onScrollToQuestionDone = null,
 }) {
   const [title, setTitle] = useState(exam?.title || '');
   const [subject, setSubject] = useState(exam?.subject || 'Toán');
@@ -66,6 +68,51 @@ export default function ExamEditor({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasQuestions = questions.length > 0;
   const realQuestionCount = questions.filter(q => q.type !== 'TEXT').length;
+
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveSection(defaultTab);
+    }
+  }, [defaultTab]);
+
+  // Scroll to a specific question when requested from report tracking
+  useEffect(() => {
+    if (!scrollToQuestionId) return;
+
+    // Switch to questions tab first
+    setActiveSection('questions');
+
+    let attempts = 0;
+    const maxAttempts = 25;
+    const tryScroll = () => {
+      attempts++;
+      const el = document.getElementById(`editor-question-${scrollToQuestionId}`);
+      if (el) {
+        // Use requestAnimationFrame for reliable scroll on mobile
+        requestAnimationFrame(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Use inline styles instead of Tailwind classes (reliable on mobile)
+          el.style.outline = '4px solid #f59e0b';
+          el.style.outlineOffset = '4px';
+          el.style.transition = 'outline 0.3s ease, outline-offset 0.3s ease';
+          el.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.3)';
+          setTimeout(() => {
+            el.style.outline = '';
+            el.style.outlineOffset = '';
+            el.style.boxShadow = '';
+            el.style.transition = '';
+          }, 5000);
+        });
+        if (onScrollToQuestionDone) onScrollToQuestionDone();
+      } else if (attempts < maxAttempts) {
+        setTimeout(tryScroll, 150);
+      } else {
+        if (onScrollToQuestionDone) onScrollToQuestionDone();
+      }
+    };
+    const timer = setTimeout(tryScroll, 100);
+    return () => clearTimeout(timer);
+  }, [scrollToQuestionId, onScrollToQuestionDone]);
 
   const updatePreset = useCallback((subj, type) => {
     let preset = 'Tuỳ chỉnh';

@@ -306,7 +306,8 @@ export default function UserManagement() {
   const filtered = enrichedUsers
     .filter(u => {
       if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterRole !== 'all' && u.role !== filterRole) return false;
+      const effectiveRole = u.role === 'admin' ? 'admin' : 'user';
+      if (filterRole !== 'all' && effectiveRole !== filterRole) return false;
       return true;
     })
     .sort((a, b) => {
