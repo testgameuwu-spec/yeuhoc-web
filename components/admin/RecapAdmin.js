@@ -75,13 +75,24 @@ export default function RecapAdmin() {
   const handleVdAdd = async () => {
     const newMember = { name: 'Tên mới', achievements: 'Thành tích', photo_url: '', order_index: vdMembers.length };
     const { data, error } = await supabase.from('vinh_danh_members').insert([newMember]).select();
-    if (data) setVdMembers([...vdMembers, data[0]]);
-    if (error) alert('Lỗi: ' + error.message);
+    if (error) {
+      console.error('Insert error:', error);
+      alert('Lỗi thêm thành viên: ' + error.message + '\nHãy kiểm tra RLS policy cho bảng vinh_danh_members.');
+      return;
+    }
+    if (data && data[0]) setVdMembers([...vdMembers, data[0]]);
   };
 
-  const handleVdUpdate = async (id, field, value) => {
+  const vdUpdateTimers = useRef({});
+  const handleVdUpdate = (id, field, value) => {
+    // Update UI immediately
     setVdMembers(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
-    await supabase.from('vinh_danh_members').update({ [field]: value, updated_at: new Date().toISOString() }).eq('id', id);
+    // Debounce DB update
+    const key = `${id}_${field}`;
+    clearTimeout(vdUpdateTimers.current[key]);
+    vdUpdateTimers.current[key] = setTimeout(async () => {
+      await supabase.from('vinh_danh_members').update({ [field]: value, updated_at: new Date().toISOString() }).eq('id', id);
+    }, 500);
   };
 
   const handleVdDelete = async (id) => {
@@ -310,6 +321,8 @@ export default function RecapAdmin() {
     if (error) {
       alert("Lỗi lưu slide: " + error.message);
     } else {
+      // Re-fetch to sync state without F5
+      await fetchSlides();
       alert("Đã lưu slide thành công!");
     }
     setIsSaving(false);
