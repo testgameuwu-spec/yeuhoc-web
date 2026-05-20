@@ -284,7 +284,8 @@ export default function RecapAdmin() {
         slideEl.querySelectorAll('.anim').forEach(el => el.classList.remove('show'));
         slideEl.querySelectorAll('.typewriter').forEach(el => {
             el.style.visibility = '';
-            // we should not clear textContent here, otherwise it saves empty
+            // Update the original text attribute so the animation uses the newly edited text
+            el.setAttribute('data-text-original', el.textContent.trim());
         });
     }
     
@@ -321,6 +322,7 @@ export default function RecapAdmin() {
         slideEl.querySelectorAll('.anim').forEach(el => el.classList.remove('show'));
         slideEl.querySelectorAll('.typewriter').forEach(el => {
           el.style.visibility = '';
+          el.setAttribute('data-text-original', el.textContent.trim());
         });
       }
       savedHtml = clone.innerHTML;
