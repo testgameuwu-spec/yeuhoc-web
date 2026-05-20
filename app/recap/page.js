@@ -6,10 +6,12 @@ import { supabase } from "@/lib/supabase";
 export default function RecapViewer() {
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [vinhDanhMembers, setVinhDanhMembers] = useState([]);
   const containerRef = useRef(null);
 
   useEffect(() => {
     fetchSlides();
+    fetchVinhDanhMembers();
   }, []);
 
   const fetchSlides = async () => {
@@ -21,6 +23,30 @@ export default function RecapViewer() {
       setSlides(data);
     }
     setLoading(false);
+  };
+
+  const fetchVinhDanhMembers = async () => {
+    const { data } = await supabase
+      .from("vinh_danh_members")
+      .select("*")
+      .order("order_index", { ascending: true });
+    if (data) setVinhDanhMembers(data);
+  };
+
+  const buildVinhDanhCards = () => {
+    return vinhDanhMembers.map(m => 
+      `<div class="personal-award-card static-card">
+        <div class="card-photo"><img src="${m.photo_url || ''}" alt="${m.name}"></div>
+        <div class="card-info-wrap">
+          <div class="card-name">${m.name}</div>
+          <div class="card-name-divider"></div>
+          <div class="card-achievements">
+            <div class="ach-label">Thành Tích</div>
+            <div class="ach-text">${(m.achievements || '').replace(/\n/g, '<br>')}</div>
+          </div>
+        </div>
+      </div>`
+    ).join('');
   };
 
   useEffect(() => {
@@ -37,7 +63,7 @@ export default function RecapViewer() {
     let progressFills = [];
     let slideTimer = null;
     let progressInterval = null;
-    const CHAR_SPEED = 35;
+    const CHAR_SPEED = 50;
 
     // Initialize typewriter texts
     containerRef.current.querySelectorAll(".typewriter").forEach(el => {
@@ -98,13 +124,17 @@ export default function RecapViewer() {
         const delay = parseInt(el.dataset.delay || "0");
         maxEnd = Math.max(maxEnd, delay + 900);
       });
-      // Check typewriter elements (delay + text.length * CHAR_SPEED)
-      slide.querySelectorAll(".typewriter").forEach(el => {
-        const delay = parseInt(el.dataset.delay || "0");
-        const text = el.dataset.textOriginal || "";
-        const typingTime = text.length * CHAR_SPEED;
-        maxEnd = Math.max(maxEnd, delay + typingTime);
-      });
+      // Typewriters run sequentially: first delay + sum of all typing times + gaps
+      const typewriters = slide.querySelectorAll(".typewriter");
+      if (typewriters.length > 0) {
+        const firstDelay = parseInt(typewriters[0].dataset.delay || "0");
+        let totalTyping = firstDelay;
+        typewriters.forEach(el => {
+          const text = el.dataset.textOriginal || el.textContent || "";
+          totalTyping += text.length * CHAR_SPEED + 500; // typing + gap
+        });
+        maxEnd = Math.max(maxEnd, totalTyping);
+      }
       return maxEnd;
     }
 
@@ -157,16 +187,45 @@ export default function RecapViewer() {
         credits.style.animation = "";
       }
 
+      // Split .anim into before/after typewriter groups
+      const typewriters = Array.from(slide.querySelectorAll(".typewriter"));
+      const firstTwDelay = typewriters.length > 0 ? parseInt(typewriters[0].dataset.delay || "0") : Infinity;
+      
+      const animsBefore = [];
+      const animsAfter = [];
       slide.querySelectorAll(".anim").forEach(el => {
+        const delay = parseInt(el.dataset.delay || "0");
+        if (delay < firstTwDelay || typewriters.length === 0) {
+          animsBefore.push(el);
+        } else {
+          animsAfter.push(el);
+        }
+      });
+
+      // Show before-typewriter anims normally
+      animsBefore.forEach(el => {
         const delay = parseInt(el.dataset.delay || "0");
         setTimeout(() => el.classList.add("show"), delay);
       });
 
-      slide.querySelectorAll(".typewriter").forEach(el => {
-        const delay = parseInt(el.dataset.delay || "0");
-        const text = el.dataset.textOriginal || "";
-        typeWriter(el, text, delay, CHAR_SPEED);
-      });
+      // Run typewriters sequentially, then show after-typewriter anims
+      if (typewriters.length > 0) {
+        let chain = new Promise(r => setTimeout(r, firstTwDelay));
+        typewriters.forEach(el => {
+          chain = chain.then(() => {
+            const text = el.dataset.textOriginal || "";
+            return typeWriter(el, text, 0, CHAR_SPEED).then(() => {
+              return new Promise(r => setTimeout(r, 500));
+            });
+          });
+        });
+        // After all typewriters done, show remaining anims
+        chain.then(() => {
+          animsAfter.forEach((el, i) => {
+            setTimeout(() => el.classList.add("show"), i * 400);
+          });
+        });
+      }
 
       const overlayContainer = slide.querySelector(".overlay-images");
       if (overlayContainer) {
@@ -212,22 +271,28 @@ export default function RecapViewer() {
       animateSlide(domSlides[index]);
 
       const totalDuration = getSlideDuration(domSlides[index], index);
-      startProgress(totalDuration);
-
-      slideTimer = setTimeout(() => {
-        if (currentSlide < domSlides.length - 1) {
-          currentSlide++;
-          showSlide(currentSlide);
-        } else {
-          clearInterval(progressInterval);
+      
+      if (domSlides[index].dataset.manual === 'true') {
+        if (progressFills[index]) {
+            progressFills[index].style.width = '0%';
         }
-      }, totalDuration);
+      } else {
+        startProgress(totalDuration);
+        slideTimer = setTimeout(() => {
+          if (currentSlide < domSlides.length - 1) {
+            currentSlide++;
+            showSlide(currentSlide);
+          } else {
+            clearInterval(progressInterval);
+          }
+        }, totalDuration);
+      }
     }
 
-    // Allow clicking "BẮT ĐẦU CHUYẾN TÀU" button globally in case it exists in a slide
     const clickHandler = (e) => {
+        // Handle start buttons
         if (e.target.classList.contains('start-btn')) {
-             if (e.target.textContent.includes('BẮT ĐẦU')) {
+             if (e.target.textContent.includes('BẮT ĐẦU') || e.target.textContent.includes('Check - in') || e.target.textContent.includes('Check in')) {
                  if (currentSlide < domSlides.length - 1) {
                     currentSlide++;
                     showSlide(currentSlide);
@@ -236,19 +301,97 @@ export default function RecapViewer() {
                  currentSlide = 0;
                  showSlide(currentSlide);
              }
+             return;
+        }
+
+        // Handle generic click to advance/go back
+        if (e.target.closest('.img-placeholder') || e.target.closest('.personal-award-card')) return;
+        
+        const x = e.clientX;
+        const width = window.innerWidth;
+        if (x < width * 0.3) {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        } else {
+            if (currentSlide < domSlides.length - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
         }
     };
     
     document.addEventListener('click', clickHandler);
+
+    // ===== VINH DANH CAROUSEL =====
+    let vdAutoTimer;
+    function initVinhDanhCarousel() {
+        const track = document.getElementById('vdTrack');
+        if (!track) return;
+        const cards = Array.from(track.querySelectorAll('.personal-award-card'));
+        if (cards.length === 0) return;
+        let current = 0;
+        const N = cards.length;
+        const INTERVAL = 5000;
+
+        function render() {
+            const indices = [((current - 1) + N) % N, current, (current + 1) % N];
+            cards.forEach((card, i) => {
+                card.className = 'personal-award-card';
+                if (i === indices[0]) card.classList.add('side-left');
+                else if (i === indices[1]) card.classList.add('center');
+                else if (i === indices[2]) card.classList.add('side-right');
+            });
+        }
+
+        function goTo(idx) {
+            current = ((idx % N) + N) % N;
+            render();
+            resetTimer();
+        }
+
+        window.vdPrev = () => goTo(current - 1);
+        window.vdNext = () => goTo(current + 1);
+
+        function resetTimer() {
+            clearInterval(vdAutoTimer);
+            vdAutoTimer = setInterval(() => goTo(current + 1), INTERVAL);
+        }
+        
+        cards.forEach((card, i) => {
+            card.onclick = () => {
+                if (!card.classList.contains('center')) {
+                    goTo(i);
+                }
+            };
+        });
+
+        let touchStartX = 0;
+        const container = document.getElementById('vdCarousel');
+        if(container) {
+            container.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+            container.addEventListener('touchend', e => {
+                const diff = touchStartX - e.changedTouches[0].clientX;
+                if (Math.abs(diff) > 40) goTo(diff > 0 ? current + 1 : current - 1);
+            });
+        }
+
+        render();
+        resetTimer();
+    }
+    
+    initVinhDanhCarousel();
 
     showSlide(0);
 
     return () => {
       clearTimeout(slideTimer);
       clearInterval(progressInterval);
+      clearInterval(vdAutoTimer);
       document.removeEventListener('click', clickHandler);
     };
-  }, [slides, loading]);
+  }, [slides, loading, vinhDanhMembers]);
 
   if (loading) {
     return <div className="bg-[#0a0a0a] h-screen w-screen flex items-center justify-center text-white">Loading...</div>;
@@ -264,17 +407,22 @@ export default function RecapViewer() {
       <link rel="stylesheet" href="/recap/recap.css" />
       
       <div style={{ background: '#0a0a0a', fontFamily: "'Be Vietnam Pro', sans-serif", overflow: 'hidden', height: '100vh', width: '100vw', position: 'relative' }}>
-          <img src="/recap/image_0.png" className="background-watermark" alt="watermark" />
+          <img src="/recap/imgbackground.png" className="background-watermark" alt="watermark" />
           <div className="progress-container" id="progressBar"></div>
           
           <div ref={containerRef}>
-            {slides.map((slide) => (
-                <div 
-                  key={slide.id} 
-                  dangerouslySetInnerHTML={{ __html: slide.content.html }} 
-                  // Note: outer HTML string contains `<div class="slide...">` already from the templates
-                />
-            ))}
+            {slides.map((slide) => {
+                let html = slide.content.html || '';
+                if (html.includes('VINH_DANH_START') && vinhDanhMembers.length > 0) {
+                  html = html.replace(/<!-- VINH_DANH_START -->[\s\S]*?<!-- VINH_DANH_END -->/, buildVinhDanhCards());
+                }
+                return (
+                  <div 
+                    key={slide.id} 
+                    dangerouslySetInnerHTML={{ __html: html }} 
+                  />
+                );
+            })}
           </div>
       </div>
     </>

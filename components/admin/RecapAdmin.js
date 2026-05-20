@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Plus, Save, Trash2, ArrowUp, ArrowDown, Image as ImageIcon, LayoutTemplate, DownloadCloud, Play, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Plus, Save, Trash2, ArrowUp, ArrowDown, Image as ImageIcon, LayoutTemplate, DownloadCloud, Play, ChevronLeft, ChevronRight, X, Users, Upload } from "lucide-react";
 import slidesData from "./slides_data.json";
 
 export default function RecapAdmin() {
@@ -16,6 +16,9 @@ export default function RecapAdmin() {
   const previewRef = useRef(null);
   const previewTimerRef = useRef(null);
   const previewProgressRef = useRef(null);
+  const [vdMembers, setVdMembers] = useState([]);
+  const [vdLoading, setVdLoading] = useState(false);
+  const [showVdPanel, setShowVdPanel] = useState(false);
 
   useEffect(() => {
     fetchSlides();
@@ -52,6 +55,81 @@ export default function RecapAdmin() {
       setSlides(data);
     }
     setLoading(false);
+  };
+
+  // ── Vinh Danh Members Management ──
+  const fetchVdMembers = async () => {
+    setVdLoading(true);
+    const { data } = await supabase
+      .from('vinh_danh_members')
+      .select('*')
+      .order('order_index', { ascending: true });
+    if (data) setVdMembers(data);
+    setVdLoading(false);
+  };
+
+  useEffect(() => {
+    if (showVdPanel) fetchVdMembers();
+  }, [showVdPanel]);
+
+  const handleVdAdd = async () => {
+    const newMember = { name: 'Tên mới', achievements: 'Thành tích', photo_url: '', order_index: vdMembers.length };
+    const { data, error } = await supabase.from('vinh_danh_members').insert([newMember]).select();
+    if (data) setVdMembers([...vdMembers, data[0]]);
+    if (error) alert('Lỗi: ' + error.message);
+  };
+
+  const handleVdUpdate = async (id, field, value) => {
+    setVdMembers(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
+    await supabase.from('vinh_danh_members').update({ [field]: value, updated_at: new Date().toISOString() }).eq('id', id);
+  };
+
+  const handleVdDelete = async (id) => {
+    if (!confirm('Xóa thành viên vinh danh này?')) return;
+    const member = vdMembers.find(m => m.id === id);
+    if (member?.photo_url?.includes('/storage/v1/object/public/recap_images/')) {
+      const prefix = '/storage/v1/object/public/recap_images/';
+      const idx = member.photo_url.indexOf(prefix);
+      if (idx !== -1) {
+        const filePath = member.photo_url.substring(idx + prefix.length);
+        if (filePath) await supabase.storage.from('recap_images').remove([filePath]);
+      }
+    }
+    await supabase.from('vinh_danh_members').delete().eq('id', id);
+    setVdMembers(prev => prev.filter(m => m.id !== id));
+  };
+
+  const handleVdPhotoUpload = async (id, file) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `vinh_danh/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage.from('recap_images').upload(fileName, file);
+    if (uploadError) { alert('Lỗi upload: ' + uploadError.message); return; }
+    const { data: urlData } = supabase.storage.from('recap_images').getPublicUrl(fileName);
+    await handleVdUpdate(id, 'photo_url', urlData.publicUrl);
+  };
+
+  const handleVdPhotoPaste = (id, e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        handleVdPhotoUpload(id, item.getAsFile());
+        return;
+      }
+    }
+  };
+
+  const handleVdMove = async (index, dir) => {
+    const targetIdx = dir === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= vdMembers.length) return;
+    const newList = [...vdMembers];
+    [newList[index], newList[targetIdx]] = [newList[targetIdx], newList[index]];
+    newList.forEach((m, i) => m.order_index = i);
+    setVdMembers(newList);
+    for (const m of newList) {
+      await supabase.from('vinh_danh_members').update({ order_index: m.order_index }).eq('id', m.id);
+    }
   };
 
   const attachEditorEvents = () => {
@@ -103,6 +181,9 @@ export default function RecapAdmin() {
   };
 
   const handleImageUpload = async (file, targetNode) => {
+    const oldImg = targetNode.querySelector("img");
+    const oldImgUrl = oldImg ? oldImg.src : null;
+
     targetNode.style.opacity = "0.5";
     
     // Upload to supabase storage
@@ -132,6 +213,23 @@ export default function RecapAdmin() {
     
     // Force sync content
     syncEditorContent();
+
+    // Delete old image if it was uploaded to our storage
+    if (oldImgUrl) {
+      const bucket = 'recap_images';
+      const prefix = `/storage/v1/object/public/${bucket}/`;
+      const index = oldImgUrl.indexOf(prefix);
+      if (index !== -1) {
+        const oldFilePath = oldImgUrl.substring(index + prefix.length);
+        if (oldFilePath) {
+          try {
+            await supabase.storage.from(bucket).remove([oldFilePath]);
+          } catch (err) {
+            console.error("Failed to delete old recap image:", err);
+          }
+        }
+      }
+    }
   };
 
   const syncEditorContent = () => {
@@ -167,17 +265,47 @@ export default function RecapAdmin() {
   const handleSave = async () => {
     if (!slides[currentIndex]) return;
     setIsSaving(true);
-    syncEditorContent();
     
-    const currentSlide = slides[currentIndex];
+    // Capture current values upfront (before any async setState)
+    const slideId = slides[currentIndex].id;
+    const slideDuration = slides[currentIndex].duration;
+    const slideOrderIndex = slides[currentIndex].order_index;
+    
+    // Read content directly from DOM to capture all text + image edits
+    let savedHtml = slides[currentIndex].content.html;
+    if (editorRef.current) {
+      const clone = editorRef.current.cloneNode(true);
+      clone.querySelectorAll("[contenteditable]").forEach(node => {
+        node.removeAttribute("contenteditable");
+        node.style.outline = "";
+      });
+      clone.querySelectorAll(".img-placeholder, .credits-img").forEach(node => {
+        node.style.cursor = "";
+        node.style.outline = "";
+      });
+      const slideEl = clone.querySelector('.slide');
+      if (slideEl) {
+        slideEl.classList.remove('active');
+        slideEl.querySelectorAll('.anim').forEach(el => el.classList.remove('show'));
+        slideEl.querySelectorAll('.typewriter').forEach(el => {
+          el.style.visibility = '';
+        });
+      }
+      savedHtml = clone.innerHTML;
+      // Update local state
+      const newSlides = [...slides];
+      newSlides[currentIndex] = { ...newSlides[currentIndex], content: { html: savedHtml } };
+      setSlides(newSlides);
+    }
+    
     const { error } = await supabase
       .from("recap_slides")
       .update({
-        content: currentSlide.content,
-        duration: currentSlide.duration,
-        order_index: currentSlide.order_index
+        content: { html: savedHtml },
+        duration: slideDuration,
+        order_index: slideOrderIndex
       })
-      .eq("id", currentSlide.id);
+      .eq("id", slideId);
       
     if (error) {
       alert("Lỗi lưu slide: " + error.message);
@@ -515,6 +643,10 @@ export default function RecapAdmin() {
           <button onClick={() => handleAddSlide('gallery')} className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 p-2 rounded text-sm"><LayoutTemplate size={16}/> Gallery</button>
           
           <div className="my-2 border-t border-gray-800 pt-2"></div>
+          <button onClick={() => setShowVdPanel(!showVdPanel)} className={`w-full flex items-center justify-center gap-2 ${showVdPanel ? 'bg-amber-700 text-white' : 'bg-gray-800 hover:bg-gray-700'} p-2 rounded text-sm transition`}>
+            <Users size={16}/> Vinh Danh
+          </button>
+          <div className="my-2 border-t border-gray-800 pt-2"></div>
           <button onClick={handleImportA5} className="w-full flex items-center justify-center gap-2 bg-blue-900/50 hover:bg-blue-800 text-blue-200 p-2 rounded text-sm transition">
              <DownloadCloud size={16}/> Import Gốc A5K58
           </button>
@@ -562,6 +694,52 @@ export default function RecapAdmin() {
               </div>
             </div>
             
+            {/* Vinh Danh Members Panel */}
+            {showVdPanel && (
+              <div className="bg-gray-900 border-b border-gray-800 p-4 max-h-[60vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold flex items-center gap-2"><Users size={20}/> Quản Lý Vinh Danh ({vdMembers.length})</h3>
+                  <button onClick={handleVdAdd} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition">
+                    <Plus size={14}/> Thêm
+                  </button>
+                </div>
+                {vdLoading ? <p className="text-gray-400">Đang tải...</p> : (
+                  <div className="space-y-3">
+                    {vdMembers.map((member, idx) => (
+                      <div key={member.id} className="flex gap-3 bg-gray-800 rounded-xl p-3 items-start">
+                        <div className="shrink-0">
+                          <div 
+                            className="w-20 h-24 bg-gray-700 rounded-lg overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-amber-500 transition flex items-center justify-center"
+                            onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (e) => handleVdPhotoUpload(member.id, e.target.files[0]); input.click(); }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files[0]; if (file?.type.startsWith('image/')) handleVdPhotoUpload(member.id, file); }}
+                            onPaste={(e) => handleVdPhotoPaste(member.id, e)}
+                            tabIndex={0}
+                          >
+                            {member.photo_url ? (
+                              <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="text-center text-xs text-gray-400"><Upload size={16} className="mx-auto mb-1" />Kéo thả</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <input type="text" value={member.name} onChange={(e) => handleVdUpdate(member.id, 'name', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm font-bold focus:border-amber-500 outline-none" placeholder="Tên" />
+                          <textarea value={member.achievements} onChange={(e) => handleVdUpdate(member.id, 'achievements', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm resize-none focus:border-amber-500 outline-none" placeholder="Thành tích (mỗi dòng = 1 thành tích)" rows={3} />
+                        </div>
+                        <div className="shrink-0 flex flex-col gap-1">
+                          <button onClick={() => handleVdMove(idx, 'up')} disabled={idx === 0} className="p-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-30 transition"><ArrowUp size={14}/></button>
+                          <button onClick={() => handleVdMove(idx, 'down')} disabled={idx === vdMembers.length - 1} className="p-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-30 transition"><ArrowDown size={14}/></button>
+                          <button onClick={() => handleVdDelete(member.id)} className="p-1 bg-red-900/50 rounded hover:bg-red-800 text-red-300 transition"><Trash2 size={14}/></button>
+                        </div>
+                      </div>
+                    ))}
+                    {vdMembers.length === 0 && <p className="text-gray-500 text-sm text-center py-4">Chưa có thành viên vinh danh. Nhấn "Thêm" để bắt đầu.</p>}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Canvas Preview Area */}
             <div className="flex-1 bg-black overflow-hidden relative" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
                 {/* We render the slide inside a container that mimics the full screen */}

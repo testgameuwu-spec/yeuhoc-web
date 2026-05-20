@@ -4,10 +4,11 @@
     display: flex; flex-direction: column;
     justify-content: flex-start; align-items: center;
     padding: 70px 60px 40px;
-    background: linear-gradient(rgba(248, 249, 250, 0.92), rgba(248, 249, 250, 0.92)), url('/recap/bg.png') center/85vh no-repeat, #f8f9fa;
+    background: linear-gradient(rgba(248, 249, 250, 0.93), rgba(248, 249, 250, 0.93)), url('/recap/bg.png') center/85vh no-repeat, #f8f9fa;
     opacity: 0; visibility: hidden;
     z-index: 1; text-align: center;
     overflow-y: auto;
+    font-family: 'Be Vietnam Pro', sans-serif;
 }
 .slide.active { opacity: 1; visibility: visible; z-index: 2; }
 .slide.slide-centered {
@@ -20,8 +21,8 @@
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 500px; height: auto;
-    opacity: 0.03; z-index: 3;
+    width: min(550px, 90vw); height: auto;
+    opacity: 0.2; z-index: 0;
     pointer-events: none;
 }
 
@@ -51,32 +52,32 @@
 
 /* ===== TYPOGRAPHY ===== */
 .chapter-label {
-    color: #c62828; font-weight: 700;
+    color: #c62828; font-weight: 800;
     letter-spacing: 3px; text-transform: uppercase;
-    font-size: 0.85rem; margin-bottom: 12px;
+    font-size: 0.95rem; margin-bottom: 12px;
 }
 h1 {
-    font-size: 2.2rem; color: #1a1a1a;
-    font-weight: 700; margin-bottom: 14px; line-height: 1.3;
+    font-size: 2.5rem; color: #1a1a1a;
+    font-weight: 800; margin-bottom: 14px; line-height: 1.3;
 }
 h2 {
-    font-size: 1.5rem; color: #1a1a1a;
-    font-weight: 600; margin-bottom: 10px; line-height: 1.4;
+    font-size: 1.8rem; color: #1a1a1a;
+    font-weight: 700; margin-bottom: 10px; line-height: 1.4;
 }
 p {
-    color: #444; font-size: 1rem;
+    color: #333; font-size: 1.25rem;
     line-height: 1.85; max-width: 680px;
-    font-weight: 400; margin: 0 auto;
+    font-weight: 600; margin: 0 auto;
 }
 .slide-desc {
-    color: #666; font-size: 0.95rem;
+    color: #555; font-size: 1.2rem;
     line-height: 1.7; max-width: 620px;
     margin: 4px auto 10px;
-    font-style: italic;
+    font-style: italic; font-weight: 500;
 }
 .slide-quote {
-    color: #c62828; font-size: 1.05rem;
-    font-weight: 500; font-style: italic;
+    color: #c62828; font-size: 1.3rem;
+    font-weight: 700; font-style: italic;
     margin: 8px auto; max-width: 600px;
 }
 .big-title {
@@ -126,6 +127,60 @@ p {
 .start-btn:hover {
     background: #a02020;
     transform: scale(1.05);
+}
+
+/* ===== WELCOME TITLE ===== */
+.welcome-title-img {
+    width: min(500px, 90vw);
+    height: auto;
+    margin-bottom: 30px;
+    object-fit: contain;
+}
+
+/* ===== BIG TITLE IMAGE (SLIDE 3) ===== */
+.big-title-img {
+    width: min(600px, 90vw);
+    height: auto;
+    margin: 20px auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* ===== SPONSOR LOGO ===== */
+.logos-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+.sponsor-logo {
+    height: 45px;
+    width: auto;
+    object-fit: contain;
+}
+.logo-divider {
+    font-size: 1.2rem;
+    color: #333;
+    font-weight: 400;
+}
+
+.checkin-btn {
+    background: #1a2332 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 30px !important;
+    padding: 14px 45px !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: 0 4px 15px rgba(26, 35, 50, 0.25) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.checkin-btn:hover {
+    background: #253247 !important;
+    transform: scale(1.05) translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(26, 35, 50, 0.35) !important;
 }
 
 /* ===== TYPEWRITER ===== */
@@ -255,6 +310,13 @@ p {
     margin-top: 14px;
     margin-bottom: 14px;
 }
+/* Vinh Danh compact: smaller margin */
+.gallery-slideshow.vd-compact-gallery {
+    margin-top: 6px;
+    margin-bottom: 6px;
+    padding: 6px 0;
+    gap: 6px;
+}
 .gallery-track {
     display: flex;
     width: max-content;
@@ -272,6 +334,14 @@ p {
 @keyframes marqueeRight {
     0% { transform: translateX(-50%); }
     100% { transform: translateX(0); }
+}
+/* Vinh Danh: first card visible, scroll left */
+@keyframes marqueeFromRight {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.vd-compact-gallery .gallery-track.dir-left {
+    animation: marqueeFromRight 30s linear infinite;
 }
 .gallery-track .img-placeholder {
     flex-shrink: 0;
@@ -419,4 +489,434 @@ p {
     .gallery-grid { grid-template-columns: 1fr 1fr; }
     .scattered-gallery { height: 400px; }
     .gallery-track .img-placeholder { width: 180px; height: 130px; }
+}
+
+/* ===== VINH DANH CAROUSEL ===== */
+.vinhdanh-carousel {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto 0;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.personal-award-card {
+    background: transparent;
+    border-radius: 20px;
+    padding: 20px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+    transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.personal-award-card.center {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    z-index: 10;
+    pointer-events: auto;
+}
+.personal-award-card.side-left {
+    transform: translate(-120%, -50%) scale(0.85);
+    opacity: 0.3;
+    z-index: 5;
+}
+.personal-award-card.side-right {
+    transform: translate(20%, -50%) scale(0.85);
+    opacity: 0.3;
+    z-index: 5;
+}
+
+@media (max-width: 600px) {
+    .personal-award-card.side-left { transform: translate(-100%, -50%) scale(0.7); opacity: 0; }
+    .personal-award-card.side-right { transform: translate(0%, -50%) scale(0.7); opacity: 0; }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.vd-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(0,0,0,0.05);
+    border: none;
+    border-radius: 50%;
+    color: #333;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 20;
+    transition: background 0.3s;
+}
+.vd-nav:hover { background: rgba(0,0,0,0.1); }
+.vd-nav.prev { left: 0; }
+.vd-nav.next { right: 0; }
+
+
+
+.card-photo {
+    width: 240px;
+    height: 280px;
+    border-radius: 0;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: visible;
+}
+
+.card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 15px rgba(0,0,0,0.15));
+}
+
+.card-info-wrap {
+    text-align: center;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.card-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #222;
+    margin-bottom: 10px;
+}
+
+.card-name-divider {
+    width: 35px;
+    height: 3px;
+    background: #e74c3c;
+    margin: 0 auto 15px;
+    border-radius: 2px;
+}
+
+.card-achievements {
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 20px 15px;
+    color: #333;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    width: 100%;
+    max-width: 280px;
+}
+
+.ach-label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #777;
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+}
+
+.ach-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    font-weight: 700;
+    color: #444;
+}
+
+/* Static card for gallery-slideshow */
+.personal-award-card.static-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto;
+    z-index: 10;
+    flex-shrink: 0;
+    margin: 0 15px 0 0;
+    background: transparent;
+    width: 300px;
+}
+
+/* ===== VINH DANH COMPACT (smaller gallery + stats) ===== */
+.vd-compact-gallery .gallery-track .img-placeholder {
+    width: 220px;
+    height: 150px;
+}
+.vd-compact-gallery .gallery-track .personal-award-card.static-card {
+    width: 200px;
+}
+.vd-compact-gallery .gallery-track .personal-award-card.static-card .card-photo {
+    width: 140px;
+    height: 160px;
+}
+.vd-compact-gallery .gallery-track .personal-award-card.static-card .card-name {
+    font-size: 1rem;
+    margin-bottom: 6px;
+}
+.vd-compact-gallery .gallery-track .personal-award-card.static-card .card-achievements {
+    padding: 10px 8px;
+    max-width: 180px;
+}
+.vd-compact-gallery .gallery-track .personal-award-card.static-card .ach-label {
+    font-size: 0.7rem;
+    margin-bottom: 6px;
+}
+.vd-compact-gallery .gallery-track .personal-award-card.static-card .ach-text {
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+/* ===== STATS SECTION (inspired by reference image) ===== */
+.vd-stats-section {
+    width: 100%;
+    max-width: 700px;
+    margin: 12px auto 0;
+    padding: 0 10px;
+}
+
+.vd-stats-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #c62828;
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.vd-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.vd-stat-card {
+    background: #fff;
+    border: 1.5px solid #eaeaea;
+    border-radius: 12px;
+    padding: 14px 10px 10px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.vd-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
+
+.vd-stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #c62828;
+    line-height: 1.1;
+    letter-spacing: -1px;
+}
+
+.vd-stat-label {
+    font-size: 0.7rem;
+    color: #888;
+    font-weight: 500;
+    margin-top: 4px;
+    line-height: 1.3;
+}
+
+/* Collective Awards */
+.vd-collective-section {
+    background: #fff;
+    border: 1.5px solid #eaeaea;
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: left;
+}
+
+.vd-collective-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #999;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.vd-award-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.vd-award-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #fef3f3;
+    border: 1px solid #fbd5d5;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #c62828;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+.vd-award-tag:hover {
+    background: #c62828;
+    color: #fff;
+    border-color: #c62828;
+}
+
+.vd-award-tag .tag-icon {
+    font-size: 0.85rem;
+}
+
+.vd-fun-fact {
+    margin-top: 12px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.5;
+    font-style: italic;
+    text-align: center;
+}
+.vd-fun-fact strong {
+    color: #c62828;
+    font-weight: 700;
+    font-style: normal;
+}
+
+@media (max-width: 600px) {
+    .vd-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .vd-stat-number {
+        font-size: 1.5rem;
+    }
+    .vd-compact-gallery .gallery-track .personal-award-card.static-card {
+        width: 160px;
+    }
+    .vd-compact-gallery .gallery-track .personal-award-card.static-card .card-photo {
+        width: 110px;
+        height: 130px;
+    }
+}
+
+/* ===== FLOATING BALLOONS (member photos) ===== */
+.balloon-container {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.balloon-side {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+.balloon-side.left { left: 120px; }
+.balloon-side.right { right: 120px; }
+
+.balloon-photo {
+    position: absolute;
+    bottom: -120px;
+    width: 82px;
+    height: 82px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(198, 40, 40, 0.3);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    opacity: 0;
+    animation: floatUp var(--float-duration, 12s) var(--float-delay, 0s) linear infinite;
+}
+
+@keyframes floatUp {
+    0% {
+        bottom: -80px;
+        opacity: 0;
+        transform: translateX(0) scale(0.7);
+    }
+    5% {
+        opacity: 0.7;
+        transform: translateX(0) scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: translateX(var(--sway, 15px)) scale(1);
+    }
+    95% {
+        opacity: 0.3;
+        transform: translateX(calc(var(--sway, 15px) * -1)) scale(0.85);
+    }
+    100% {
+        bottom: 105%;
+        opacity: 0;
+        transform: translateX(0) scale(0.7);
+    }
+}
+
+/* Farewell message styling */
+.farewell-content {
+    position: relative;
+    z-index: 5;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.farewell-content .typewriter {
+    text-align: left;
+    font-size: 1.2rem;
+    line-height: 1.9;
+    color: #333;
+    font-weight: 600;
+    max-width: 600px;
+}
+
+.farewell-signature {
+    margin-top: 16px;
+    font-weight: 800;
+    color: #c62828;
+    letter-spacing: 1px;
+}
+
+@media (max-width: 768px) {
+    .balloon-side { width: 80px; }
+    .balloon-photo { width: 55px; height: 55px; }
+    .balloon-side.left { left: 4px; }
+    .balloon-side.right { right: 4px; }
+    .farewell-content .typewriter { font-size: 0.82rem; }
 }
