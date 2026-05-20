@@ -332,15 +332,17 @@ export default function RecapAdmin() {
   };
 
   const handleImportA5 = async () => {
-    if (!confirm("Thao tác này sẽ cập nhật template nhưng GIỮ NGUYÊN ảnh đã upload. Bạn có chắc chắn?")) return;
+    if (!confirm("Thao tác này sẽ cập nhật giao diện (code mới) nhưng GIỮ NGUYÊN ảnh, chữ viết và thời gian đã chỉnh. Bạn có chắc chắn?")) return;
     
     setIsSaving(true);
 
-    // 1. Extract existing images from current slides before deleting
-    const existingImages = {}; // { slideIndex: [ {selector, imgHtml} ] }
+    // 1. Extract existing images, texts and duration from current slides before deleting
+    const existingData = {}; 
     const parser = new DOMParser();
     slides.forEach((slide, idx) => {
       const doc = parser.parseFromString(slide.content.html || "", "text/html");
+      
+      // Extract images
       const imgContainers = doc.querySelectorAll(".img-placeholder, .credits-img");
       const images = [];
       imgContainers.forEach(container => {
@@ -348,12 +350,23 @@ export default function RecapAdmin() {
         if (img && img.src && (img.src.startsWith("http") || img.src.startsWith("/"))) {
           images.push(img.outerHTML);
         } else {
-          images.push(null); // no image uploaded for this slot
+          images.push(null); 
         }
       });
-      if (images.length > 0) {
-        existingImages[idx] = images;
-      }
+
+      // Extract texts
+      const textNodes = doc.querySelectorAll("h1, h2, p, span, .big-title, .subtitle, .typewriter, .slide-desc, .chapter-label, .slide-quote, .achievement");
+      const texts = [];
+      textNodes.forEach(node => {
+         if (!node.classList.contains('ph-icon')) {
+             texts.push({ 
+               html: node.innerHTML, 
+               textOriginal: node.getAttribute('data-text-original') 
+             });
+         }
+      });
+
+      existingData[idx] = { images, texts, duration: slide.duration || 15 };
     });
 
     // 2. Delete all current slides
@@ -362,27 +375,43 @@ export default function RecapAdmin() {
       await supabase.from("recap_slides").delete().in("id", ids);
     }
     
-    // 3. Build new slides, merging saved images back in
+    // 3. Build new slides, merging saved data back in
     const inserts = slidesData.map((html, idx) => {
       let finalHtml = html;
-      const savedImages = existingImages[idx];
-      if (savedImages && savedImages.length > 0) {
-        // Parse the new template and inject images back
+      const savedData = existingData[idx];
+      
+      if (savedData) {
         const doc = parser.parseFromString(finalHtml, "text/html");
+        
+        // Restore images
         const containers = doc.querySelectorAll(".img-placeholder, .credits-img");
         containers.forEach((container, i) => {
-          if (savedImages[i]) {
-            // Replace placeholder content with the saved image
-            container.innerHTML = savedImages[i];
+          if (savedData.images[i]) {
+            container.innerHTML = savedData.images[i];
           }
         });
+
+        // Restore texts
+        const textNodes = doc.querySelectorAll("h1, h2, p, span, .big-title, .subtitle, .typewriter, .slide-desc, .chapter-label, .slide-quote, .achievement");
+        let textIdx = 0;
+        textNodes.forEach(node => {
+          if (!node.classList.contains('ph-icon') && savedData.texts[textIdx]) {
+              node.innerHTML = savedData.texts[textIdx].html;
+              if (savedData.texts[textIdx].textOriginal) {
+                  node.setAttribute('data-text-original', savedData.texts[textIdx].textOriginal);
+              }
+              textIdx++;
+          }
+        });
+
         finalHtml = doc.body.innerHTML;
       }
+
       return {
         order_index: idx,
         slide_type: "a5k58_slide",
         content: { html: finalHtml },
-        duration: 15
+        duration: savedData ? savedData.duration : 15
       };
     });
     
