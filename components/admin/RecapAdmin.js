@@ -22,12 +22,34 @@ export default function RecapAdmin() {
 
   useEffect(() => {
     fetchSlides();
+    fetchVdMembers();
   }, []);
 
   useEffect(() => {
-    // When slide changes, update the editor content
+    // When slide changes or vinh danh members update, update the editor content
     if (editorRef.current && slides[currentIndex]) {
-      editorRef.current.innerHTML = slides[currentIndex].content.html || "";
+      let html = slides[currentIndex].content.html || "";
+      if (html.includes('VINH_DANH_START') && vdMembers.length > 0) {
+        // Inject but PRESERVE the markers so they get saved back!
+        const cardsHtml = vdMembers.map(m => 
+          `<div class="personal-award-card static-card">
+            <div class="card-photo"><img src="${m.photo_url || ''}" alt="${m.name}"></div>
+            <div class="card-info-wrap">
+              <div class="card-name">${m.name}</div>
+              <div class="card-name-divider"></div>
+              <div class="card-achievements">
+                <div class="ach-label">Thành Tích</div>
+                <div class="ach-text">${(m.achievements || '').replace(/\n/g, '<br>')}</div>
+              </div>
+            </div>
+          </div>`
+        ).join('');
+        html = html.replace(
+          /<!-- VINH_DANH_START -->[\s\S]*?<!-- VINH_DANH_END -->/, 
+          `<!-- VINH_DANH_START -->\n${cardsHtml}\n<!-- VINH_DANH_END -->`
+        );
+      }
+      editorRef.current.innerHTML = html;
       
       // Ensure the slide is visible in editor
       const slideEl = editorRef.current.querySelector('.slide');
@@ -43,7 +65,7 @@ export default function RecapAdmin() {
       
       attachEditorEvents();
     }
-  }, [currentIndex, slides]);
+  }, [currentIndex, slides, vdMembers]);
 
   const fetchSlides = async () => {
     setLoading(true);
@@ -67,10 +89,6 @@ export default function RecapAdmin() {
     if (data) setVdMembers(data);
     setVdLoading(false);
   };
-
-  useEffect(() => {
-    if (showVdPanel) fetchVdMembers();
-  }, [showVdPanel]);
 
   const handleVdAdd = async () => {
     const newMember = { name: 'Tên mới', achievements: 'Thành tích', photo_url: '', order_index: vdMembers.length };
