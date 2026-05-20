@@ -164,6 +164,19 @@ export default function RecapAdmin() {
     }
   };
 
+  const handleAddCollectiveAward = () => {
+    if (!editorRef.current) return;
+    const tagsContainer = editorRef.current.querySelector('.vd-award-tags');
+    if (tagsContainer) {
+      const newTag = document.createElement('span');
+      newTag.className = 'vd-award-tag';
+      newTag.innerHTML = `<span class="tag-icon">🥇</span> Nhập giải thưởng mới...`;
+      tagsContainer.appendChild(newTag);
+      attachEditorEvents();
+      syncEditorContent();
+    }
+  };
+
   const attachEditorEvents = () => {
     const el = editorRef.current;
     if (!el) return;
@@ -744,6 +757,11 @@ export default function RecapAdmin() {
                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 w-20 text-white"
                    />
                 </div>
+                {slides[currentIndex]?.content?.html?.includes('vd-award-tags') && (
+                  <button onClick={handleAddCollectiveAward} className="flex items-center gap-1 px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded font-medium transition ml-4">
+                    <Plus size={16}/> Thêm Giải Tập Thể
+                  </button>
+                )}
               </div>
               
               <div className="flex items-center gap-3">
