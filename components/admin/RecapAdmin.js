@@ -367,9 +367,80 @@ export default function RecapAdmin() {
     setIsSaving(false);
   };
 
+  const handleDownloadBackup = () => {
+    const dataStr = JSON.stringify({ slides, vdMembers }, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recap_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleRestoreBackup = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (!data.slides || !Array.isArray(data.slides)) {
+          alert("File backup không hợp lệ!");
+          return;
+        }
+        if (!confirm("CẢNH BÁO: Khôi phục sẽ xóa và ghi đè toàn bộ dữ liệu hiện tại bằng dữ liệu từ file backup. Bạn có chắc chắn?")) return;
+        setIsSaving(true);
+
+        // Delete all current slides
+        if (slides.length > 0) {
+          const ids = slides.map(s => s.id);
+          await supabase.from("recap_slides").delete().in("id", ids);
+        }
+
+        // Insert new slides
+        const inserts = data.slides.map(s => {
+            const { id, created_at, ...rest } = s; 
+            return rest;
+        });
+        const { data: newSlides, error } = await supabase.from("recap_slides").insert(inserts).select();
+        
+        if (error) throw error;
+        
+        // Restore vdMembers if present
+        if (data.vdMembers && Array.isArray(data.vdMembers)) {
+          const { data: currentVd } = await supabase.from("vinh_danh_members").select('id');
+          if (currentVd && currentVd.length > 0) {
+             await supabase.from("vinh_danh_members").delete().in("id", currentVd.map(v => v.id));
+          }
+          const vdInserts = data.vdMembers.map(v => {
+             const { id, created_at, ...rest } = v;
+             return rest;
+          });
+          if (vdInserts.length > 0) {
+             await supabase.from("vinh_danh_members").insert(vdInserts);
+          }
+        }
+
+        setSlides(newSlides.sort((a,b) => a.order_index - b.order_index));
+        setCurrentIndex(0);
+        alert("Khôi phục thành công!");
+      } catch (err) {
+        alert("Lỗi khôi phục: " + err.message);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // reset
+  };
+
   const handleImportA5 = async () => {
-    if (!confirm("Thao tác này sẽ cập nhật giao diện (code mới) nhưng GIỮ NGUYÊN ảnh, chữ viết và thời gian đã chỉnh. Bạn có chắc chắn?")) return;
+    if (!confirm('LƯU Ý: Import sẽ nạp lại 21 slide mẫu. Nếu bạn đã thêm/xóa slide, tính năng giữ lại text/ảnh cũ có thể bị dán nhầm vị trí. Hệ thống sẽ tự động TẢI XUỐNG 1 FILE BACKUP trước khi làm. Tiếp tục?')) return;
     
+    // Auto-backup to prevent disasters
+    handleDownloadBackup();
+
     setIsSaving(true);
 
     // 1. Extract existing images, texts and duration from current slides before deleting
@@ -728,6 +799,14 @@ export default function RecapAdmin() {
           <button onClick={handleImportA5} className="w-full flex items-center justify-center gap-2 bg-blue-900/50 hover:bg-blue-800 text-blue-200 p-2 rounded text-sm transition">
              <DownloadCloud size={16}/> Import Gốc A5K58
           </button>
+          <div className="my-2 border-t border-gray-800 pt-2"></div>
+          <button onClick={handleDownloadBackup} className="w-full flex items-center justify-center gap-2 bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 p-2 rounded text-sm transition">
+             ⬇️ Tải Backup (JSON)
+          </button>
+          <label className="w-full flex items-center justify-center gap-2 bg-rose-900/50 hover:bg-rose-800 text-rose-200 p-2 rounded text-sm transition cursor-pointer">
+             ⬆️ Khôi phục Backup
+             <input type="file" accept=".json" className="hidden" onChange={handleRestoreBackup} />
+          </label>
         </div>
       </div>
 
