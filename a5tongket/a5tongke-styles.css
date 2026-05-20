@@ -1,7 +1,7 @@
 /* ===== RESET & BASE ===== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-    background: #0a0a0a;
+    background: #f8f9fa;
     font-family: 'Be Vietnam Pro', sans-serif;
     overflow: hidden;
     height: 100vh; width: 100vw;
@@ -13,7 +13,7 @@ body {
     display: flex; flex-direction: column;
     justify-content: flex-start; align-items: center;
     padding: 70px 60px 40px;
-    background: #ffffff;
+    background: transparent;
     opacity: 0; visibility: hidden;
     z-index: 1; text-align: center;
     overflow-y: auto;
@@ -29,8 +29,8 @@ body {
     position: fixed;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 500px; height: auto;
-    opacity: 0.03; z-index: 3;
+    width: min(550px, 90vw); height: auto;
+    opacity: 0.2; z-index: 0;
     pointer-events: none;
 }
 
@@ -135,6 +135,60 @@ p {
 .start-btn:hover {
     background: #a02020;
     transform: scale(1.05);
+}
+
+/* ===== WELCOME TITLE ===== */
+.welcome-title-img {
+    width: min(500px, 90vw);
+    height: auto;
+    margin-bottom: 30px;
+    object-fit: contain;
+}
+
+/* ===== BIG TITLE IMAGE (SLIDE 3) ===== */
+.big-title-img {
+    width: min(600px, 90vw);
+    height: auto;
+    margin: 20px auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* ===== SPONSOR LOGO ===== */
+.logos-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+.sponsor-logo {
+    height: 45px;
+    width: auto;
+    object-fit: contain;
+}
+.logo-divider {
+    font-size: 1.2rem;
+    color: #333;
+    font-weight: 400;
+}
+
+.checkin-btn {
+    background: #1a2332 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 30px !important;
+    padding: 14px 45px !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: 0 4px 15px rgba(26, 35, 50, 0.25) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.checkin-btn:hover {
+    background: #253247 !important;
+    transform: scale(1.05) translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(26, 35, 50, 0.35) !important;
 }
 
 /* ===== TYPEWRITER ===== */
@@ -383,4 +437,176 @@ p {
     .gallery-grid { grid-template-columns: 1fr 1fr; }
     .scattered-gallery { height: 400px; }
     .gallery-track .img-placeholder { width: 180px; height: 130px; }
+}
+
+/* ===== VINH DANH CAROUSEL ===== */
+.vinhdanh-carousel {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto 0;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.personal-award-card {
+    background: transparent;
+    border-radius: 20px;
+    padding: 20px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+    transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.personal-award-card.center {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    z-index: 10;
+    pointer-events: auto;
+}
+.personal-award-card.side-left {
+    transform: translate(-120%, -50%) scale(0.85);
+    opacity: 0.3;
+    z-index: 5;
+}
+.personal-award-card.side-right {
+    transform: translate(20%, -50%) scale(0.85);
+    opacity: 0.3;
+    z-index: 5;
+}
+
+@media (max-width: 600px) {
+    .personal-award-card.side-left { transform: translate(-100%, -50%) scale(0.7); opacity: 0; }
+    .personal-award-card.side-right { transform: translate(0%, -50%) scale(0.7); opacity: 0; }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.vd-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(0,0,0,0.05);
+    border: none;
+    border-radius: 50%;
+    color: #333;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 20;
+    transition: background 0.3s;
+}
+.vd-nav:hover { background: rgba(0,0,0,0.1); }
+.vd-nav.prev { left: 0; }
+.vd-nav.next { right: 0; }
+
+
+
+.card-photo {
+    width: 240px;
+    height: 280px;
+    border-radius: 0;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: visible;
+}
+
+.card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 15px rgba(0,0,0,0.15));
+}
+
+.card-info-wrap {
+    text-align: center;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.card-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #222;
+    margin-bottom: 10px;
+}
+
+.card-name-divider {
+    width: 35px;
+    height: 3px;
+    background: #e74c3c;
+    margin: 0 auto 15px;
+    border-radius: 2px;
+}
+
+.card-achievements {
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 20px 15px;
+    color: #333;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    width: 100%;
+    max-width: 280px;
+}
+
+.ach-label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #777;
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+}
+
+.ach-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    font-weight: 700;
+    color: #444;
+}
+
+/* Static card for gallery-slideshow */
+.personal-award-card.static-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto;
+    z-index: 10;
+    flex-shrink: 0;
+    margin: 0 15px 0 0;
+    background: transparent;
+    width: 300px;
 }

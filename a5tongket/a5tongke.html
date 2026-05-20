@@ -13,14 +13,18 @@
 
 <body>
 
-    <img src="image_0.png" class="background-watermark">
+    <img src="imgbackground.png" class="background-watermark">
     <div class="progress-container" id="progressBar"></div>
 
     <!-- ==================== WELCOME ==================== -->
     <div class="slide active slide-centered" id="welcomeSlide" data-manual="true">
-        <h1 class="big-title anim" data-delay="300">KÝ ỨC THĂNG LONG</h1>
-        <p class="subtitle anim" data-delay="800">Sẵn sàng cùng A5K58 ôn lại thanh xuân?</p>
-        <button class="start-btn anim" data-delay="1500" onclick="nextSlide()">BẮT ĐẦU CHUYẾN TÀU</button>
+        <div class="logos-container anim" data-delay="100">
+            <img src="logo1.png" class="sponsor-logo" alt="YeuHoc">
+            <span class="logo-divider">x</span>
+            <img src="logo2.png" class="sponsor-logo" alt="A5K58">
+        </div>
+        <img src="title.png" class="welcome-title-img anim" data-delay="300" alt="A5 K58 End of a Journey">
+        <button class="start-btn checkin-btn anim" data-delay="1000" onclick="event.stopPropagation(); nextSlide()">Check in ▶</button>
     </div>
 
     <!-- ==================== PHẦN 1: KHỞI ĐẦU ==================== -->
@@ -29,10 +33,10 @@
         <p class="slide-desc anim" data-delay="2500">Mọi thứ bắt đầu bằng những ánh mắt rụt rè, những câu chào ngập ngừng...</p>
     </div>
 
-    <!-- Slide 2: A5K58 Big Reveal -->
+    <!-- Slide 3: Giới thiệu hành trình -->
     <div class="slide slide-centered">
         <p class="chapter-label anim" data-delay="300">Hành trình thanh xuân</p>
-        <h1 class="big-title anim" data-delay="800">A5K58</h1>
+        <img src="a5chuyentau.png" class="big-title-img anim" data-delay="800" alt="A5K58">
         <p class="subtitle anim" data-delay="1400">NIÊN KHÓA 2023 — 2026</p>
         <p class="slide-quote anim" data-delay="2000">"Chuyến tàu mang tên thanh xuân, chỉ có vé một chiều."</p>
     </div>
@@ -443,34 +447,87 @@
         <p class="slide-quote anim" data-delay="1800">"Chữ ký chi chít trên áo, nụ cười in hằn trong tim."</p>
     </div>
 
-    <!-- Slide 19: Lễ Trưởng Thành -->
-    <div class="slide">
-        <h2 class="anim" data-delay="300">Lễ Trưởng Thành & Vinh Danh</h2>
-        <p class="slide-desc anim" data-delay="500">Ba năm, bao nhiêu nỗ lực thầm lặng đã kết tinh thành những thành tựu
-            đáng tự hào.</p>
+    <!-- Slide 16: Vinh Danh Cá Nhân -->    <div class="slide">
+        <h2 class="anim" data-delay="300">Vinh Danh Cá Nhân</h2>
+        <p class="slide-desc anim" data-delay="500">Những cá nhân xuất sắc với thành tích nổi bật đáng tự hào.</p>
 
-        <div class="scattered-gallery">
-            <div class="img-placeholder anim" data-delay="700">
-                <span class="ph-icon">🎓</span><span>Lễ bế giảng toàn trường</span>
-            </div>
-            <div class="img-placeholder anim" data-delay="900">
-                <span class="ph-icon">😭</span><span>Ôm nhau khóc</span>
-            </div>
-            <div class="img-placeholder anim" data-delay="1100">
-                <span class="ph-icon">⭐</span><span>Vinh danh thành tựu</span>
-            </div>
-            <div class="img-placeholder anim" data-delay="1300">
-                <span class="ph-icon">👩‍🏫</span><span>Chụp cùng giáo viên</span>
-            </div>
-            <div class="img-placeholder anim" data-delay="1500">
-                <span class="ph-icon">📜</span><span>Bằng khen</span>
+        <div class="gallery-slideshow anim" data-delay="800">
+            <div class="gallery-track dir-left">
+
+                <div class="personal-award-card static-card">
+                    <div class="card-photo"><img src="haiminhvd.png" alt="Trần Hải Minh"></div>
+                    <div class="card-info-wrap">
+                        <div class="card-name">Trần Hải Minh</div>
+                        <div class="card-name-divider"></div>
+                        <div class="card-achievements">
+                            <div class="ach-label">Thành Tích</div>
+                            <div class="ach-text">120 HSA<br> IELTS 7.0<br> Trợ giảng Yêu Học <br> Trợ giảng HCTK</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="personal-award-card static-card">
+                    <div class="card-photo"><img src="hieunguyenvinhdanh.png" alt="Đặng Hiếu Nguyên"></div>
+                    <div class="card-info-wrap">
+                        <div class="card-name">Đặng Hiếu Nguyên</div>
+                        <div class="card-name-divider"></div>
+                        <div class="card-achievements">
+                            <div class="ach-label">Thành Tích</div>
+                            <div class="ach-text">HSK 6<br> IELTS 7.0 <br> Cổ đông Yêu Học</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="personal-award-card static-card">
+                    <div class="card-photo"><img src="nhatduyvinhdanh.png" alt="Nguyễn Nhật Duy"></div>
+                    <div class="card-info-wrap">
+                        <div class="card-name">Nguyễn Nhật Duy</div>
+                        <div class="card-name-divider"></div>
+                        <div class="card-achievements">
+                            <div class="ach-label">Thành Tích</div>
+                            <div class="ach-text">Giải Nhất HSG Toán TP Hà Nội<br> Trợ giảng ÁiTDM<br> Trợ giảng Yêu Học</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="personal-award-card static-card">
+                    <div class="card-photo"><img src="duyminhvinhdanh.png" alt="Phạm Duy Minh"></div>
+                    <div class="card-info-wrap">
+                        <div class="card-name">Phạm Duy Minh</div>
+                        <div class="card-name-divider"></div>
+                        <div class="card-achievements">
+                            <div class="ach-label">Thành Tích</div>
+                            <div class="ach-text">1590 SAT<br> IELTS 7.5<br> Giám đốc Yêu Học</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="personal-award-card static-card">
+                    <div class="card-photo"><img src="hainamvinhdanh.png" alt="Trần Hoàng Hải Nam"></div>
+                    <div class="card-info-wrap">
+                        <div class="card-name">Trần Hoàng Hải Nam</div>
+                        <div class="card-name-divider"></div>
+                        <div class="card-achievements">
+                            <div class="ach-label">Thành Tích</div>
+                            <div class="ach-text">112 HSA<br> IELTS 7.5<br> Trợ Giảng Yêu Học <br> Trợ giảng HCTK</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="personal-award-card static-card">
+                    <div class="card-photo"><img src="quanganhvinhdanh.png" alt="Nguyễn Quang Anh"></div>
+                    <div class="card-info-wrap">
+                        <div class="card-name">Nguyễn Quang Anh</div>
+                        <div class="card-name-divider"></div>
+                        <div class="card-achievements">
+                            <div class="ach-label">Thành Tích</div>
+                            <div class="ach-text">Bố của các thành viên trên</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <p class="slide-quote anim" data-delay="1800">"Chúng ta không còn là học sinh lớp 12 nữa rồi..."</p>
-    </div>
-
-    <!-- ==================== PHẦN 5: KẾT BÀI ==================== -->
+    </div>\n\n    <!-- ==================== PHẦN 5: KẾT BÀI ==================== -->
     <div class="slide slide-centered">
         <p class="chapter-label anim" data-delay="0">A5K58 — Thành viên</p>
         <p class="slide-desc anim" data-delay="500">Những người đã cùng nhau viết nên câu chuyện này.</p>

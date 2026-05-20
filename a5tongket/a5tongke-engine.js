@@ -299,3 +299,64 @@ document.addEventListener('paste', e => {
         reader.readAsDataURL(file);
     }
 });
+
+// ===== VINH DANH CAROUSEL =====
+function initVinhDanhCarousel() {
+    const track = document.getElementById('vdTrack');
+    if (!track) return;
+    const cards = Array.from(track.querySelectorAll('.personal-award-card'));
+    if (cards.length === 0) return;
+    const prevBtn = document.getElementById('vdPrev');
+    const nextBtn = document.getElementById('vdNext');
+    let current = 0;
+    const N = cards.length;
+    let autoTimer;
+    const INTERVAL = 5000;
+
+    function render() {
+        const indices = [((current - 1) + N) % N, current, (current + 1) % N];
+        cards.forEach((card, i) => {
+            card.className = 'personal-award-card'; // reset
+            if (i === indices[0]) card.classList.add('side-left');
+            else if (i === indices[1]) card.classList.add('center');
+            else if (i === indices[2]) card.classList.add('side-right');
+        });
+    }
+
+    function goTo(idx) {
+        current = ((idx % N) + N) % N;
+        render();
+        resetTimer();
+    }
+
+    window.vdPrev = () => goTo(current - 1);
+    window.vdNext = () => goTo(current + 1);
+
+    function resetTimer() {
+        clearInterval(autoTimer);
+        autoTimer = setInterval(() => goTo(current + 1), INTERVAL);
+    }
+    
+    cards.forEach((card, i) => {
+        card.addEventListener('click', () => {
+            if (!card.classList.contains('center')) {
+                goTo(i);
+            }
+        });
+    });
+
+    let touchStartX = 0;
+    const container = document.getElementById('vdCarousel');
+    if(container) {
+        container.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        container.addEventListener('touchend', e => {
+            const diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 40) goTo(diff > 0 ? current + 1 : current - 1);
+        });
+    }
+
+    render();
+    resetTimer();
+}
+
+initVinhDanhCarousel();

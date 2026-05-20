@@ -313,6 +313,7 @@ function ProfilePageInner() {
       setUploadingAvatar(true);
       setMessage({ type: '', text: '' });
 
+      const oldAvatarUrl = avatarUrl;
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
@@ -348,6 +349,23 @@ function ProfilePageInner() {
       // Force a custom event so Navbar can also update if we implement listening to it,
       // or just let it update on next reload.
       window.dispatchEvent(new Event('yeuhoc-profile-updated'));
+
+      // Delete old avatar from storage if it was uploaded to our storage
+      if (oldAvatarUrl) {
+        const bucket = 'avatars';
+        const prefix = `/storage/v1/object/public/${bucket}/`;
+        const index = oldAvatarUrl.indexOf(prefix);
+        if (index !== -1) {
+          const oldFilePath = oldAvatarUrl.substring(index + prefix.length);
+          if (oldFilePath) {
+            try {
+              await supabase.storage.from(bucket).remove([oldFilePath]);
+            } catch (err) {
+              console.error("Failed to delete old avatar:", err);
+            }
+          }
+        }
+      }
       
     } catch (error) {
       console.error('Error uploading avatar:', error);

@@ -19,6 +19,55 @@ export default function RecapAdmin() {
   const [vdMembers, setVdMembers] = useState([]);
   const [vdLoading, setVdLoading] = useState(false);
   const [showVdPanel, setShowVdPanel] = useState(false);
+  const [showPlaceholderBar, setShowPlaceholderBar] = useState(true);
+  const [placeholderVersion, setPlaceholderVersion] = useState(0);
+  const [selectedPlaceholder, setSelectedPlaceholder] = useState(null);
+
+  // Extract placeholder info from current slide
+  const getPlaceholders = useCallback(() => {
+    if (!editorRef.current) return [];
+    const phs = editorRef.current.querySelectorAll('.img-placeholder');
+    return Array.from(phs).map((ph, i) => {
+      const img = ph.querySelector('img');
+      const label = ph.querySelector('span:not(.ph-icon)');
+      const icon = ph.querySelector('.ph-icon');
+      return {
+        index: i,
+        hasImage: !!img,
+        imgSrc: img?.src || null,
+        label: label?.textContent || `Ảnh ${i + 1}`,
+        icon: icon?.textContent || '📸',
+        element: ph
+      };
+    });
+  }, []);
+
+  // Reset selection when slide changes
+  useEffect(() => {
+    setSelectedPlaceholder(null);
+  }, [currentIndex]);
+
+  // Global paste handler for placeholder bar
+  useEffect(() => {
+    const handlePaste = (e) => {
+      if (selectedPlaceholder === null) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          const phs = editorRef.current?.querySelectorAll('.img-placeholder');
+          if (phs && phs[selectedPlaceholder]) {
+            handleImageUpload(file, phs[selectedPlaceholder]);
+          }
+          return;
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [selectedPlaceholder]);
 
   useEffect(() => {
     fetchSlides();
@@ -258,6 +307,8 @@ export default function RecapAdmin() {
     
     // Force sync content
     syncEditorContent();
+    // Bump placeholder version so the bar re-renders
+    setPlaceholderVersion(v => v + 1);
 
     // Delete old image if it was uploaded to our storage
     if (oldImgUrl) {
@@ -856,6 +907,53 @@ export default function RecapAdmin() {
               </div>
             </div>
             
+            {/* Image Placeholders Bar */}
+            {showPlaceholderBar && (() => {
+              const phs = getPlaceholders();
+              if (phs.length === 0) return null;
+              return (
+                <div className="bg-gray-900/95 border-b border-gray-800 px-6 py-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <ImageIcon size={16} className="text-amber-400" />
+                    <span className="text-sm font-semibold text-amber-400">Khung ảnh trong slide ({phs.length})</span>
+                    {selectedPlaceholder !== null ? (
+                      <span className="text-xs text-green-400 font-medium animate-pulse">📋 Đã chọn #{selectedPlaceholder + 1} — Ctrl+V để dán ảnh</span>
+                    ) : (
+                      <span className="text-xs text-gray-500">Click chọn khung → Copy ảnh → Ctrl+V dán</span>
+                    )}
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+                    {phs.map((ph) => (
+                      <div
+                        key={ph.index}
+                        onClick={() => setSelectedPlaceholder(selectedPlaceholder === ph.index ? null : ph.index)}
+                        className={`shrink-0 w-28 h-20 rounded-lg border-2 cursor-pointer flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 relative ${
+                          selectedPlaceholder === ph.index
+                            ? 'border-amber-400 bg-amber-900/30 ring-2 ring-amber-400/50 scale-105'
+                            : ph.hasImage
+                              ? 'border-green-500/60 bg-green-900/20 border-solid'
+                              : 'border-gray-600 border-dashed bg-gray-800 hover:border-amber-500 hover:bg-gray-700'
+                        }`}
+                        title={`${ph.label} — Click chọn rồi Ctrl+V`}
+                      >
+                        {selectedPlaceholder === ph.index && (
+                          <div className="absolute -top-2 -right-2 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black z-10">✓</div>
+                        )}
+                        {ph.hasImage ? (
+                          <img src={ph.imgSrc} alt={ph.label} className="w-full h-full object-cover rounded-md" />
+                        ) : (
+                          <>
+                            <span className="text-lg">{ph.icon}</span>
+                            <span className="text-[10px] text-gray-400 truncate max-w-[100px] px-1">{ph.label}</span>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Vinh Danh Members Panel */}
             {showVdPanel && (
               <div className="bg-gray-900 border-b border-gray-800 p-4 max-h-[60vh] overflow-y-auto">
