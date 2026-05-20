@@ -8,6 +8,7 @@ export default function RecapViewer() {
   const [loading, setLoading] = useState(true);
   const [vinhDanhMembers, setVinhDanhMembers] = useState([]);
   const containerRef = useRef(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     fetchSlides();
@@ -293,11 +294,20 @@ export default function RecapViewer() {
         // Handle start buttons
         if (e.target.classList.contains('start-btn')) {
              if (e.target.textContent.includes('BẮT ĐẦU') || e.target.textContent.includes('Check - in') || e.target.textContent.includes('Check in')) {
+                 // Start background music
+                 if (audioRef.current) {
+                   audioRef.current.currentTime = 0;
+                   audioRef.current.play().catch(() => {});
+                 }
                  if (currentSlide < domSlides.length - 1) {
                     currentSlide++;
                     showSlide(currentSlide);
                  }
              } else if (e.target.textContent.includes('XEM LẠI')) {
+                 if (audioRef.current) {
+                   audioRef.current.currentTime = 0;
+                   audioRef.current.play().catch(() => {});
+                 }
                  currentSlide = 0;
                  showSlide(currentSlide);
              }
@@ -405,6 +415,7 @@ export default function RecapViewer() {
     <>
       <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&display=swap" rel="stylesheet" />
       <link rel="stylesheet" href="/recap/recap.css" />
+      <audio ref={audioRef} src="/recap/backgroundmusic.mp3" loop preload="auto" />
       
       <div style={{ background: '#0a0a0a', fontFamily: "'Be Vietnam Pro', sans-serif", overflow: 'hidden', height: '100vh', width: '100vw', position: 'relative' }}>
           <img src="/recap/imgbackground.png" className="background-watermark" alt="watermark" />
