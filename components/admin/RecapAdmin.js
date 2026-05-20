@@ -279,7 +279,7 @@ export default function RecapAdmin() {
     
     // Capture current values upfront (before any async setState)
     const slideId = slides[currentIndex].id;
-    const slideDuration = slides[currentIndex].duration;
+    const slideDuration = parseInt(slides[currentIndex].duration) || 15;
     const slideOrderIndex = slides[currentIndex].order_index;
     
     // Read content directly from DOM to capture all text + image edits
@@ -305,9 +305,11 @@ export default function RecapAdmin() {
       savedHtml = clone.innerHTML;
       // Update local state
       const newSlides = [...slides];
-      newSlides[currentIndex] = { ...newSlides[currentIndex], content: { html: savedHtml } };
+      newSlides[currentIndex] = { ...newSlides[currentIndex], content: { html: savedHtml }, duration: slideDuration };
       setSlides(newSlides);
     }
+    
+    console.log('Saving slide:', { id: slideId, duration: slideDuration, order_index: slideOrderIndex, htmlLength: savedHtml.length });
     
     const { error } = await supabase
       .from("recap_slides")
@@ -319,11 +321,12 @@ export default function RecapAdmin() {
       .eq("id", slideId);
       
     if (error) {
+      console.error('Save error:', error);
       alert("Lỗi lưu slide: " + error.message);
     } else {
       // Re-fetch to sync state without F5
       await fetchSlides();
-      alert("Đã lưu slide thành công!");
+      alert("Đã lưu slide thành công! (Duration: " + slideDuration + "s)");
     }
     setIsSaving(false);
   };
