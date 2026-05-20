@@ -669,7 +669,7 @@ p {
     height: 150px;
 }
 .vd-compact-gallery .gallery-track .personal-award-card.static-card {
-    width: 200px;
+    width: 260px;
 }
 .vd-compact-gallery .gallery-track .personal-award-card.static-card .card-photo {
     width: 140px;
@@ -680,8 +680,8 @@ p {
     margin-bottom: 6px;
 }
 .vd-compact-gallery .gallery-track .personal-award-card.static-card .card-achievements {
-    padding: 10px 8px;
-    max-width: 180px;
+    padding: 12px 10px;
+    max-width: 240px;
 }
 .vd-compact-gallery .gallery-track .personal-award-card.static-card .ach-label {
     font-size: 0.7rem;
