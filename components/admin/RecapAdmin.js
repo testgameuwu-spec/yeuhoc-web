@@ -615,11 +615,8 @@ export default function RecapAdmin() {
     animatePreviewSlide(domSlides[index]);
 
     // Duration calculation
-    const contentEnd = getContentEndTime(domSlides[index]);
-    const contentBased = contentEnd + 1500;
     const dbDuration = slides[index]?.duration;
-    const configuredMs = (dbDuration && dbDuration > 0) ? dbDuration * 1000 : 15000;
-    const totalDuration = Math.max(contentBased, configuredMs);
+    const totalDuration = (dbDuration && dbDuration > 0) ? dbDuration * 1000 : 15000;
 
     // Progress animation
     let elapsed = 0;

@@ -140,14 +140,9 @@ export default function RecapViewer() {
     }
 
     function getSlideDuration(slideDom, index) {
-      const contentEnd = getContentEndTime(slideDom);
-      // Add 1.5s buffer after content finishes
-      const contentBasedDuration = contentEnd + 1500;
-      // Use DB configured duration as a minimum floor
+      // Use DB configured duration strictly
       const dbDuration = slides[index]?.duration;
-      const configuredMs = (dbDuration && dbDuration > 0) ? dbDuration * 1000 : 15000;
-      // Use whichever is larger: content-based or configured
-      return Math.max(contentBasedDuration, configuredMs);
+      return (dbDuration && dbDuration > 0) ? dbDuration * 1000 : 15000;
     }
 
     function cycleOverlayImages(container) {
