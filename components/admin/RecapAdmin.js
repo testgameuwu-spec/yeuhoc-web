@@ -25,31 +25,34 @@ export default function RecapAdmin() {
     fetchVdMembers();
   }, []);
 
+  const getInjectedHtml = (baseHtml) => {
+    let html = baseHtml || "";
+    if (html.includes('VINH_DANH_START') && vdMembers.length > 0) {
+      const cardsHtml = vdMembers.map(m => 
+        `<div class="personal-award-card static-card">
+          <div class="card-photo"><img src="${m.photo_url || ''}" alt="${m.name}"></div>
+          <div class="card-info-wrap">
+            <div class="card-name">${m.name}</div>
+            <div class="card-name-divider"></div>
+            <div class="card-achievements">
+              <div class="ach-label">Thành Tích</div>
+              <div class="ach-text">${(m.achievements || '').replace(/\n/g, '<br>')}</div>
+            </div>
+          </div>
+        </div>`
+      ).join('');
+      html = html.replace(
+        /<!-- VINH_DANH_START -->[\s\S]*?<!-- VINH_DANH_END -->/, 
+        `<!-- VINH_DANH_START -->\n${cardsHtml}\n<!-- VINH_DANH_END -->`
+      );
+    }
+    return html;
+  };
+
   useEffect(() => {
     // When slide changes or vinh danh members update, update the editor content
     if (editorRef.current && slides[currentIndex]) {
-      let html = slides[currentIndex].content.html || "";
-      if (html.includes('VINH_DANH_START') && vdMembers.length > 0) {
-        // Inject but PRESERVE the markers so they get saved back!
-        const cardsHtml = vdMembers.map(m => 
-          `<div class="personal-award-card static-card">
-            <div class="card-photo"><img src="${m.photo_url || ''}" alt="${m.name}"></div>
-            <div class="card-info-wrap">
-              <div class="card-name">${m.name}</div>
-              <div class="card-name-divider"></div>
-              <div class="card-achievements">
-                <div class="ach-label">Thành Tích</div>
-                <div class="ach-text">${(m.achievements || '').replace(/\n/g, '<br>')}</div>
-              </div>
-            </div>
-          </div>`
-        ).join('');
-        html = html.replace(
-          /<!-- VINH_DANH_START -->[\s\S]*?<!-- VINH_DANH_END -->/, 
-          `<!-- VINH_DANH_START -->\n${cardsHtml}\n<!-- VINH_DANH_END -->`
-        );
-      }
-      editorRef.current.innerHTML = html;
+      editorRef.current.innerHTML = getInjectedHtml(slides[currentIndex].content.html);
       
       // Ensure the slide is visible in editor
       const slideEl = editorRef.current.querySelector('.slide');
@@ -866,7 +869,7 @@ export default function RecapAdmin() {
             </div>
             {/* Slides */}
             {slides.map((slide) => (
-              <div key={slide.id} dangerouslySetInnerHTML={{ __html: slide.content.html }} />
+              <div key={slide.id} dangerouslySetInnerHTML={{ __html: getInjectedHtml(slide.content.html) }} />
             ))}
           </div>
         </div>
