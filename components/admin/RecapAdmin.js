@@ -347,6 +347,9 @@ export default function RecapAdmin() {
         }
       }
     }
+
+    // Auto save sau khi up ảnh thành công
+    await handleSave();
   };
 
   const syncEditorContent = () => {
@@ -413,9 +416,11 @@ export default function RecapAdmin() {
         });
       }
       savedHtml = clone.innerHTML;
-      // Update local state
+      // Update local state preserving other JSON fields like quotes
       const newSlides = [...slides];
-      newSlides[currentIndex] = { ...newSlides[currentIndex], content: { html: savedHtml }, duration: slideDuration };
+      const currentContent = newSlides[currentIndex].content || {};
+      const newContent = { ...currentContent, html: savedHtml };
+      newSlides[currentIndex] = { ...newSlides[currentIndex], content: newContent, duration: slideDuration };
       setSlides(newSlides);
     }
     
@@ -424,7 +429,7 @@ export default function RecapAdmin() {
     const { error } = await supabase
       .from("recap_slides")
       .update({
-        content: { html: savedHtml },
+        content: slides[currentIndex].content, // Use the updated state
         duration: slideDuration,
         order_index: slideOrderIndex
       })
@@ -744,6 +749,50 @@ export default function RecapAdmin() {
       const text = el.dataset.textOriginal || "";
       runTypewriter(el, text, delay, CHAR_SPEED);
     });
+
+    // Handle floating quotes for credits slide
+    if (slide.id === 'creditsContainer' || slide.querySelector('.credits-scroll')) {
+      const leftBox = slide.querySelector('#leftQuotesBox');
+      const rightBox = slide.querySelector('#rightQuotesBox');
+      if (leftBox) leftBox.innerHTML = '';
+      if (rightBox) rightBox.innerHTML = '';
+      
+      // Find current slide data to get quotes
+      const slideIndex = Array.from(slide.parentNode.children).indexOf(slide);
+      const quotesData = slides[slideIndex]?.content?.quotes || [];
+      
+      if (leftBox && rightBox && quotesData.length > 0) {
+          const shuffledData = [...quotesData].sort(() => 0.5 - Math.random());
+          shuffledData.forEach((item, index) => {
+              const div = document.createElement('div');
+              div.className = 'quote-item';
+              div.textContent = item.text;
+              
+              if (item.type === 'insta') {
+                  div.style.color = '#1a1a1a'; div.style.fontWeight = '600';
+              } else if (item.type === 'group') {
+                  div.style.color = '#c62828'; div.style.fontWeight = '700';
+              } else {
+                  div.style.color = '#1565c0'; div.style.fontWeight = '700';
+              }
+              
+              const duration = 18 + Math.random() * 8;
+              const delay = (index / shuffledData.length) * 30; 
+              const pos = Math.random() * 15; 
+              
+              div.style.animationDuration = `${duration}s`;
+              div.style.animationDelay = `${delay}s`;
+              
+              if (index % 2 === 0) {
+                  div.style.left = `${pos}%`;
+                  leftBox.appendChild(div);
+              } else {
+                  div.style.right = `${pos}%`;
+                  rightBox.appendChild(div);
+              }
+          });
+      }
+    }
   };
 
   const showPreviewSlide = useCallback((index) => {
@@ -835,6 +884,33 @@ export default function RecapAdmin() {
     clearTimeout(previewTimerRef.current);
     clearInterval(previewProgressRef.current);
     setPreviewOpen(false);
+  };
+
+  // Quotes Management Handlers
+  const handleQuoteAdd = () => {
+    const newSlides = [...slides];
+    const currentContent = newSlides[currentIndex].content || {};
+    const currentQuotes = currentContent.quotes || [];
+    const newQuotes = [...currentQuotes, { text: "Quote mới", type: "quote", id: Date.now().toString() }];
+    newSlides[currentIndex].content = { ...currentContent, quotes: newQuotes };
+    setSlides(newSlides);
+  };
+
+  const handleQuoteUpdate = (qIndex, field, value) => {
+    const newSlides = [...slides];
+    const currentQuotes = [...(newSlides[currentIndex].content.quotes || [])];
+    currentQuotes[qIndex] = { ...currentQuotes[qIndex], [field]: value };
+    newSlides[currentIndex].content = { ...newSlides[currentIndex].content, quotes: currentQuotes };
+    setSlides(newSlides);
+  };
+
+  const handleQuoteDelete = (qIndex) => {
+    if (!confirm('Xóa bubble text này?')) return;
+    const newSlides = [...slides];
+    const currentQuotes = [...(newSlides[currentIndex].content.quotes || [])];
+    currentQuotes.splice(qIndex, 1);
+    newSlides[currentIndex].content = { ...newSlides[currentIndex].content, quotes: currentQuotes };
+    setSlides(newSlides);
   };
 
   if (loading) return <div className="p-10 text-white">Loading...</div>;
@@ -1031,6 +1107,43 @@ export default function RecapAdmin() {
                 </div>
               );
             })()}
+
+            {/* Bubble Texts Panel for Credits Slide */}
+            {slides[currentIndex]?.slide_type === 'credits' && (
+              <div className="bg-gray-900 border-b border-gray-800 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold flex items-center gap-2">💬 Quản Lý Bubble Texts</h3>
+                  <button onClick={handleQuoteAdd} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm font-medium transition">
+                    <Plus size={14}/> Thêm
+                  </button>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                  {(slides[currentIndex].content?.quotes || []).map((quote, idx) => (
+                    <div key={idx} className={`shrink-0 w-64 bg-gray-800 rounded-xl p-3 border-l-4 snap-start relative ${quote.type === 'quote' ? 'border-blue-500' : quote.type === 'group' ? 'border-red-600' : 'border-gray-500 bg-gray-700'}`}>
+                      <button onClick={() => handleQuoteDelete(idx)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white z-[10]" title="Xóa">✕</button>
+                      <select 
+                        value={quote.type} 
+                        onChange={(e) => handleQuoteUpdate(idx, 'type', e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 mb-2 text-sm focus:border-amber-500 focus:outline-none"
+                      >
+                        <option value="quote">📝 Quote (Xanh Navy)</option>
+                        <option value="group">👥 Group (Đỏ)</option>
+                        <option value="insta">📸 Insta (Đen)</option>
+                      </select>
+                      <textarea
+                        value={quote.text}
+                        onChange={(e) => handleQuoteUpdate(idx, 'text', e.target.value)}
+                        className="w-full h-20 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm resize-none focus:border-amber-500 focus:outline-none"
+                        placeholder="Nội dung..."
+                      />
+                    </div>
+                  ))}
+                  {(!slides[currentIndex].content?.quotes || slides[currentIndex].content.quotes.length === 0) && (
+                    <div className="text-gray-500 italic py-4">Chưa có bubble text nào.</div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Vinh Danh Members Panel */}
             {showVdPanel && (
