@@ -389,9 +389,9 @@ export default function RecapViewer() {
     }
     
     // ===== FLOATING QUOTES LOGIC =====
-    // Lấy dữ liệu quotes động từ slide credits (thường là slide cuối)
+    // Lấy dữ liệu quotes động từ slide credits (slide có id leftQuotesBox)
     let floatingData = [];
-    const creditsSlide = slides[slides.length - 1];
+    const creditsSlide = slides.find(s => s.content?.html?.includes('leftQuotesBox'));
     if (creditsSlide) {
         const parsedContent = typeof creditsSlide.content === 'string' ? JSON.parse(creditsSlide.content) : creditsSlide.content;
         if (parsedContent?.quotes && Array.isArray(parsedContent.quotes)) {

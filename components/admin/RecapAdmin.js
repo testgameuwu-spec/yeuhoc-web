@@ -751,7 +751,7 @@ export default function RecapAdmin() {
     });
 
     // Handle floating quotes for credits slide
-    if (slide.id === 'creditsContainer' || slide.querySelector('.credits-scroll')) {
+    if (slide.querySelector('#leftQuotesBox')) {
       const leftBox = slide.querySelector('#leftQuotesBox');
       const rightBox = slide.querySelector('#rightQuotesBox');
       if (leftBox) leftBox.innerHTML = '';
@@ -1109,7 +1109,7 @@ export default function RecapAdmin() {
             })()}
 
             {/* Bubble Texts Panel for Credits Slide */}
-            {slides[currentIndex]?.slide_type === 'credits' && (
+            {(slides[currentIndex]?.slide_type === 'credits' || slides[currentIndex]?.content?.html?.includes('leftQuotesBox') || slides[currentIndex]?.content?.html?.includes('creditsContainer') || slides[currentIndex]?.content?.html?.includes('credits-scroll')) && (
               <div className="bg-gray-900 border-b border-gray-800 p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold flex items-center gap-2">💬 Quản Lý Bubble Texts</h3>
