@@ -13,6 +13,9 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', '@phosphor-icons/react'],
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
   },
   images: {
     formats: ['image/avif', 'image/webp'],

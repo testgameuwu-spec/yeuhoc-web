@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Plus, Save, Trash2, ArrowUp, ArrowDown, Image as ImageIcon, LayoutTemplate, DownloadCloud, Play, ChevronLeft, ChevronRight, X, Users, Upload } from "lucide-react";
+import { uploadRecapImage } from "@/app/actions/upload";
 import slidesData from "./slides_data.json";
 
 export default function RecapAdmin() {
@@ -192,13 +193,9 @@ export default function RecapAdmin() {
     formData.append('path', fileName);
     
     try {
-      const res = await fetch('/api/admin/recap-upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
+      const data = await uploadRecapImage(formData);
       
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      if (data.error) throw new Error(data.error || 'Upload failed');
       
       await handleVdUpdate(id, 'photo_url', data.url);
     } catch (err) {
@@ -309,12 +306,8 @@ export default function RecapAdmin() {
     
     let imgUrl = '';
     try {
-      const res = await fetch('/api/admin/recap-upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      const data = await uploadRecapImage(formData);
+      if (data.error) throw new Error(data.error);
       imgUrl = data.url;
     } catch (err) {
       alert("Error uploading image: " + err.message);
