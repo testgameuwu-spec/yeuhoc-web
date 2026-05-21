@@ -299,8 +299,10 @@ export default function RecapViewer() {
                     currentSlide++;
                     showSlide(currentSlide);
                  }
-             } else if (e.target.textContent.includes('XEM LẠI')) {
+             } else if (e.target.textContent.toUpperCase().includes('XEM LẠI')) {
                  if (audioRef.current) {
+                   currentSongRef.current = 1;
+                   audioRef.current.src = "/recap/backgroundmusic.mp3";
                    audioRef.current.currentTime = 0;
                    audioRef.current.play().catch(() => {});
                  }
