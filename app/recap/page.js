@@ -387,6 +387,120 @@ export default function RecapViewer() {
         resetTimer();
     }
     
+    // ===== FLOATING QUOTES LOGIC =====
+    const floatingData = [
+        // Các câu quote / nhóm
+        { text: "6r 67 ngu thì ngậm", type: "quote" },
+        { text: "6r cn gam kl đá giải", type: "quote" },
+        { text: "CBH", type: "quote" },
+        { text: "CBM", type: "quote" },
+        { text: "CBD", type: "quote" },
+        { text: "SBBH", type: "quote" },
+        { text: "HCTK", type: "quote" },
+        { text: "Đã gọi là anh em thì đừng bao giờ yêu lại nyc nhau", type: "quote" },
+        { text: "m cày ngày cày đêm trình m càng có, t cày ngày cày đêm thử thách 24h làm chó", type: "quote" },
+        { text: "Gia Cát Khổng Minh", type: "quote" },
+        { text: "Nhị Lang Trần", type: "quote" },
+        { text: "Chúa Tể Địa Ngục", type: "quote" },
+        { text: "Công Chúa Kẹo Bông", type: "quote" },
+        { text: "NhímBeoMiXi", type: "quote" },
+        { text: "Cà Chua", type: "quote" },
+        { text: "Dâu Tây", type: "quote" },
+        { text: "Phan Anh Boxxing", type: "quote" },
+        { text: "Ngọc Thạch Vịnh Xuân Quyền", type: "quote" },
+        { text: "Hà Nội ngày mưa đêm rét, tình cảm này anh dành cho em hết", type: "quote" },
+        { text: "CBD gặp nhau cái là đê mê, nhưng tiếc cái ae toàn đâm nhau một cách tê tái", type: "quote" },
+        { text: "Trọng Đức bổ lọ cho bảy chọ, Khung cảnh ấy khiến bố m phải bỏ chạy", type: "quote" },
+        
+        // Nhóm (màu đỏ)
+        { text: "5maychanchuoi__", type: "group" },
+        { text: "caibanghoi_", type: "group" },
+        { text: "yeuhoc.site_", type: "group" },
+        { text: "family_of_universes", type: "group" },
+        
+        // Instagram (màu đen)
+        { text: "@bong.acadu", type: "insta" },
+        { text: "@baedauteii__", type: "insta" },
+        { text: "@ahoni.cinak", type: "insta" },
+        { text: "@lm__thng", type: "insta" },
+        { text: "@nlh.ilhnn_", type: "insta" },
+        { text: "@tiekhocchui", type: "insta" },
+        { text: "@ducket_0606", type: "insta" },
+        { text: "@gialam_08", type: "insta" },
+        { text: "@phdtroolll", type: "insta" },
+        { text: "@phucng402", type: "insta" },
+        { text: "@qu4n_nh", type: "insta" },
+        { text: "@dohung864", type: "insta" },
+        { text: "@dangtuan6043", type: "insta" },
+        { text: "@rice_291207", type: "insta" },
+        { text: "@capsnotbusy", type: "insta" },
+        { text: "@ngnhduyy_", type: "insta" },
+        { text: "@bo_nguuu", type: "insta" },
+        { text: "@tuila.neyu_", type: "insta" },
+        { text: "@baopham1553", type: "insta" },
+        { text: "@hntraans", type: "insta" },
+        { text: "@duongma1912", type: "insta" },
+        { text: "@duchuy.808", type: "insta" },
+        { text: "@lbl77_7", type: "insta" },
+        { text: "@babicuabadat", type: "insta" },
+        { text: "@_trnminh", type: "insta" },
+        { text: "@wavy.2907", type: "insta" },
+        { text: "@danghuu1678", type: "insta" },
+        { text: "@tmai.ngv", type: "insta" },
+        { text: "@thangkongot_41", type: "insta" },
+        { text: "@thaihha_76", type: "insta" },
+        { text: "@tuelam_hoang", type: "insta" },
+        { text: "@_leches.ht_", type: "insta" },
+        { text: "@thuphuong__1406", type: "insta" },
+        { text: "@myngocc2k8", type: "insta" },
+        { text: "@_ngkh.huyen_", type: "insta" },
+        { text: "@phuong_chiiii_273", type: "insta" }
+    ];
+
+    function initFloatingQuotes() {
+        const leftBox = document.getElementById('leftQuotesBox');
+        const rightBox = document.getElementById('rightQuotesBox');
+        
+        if (leftBox && rightBox && leftBox.children.length === 0) {
+            const shuffledData = [...floatingData].sort(() => 0.5 - Math.random());
+            shuffledData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'quote-item';
+                div.textContent = item.text;
+                
+                if (item.type === 'insta') {
+                    div.style.color = '#1a1a1a'; // Đen
+                    div.style.fontWeight = '600';
+                } else if (item.type === 'group') {
+                    div.style.color = '#c62828'; // Đỏ sẫm
+                    div.style.fontWeight = '700';
+                } else {
+                    div.style.color = '#1565c0'; // Xanh Navy đậm cho Quote
+                    div.style.fontWeight = '700';
+                }
+                
+                const duration = 18 + Math.random() * 8; // Từ 18s đến 26s
+                // Trải đều thời gian xuất hiện từ 0 đến 30s để đảm bảo ai cũng lên sóng 1 lần trước khi hết slide (Slide dài 45s)
+                const delay = (index / shuffledData.length) * 30; 
+                
+                // Vị trí left/right ngẫu nhiên nhưng giới hạn từ 0% đến 15% để không bị tràn ra khỏi khung 28%
+                const pos = Math.random() * 15; 
+                
+                div.style.animationDuration = `${duration}s`;
+                div.style.animationDelay = `${delay}s`;
+                
+                if (index % 2 === 0) {
+                    div.style.left = `${pos}%`;
+                    leftBox.appendChild(div);
+                } else {
+                    div.style.right = `${pos}%`;
+                    rightBox.appendChild(div);
+                }
+            });
+        }
+    }
+    
+    initFloatingQuotes();
     initVinhDanhCarousel();
 
     showSlide(0);

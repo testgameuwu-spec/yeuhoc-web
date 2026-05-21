@@ -346,25 +346,13 @@ p {
 .credits-wrapper {
     height: 65vh; overflow: hidden;
     position: relative; width: 100%; max-width: 400px;
-}
-.credits-wrapper::before,
-.credits-wrapper::after {
-    content: ''; position: absolute;
-    left: 0; right: 0; height: 80px; z-index: 5;
-    pointer-events: none;
-}
-.credits-wrapper::before {
-    top: 0;
-    background: linear-gradient(to bottom, #fff, transparent);
-}
-.credits-wrapper::after {
-    bottom: 0;
-    background: linear-gradient(to top, #fff, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
 }
 .credits-scroll {
     position: absolute; top: 100%;
     width: 100%; text-align: center;
-    animation: creditsRoll 25s linear forwards;
+    animation: creditsRoll 45s linear forwards;
 }
 .credits-scroll.paused { animation-play-state: paused; }
 .credits-name {
@@ -609,4 +597,86 @@ p {
     margin: 0 15px 0 0;
     background: transparent;
     width: 300px;
+}
+
+/* ===== FLOATING QUOTES ===== */
+.floating-quotes {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 25%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+.left-quotes {
+    left: 0;
+}
+.right-quotes {
+    right: 0;
+}
+.quote-item {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 12px 18px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #444;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    white-space: nowrap;
+    opacity: 0;
+    animation: floatUp 15s linear infinite;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.quote-item::before {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 20px;
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transform: rotate(45deg);
+}
+.right-quotes .quote-item::before {
+    left: auto;
+    right: 20px;
+}
+
+/* Different timings and positions */
+.q1 { left: 10%; animation-delay: 0s; animation-duration: 18s; }
+.q2 { left: 30%; animation-delay: 4s; animation-duration: 22s; }
+.q3 { left: 5%; animation-delay: 9s; animation-duration: 20s; }
+.q4 { left: 40%; animation-delay: 13s; animation-duration: 24s; }
+.q5 { left: 15%; animation-delay: 17s; animation-duration: 19s; }
+
+.q6 { right: 10%; animation-delay: 2s; animation-duration: 21s; }
+.q7 { right: 35%; animation-delay: 6s; animation-duration: 19s; }
+.q8 { right: 5%; animation-delay: 10s; animation-duration: 23s; }
+.q9 { right: 45%; animation-delay: 15s; animation-duration: 20s; }
+.q10 { right: 20%; animation-delay: 19s; animation-duration: 25s; }
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(100vh) scale(0.9);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.9;
+    }
+    90% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(-20vh) scale(1.1);
+        opacity: 0;
+    }
+}
+@media (max-width: 768px) {
+    .floating-quotes { display: none; }
 }

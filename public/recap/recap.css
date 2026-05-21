@@ -390,25 +390,13 @@ p {
 .credits-wrapper {
     height: 65vh; overflow: hidden;
     position: relative; width: 100%; max-width: 400px;
-}
-.credits-wrapper::before,
-.credits-wrapper::after {
-    content: ''; position: absolute;
-    left: 0; right: 0; height: 80px; z-index: 5;
-    pointer-events: none;
-}
-.credits-wrapper::before {
-    top: 0;
-    background: linear-gradient(to bottom, #fff, transparent);
-}
-.credits-wrapper::after {
-    bottom: 0;
-    background: linear-gradient(to top, #fff, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
 }
 .credits-scroll {
     position: absolute; top: 100%;
     width: 100%; text-align: center;
-    animation: creditsRoll 25s linear forwards;
+    animation: creditsRoll 45s linear forwards;
 }
 .credits-scroll.paused { animation-play-state: paused; }
 .credits-name {
@@ -421,8 +409,8 @@ p {
     border-radius: 1px;
 }
 @keyframes creditsRoll {
-    0% { top: 100%; }
-    100% { top: -150%; }
+    0% { transform: translateY(0); }
+    100% { transform: translateY(calc(-100% - 65vh)); }
 }
 
 /* ===== CREDITS LAYOUT (flanking images) ===== */
@@ -955,4 +943,76 @@ p {
     .balloon-side.left { left: 4px; }
     .balloon-side.right { right: 4px; }
     .farewell-content .typewriter { font-size: 0.82rem; }
+}
+
+/* ===== FLOATING QUOTES ===== */
+.floating-quotes {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+.left-quotes {
+    left: 7%;
+}
+.right-quotes {
+    right: 7%;
+}
+.quote-item {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 12px 18px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #444;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    white-space: normal;
+    max-width: 90%;
+    line-height: 1.4;
+    word-wrap: break-word;
+    opacity: 0;
+    animation: floatUpQuote 15s linear infinite;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.quote-item::before {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 20px;
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transform: rotate(45deg);
+}
+.right-quotes .quote-item::before {
+    left: auto;
+    right: 20px;
+}
+
+@keyframes floatUpQuote {
+    0% {
+        transform: translateY(100vh) scale(0.9);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.9;
+    }
+    90% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(-20vh) scale(1.1);
+        opacity: 0;
+    }
+}
+@media (max-width: 768px) {
+    .floating-quotes { display: none; }
 }
