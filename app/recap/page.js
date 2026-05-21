@@ -9,6 +9,7 @@ export default function RecapViewer() {
   const [vinhDanhMembers, setVinhDanhMembers] = useState([]);
   const containerRef = useRef(null);
   const audioRef = useRef(null);
+  const currentSongRef = useRef(1);
 
   useEffect(() => {
     fetchSlides();
@@ -410,7 +411,20 @@ export default function RecapViewer() {
     <>
       <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&display=swap" rel="stylesheet" />
       <link rel="stylesheet" href="/recap/recap.css" />
-      <audio ref={audioRef} src="/recap/backgroundmusic.mp3" loop preload="auto" />
+      <audio 
+        ref={audioRef} 
+        src="/recap/backgroundmusic.mp3" 
+        preload="auto" 
+        onEnded={() => {
+          if (currentSongRef.current === 1) {
+            currentSongRef.current = 2;
+            if (audioRef.current) {
+              audioRef.current.src = "/recap/backgroundmusic2.mp3";
+              audioRef.current.play().catch(() => {});
+            }
+          }
+        }}
+      />
       
       <div style={{ background: '#0a0a0a', fontFamily: "'Be Vietnam Pro', sans-serif", overflow: 'hidden', height: '100vh', width: '100vw', position: 'relative' }}>
           <img src="/recap/imgbackground.png" className="background-watermark" alt="watermark" />

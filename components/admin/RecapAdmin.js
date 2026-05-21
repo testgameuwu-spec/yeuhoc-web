@@ -19,7 +19,7 @@ export default function RecapAdmin() {
   const [vdMembers, setVdMembers] = useState([]);
   const [vdLoading, setVdLoading] = useState(false);
   const [showVdPanel, setShowVdPanel] = useState(false);
-  const [showPlaceholderBar, setShowPlaceholderBar] = useState(true);
+
   const [placeholderVersion, setPlaceholderVersion] = useState(0);
   const [selectedPlaceholder, setSelectedPlaceholder] = useState(null);
 
@@ -116,6 +116,8 @@ export default function RecapAdmin() {
       }
       
       attachEditorEvents();
+      // Bump so the placeholder bar re-renders with the new slide's images
+      setPlaceholderVersion(v => v + 1);
     }
   }, [currentIndex, slides, vdMembers]);
 
@@ -907,12 +909,11 @@ export default function RecapAdmin() {
               </div>
             </div>
             
-            {/* Image Placeholders Bar */}
-            {showPlaceholderBar && (() => {
+            {/* Image Placeholders Bar — Always visible */}
+            {(() => {
               const phs = getPlaceholders();
-              if (phs.length === 0) return null;
               return (
-                <div className="bg-gray-900/95 border-b border-gray-800 px-6 py-3">
+                <div key={placeholderVersion} className="bg-gray-900/95 border-b border-gray-800 px-6 py-3">
                   <div className="flex items-center gap-3 mb-2">
                     <ImageIcon size={16} className="text-amber-400" />
                     <span className="text-sm font-semibold text-amber-400">Khung ảnh trong slide ({phs.length})</span>
@@ -922,12 +923,11 @@ export default function RecapAdmin() {
                       <span className="text-xs text-gray-500">Click chọn khung → Copy ảnh → Ctrl+V dán</span>
                     )}
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+                  <div className="flex gap-3 overflow-x-auto pb-1 items-center" style={{ scrollbarWidth: 'thin' }}>
                     {phs.map((ph) => (
                       <div
                         key={ph.index}
-                        onClick={() => setSelectedPlaceholder(selectedPlaceholder === ph.index ? null : ph.index)}
-                        className={`shrink-0 w-28 h-20 rounded-lg border-2 cursor-pointer flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 relative ${
+                        className={`group shrink-0 w-28 h-20 rounded-lg border-2 cursor-pointer flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 relative ${
                           selectedPlaceholder === ph.index
                             ? 'border-amber-400 bg-amber-900/30 ring-2 ring-amber-400/50 scale-105'
                             : ph.hasImage
@@ -936,9 +936,31 @@ export default function RecapAdmin() {
                         }`}
                         title={`${ph.label} — Click chọn rồi Ctrl+V`}
                       >
+                        {/* Select overlay */}
+                        <div
+                          onClick={() => setSelectedPlaceholder(selectedPlaceholder === ph.index ? null : ph.index)}
+                          className="absolute inset-0 z-[1] rounded-lg"
+                        />
                         {selectedPlaceholder === ph.index && (
                           <div className="absolute -top-2 -right-2 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center text-[10px] font-bold text-black z-10">✓</div>
                         )}
+                        {/* Delete button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!confirm('Xóa khung ảnh này?')) return;
+                            const phEls = editorRef.current?.querySelectorAll('.img-placeholder');
+                            if (phEls && phEls[ph.index]) {
+                              phEls[ph.index].remove();
+                              syncEditorContent();
+                              setPlaceholderVersion(v => v + 1);
+                              setSelectedPlaceholder(null);
+                            }
+                          }}
+                          className="absolute -top-2 -left-2 w-5 h-5 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white z-[10] opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ opacity: selectedPlaceholder === ph.index ? 1 : undefined }}
+                          title="Xóa khung ảnh"
+                        >✕</button>
                         {ph.hasImage ? (
                           <img src={ph.imgSrc} alt={ph.label} className="w-full h-full object-cover rounded-md" />
                         ) : (
@@ -949,6 +971,41 @@ export default function RecapAdmin() {
                         )}
                       </div>
                     ))}
+                    {/* Add new placeholder button */}
+                    <div
+                      onClick={() => {
+                        if (!editorRef.current) return;
+                        const slideEl = editorRef.current.querySelector('.slide');
+                        if (!slideEl) return;
+                        // Find or create a scattered-gallery container
+                        let gallery = slideEl.querySelector('.scattered-gallery');
+                        if (!gallery) {
+                          gallery = document.createElement('div');
+                          gallery.className = 'scattered-gallery';
+                          // Insert before the last quote or at end of slide
+                          const quote = slideEl.querySelector('.slide-quote');
+                          if (quote) {
+                            slideEl.insertBefore(gallery, quote);
+                          } else {
+                            slideEl.appendChild(gallery);
+                          }
+                        }
+                        const count = gallery.querySelectorAll('.img-placeholder').length;
+                        const newPh = document.createElement('div');
+                        newPh.className = 'img-placeholder anim show';
+                        newPh.setAttribute('data-delay', String(700 + count * 200));
+                        newPh.innerHTML = `<span class="ph-icon">📸</span><span>Ảnh ${count + 1}</span>`;
+                        gallery.appendChild(newPh);
+                        attachEditorEvents();
+                        syncEditorContent();
+                        setPlaceholderVersion(v => v + 1);
+                      }}
+                      className="shrink-0 w-28 h-20 rounded-lg border-2 border-dashed border-amber-500/60 bg-amber-900/10 hover:bg-amber-900/30 hover:border-amber-400 cursor-pointer flex flex-col items-center justify-center gap-1 transition-all hover:scale-105"
+                      title="Thêm khung ảnh mới"
+                    >
+                      <Plus size={24} className="text-amber-400" />
+                      <span className="text-[10px] text-amber-400 font-medium">Thêm ảnh</span>
+                    </div>
                   </div>
                 </div>
               );
