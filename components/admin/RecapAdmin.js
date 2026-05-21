@@ -185,10 +185,25 @@ export default function RecapAdmin() {
   const handleVdPhotoUpload = async (id, file) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `vinh_danh/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from('recap_images').upload(fileName, file);
-    if (uploadError) { alert('Lỗi upload: ' + uploadError.message); return; }
-    const { data: urlData } = supabase.storage.from('recap_images').getPublicUrl(fileName);
-    await handleVdUpdate(id, 'photo_url', urlData.publicUrl);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('bucket', 'recap_images');
+    formData.append('path', fileName);
+    
+    try {
+      const res = await fetch('/api/admin/recap-upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      
+      await handleVdUpdate(id, 'photo_url', data.url);
+    } catch (err) {
+      alert('Lỗi upload: ' + err.message);
+    }
   };
 
   const handleVdPhotoPaste = (id, e) => {
@@ -282,26 +297,30 @@ export default function RecapAdmin() {
 
     targetNode.style.opacity = "0.5";
     
-    // Upload to supabase storage
+    // Upload to supabase storage via API Route
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `slides/${fileName}`;
     
-    const { data, error } = await supabase.storage
-      .from('recap_images')
-      .upload(filePath, file);
-      
-    if (error) {
-      alert("Error uploading image: " + error.message);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('bucket', 'recap_images');
+    formData.append('path', filePath);
+    
+    let imgUrl = '';
+    try {
+      const res = await fetch('/api/admin/recap-upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      imgUrl = data.url;
+    } catch (err) {
+      alert("Error uploading image: " + err.message);
       targetNode.style.opacity = "1";
       return;
     }
-    
-    const { data: publicUrlData } = supabase.storage
-      .from('recap_images')
-      .getPublicUrl(filePath);
-      
-    const imgUrl = publicUrlData.publicUrl;
     
     // Replace content with image
     targetNode.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="uploaded" />`;
