@@ -357,10 +357,10 @@ p {
     width: max-content;
 }
 .gallery-track.dir-left {
-    animation: marqueeLeft 50s linear infinite;
+    animation: marqueeLeft 120s linear infinite;
 }
 .gallery-track.dir-right {
-    animation: marqueeRight 50s linear infinite;
+    animation: marqueeRight 120s linear infinite;
 }
 @keyframes marqueeLeft {
     0% { transform: translateX(0); }
