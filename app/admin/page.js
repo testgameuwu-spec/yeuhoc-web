@@ -15,6 +15,7 @@ import TransactionManagement from '@/components/admin/TransactionManagement';
 import PracticeProgressManagement from '@/components/admin/PracticeProgressManagement';
 import AdminOverview from '@/components/admin/AdminOverview';
 import NotificationManagement from '@/components/admin/NotificationManagement';
+import TargetExamManagement from '@/components/admin/TargetExamManagement';
 import RecapAdmin from '@/components/admin/RecapAdmin';
 import { parseImageMap } from '@/components/ContentWithInlineImage';
 import { TSA_TOTAL_DURATION_MINUTES } from '@/lib/examScoring';
