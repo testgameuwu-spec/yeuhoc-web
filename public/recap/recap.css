@@ -1016,3 +1016,17 @@ p {
 @media (max-width: 768px) {
     .floating-quotes { display: none; }
 }
+
+/* ===== CUSTOM ORIENTATIONS ===== */
+.scattered-gallery .img-placeholder.img-landscape {
+    aspect-ratio: 16/9 !important;
+    width: auto !important;
+    height: 45% !important;
+    max-width: 50% !important;
+}
+.scattered-gallery .img-placeholder.img-portrait {
+    aspect-ratio: 3/4 !important;
+    width: auto !important;
+    height: 50% !important;
+    max-width: 40% !important;
+}

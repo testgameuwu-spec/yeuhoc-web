@@ -913,6 +913,44 @@ export default function RecapAdmin() {
     setSlides(newSlides);
   };
 
+  const handleAddPlaceholder = (type) => {
+    if (!editorRef.current) return;
+    const slideEl = editorRef.current.querySelector('.slide');
+    if (!slideEl) return;
+    
+    // Find or create a scattered-gallery container
+    let gallery = slideEl.querySelector('.scattered-gallery');
+    if (!gallery) {
+      gallery = document.createElement('div');
+      gallery.className = 'scattered-gallery';
+      // Insert before the last quote or at end of slide
+      const quote = slideEl.querySelector('.slide-quote');
+      if (quote) {
+        slideEl.insertBefore(gallery, quote);
+      } else {
+        slideEl.appendChild(gallery);
+      }
+    }
+    
+    const count = gallery.querySelectorAll('.img-placeholder').length;
+    const newPh = document.createElement('div');
+    newPh.className = `img-placeholder anim show ${type === 'landscape' ? 'img-landscape' : 'img-portrait'}`;
+    newPh.setAttribute('data-delay', String(700 + count * 200));
+    newPh.innerHTML = `<span class="ph-icon">📸</span><span>Ảnh ${type === 'landscape' ? 'Ngang' : 'Dọc'} ${count + 1}</span>`;
+    
+    // Apply inline positioning slightly randomized to avoid full overlap
+    const top = 10 + Math.random() * 40;
+    const left = 10 + Math.random() * 40;
+    newPh.style.top = `${top}%`;
+    newPh.style.left = `${left}%`;
+    newPh.style.zIndex = String(10 + count);
+    
+    gallery.appendChild(newPh);
+    attachEditorEvents();
+    syncEditorContent();
+    setPlaceholderVersion(v => v + 1);
+  };
+
   if (loading) return <div className="p-10 text-white">Loading...</div>;
 
   return (
@@ -1068,40 +1106,24 @@ export default function RecapAdmin() {
                         )}
                       </div>
                     ))}
-                    {/* Add new placeholder button */}
-                    <div
-                      onClick={() => {
-                        if (!editorRef.current) return;
-                        const slideEl = editorRef.current.querySelector('.slide');
-                        if (!slideEl) return;
-                        // Find or create a scattered-gallery container
-                        let gallery = slideEl.querySelector('.scattered-gallery');
-                        if (!gallery) {
-                          gallery = document.createElement('div');
-                          gallery.className = 'scattered-gallery';
-                          // Insert before the last quote or at end of slide
-                          const quote = slideEl.querySelector('.slide-quote');
-                          if (quote) {
-                            slideEl.insertBefore(gallery, quote);
-                          } else {
-                            slideEl.appendChild(gallery);
-                          }
-                        }
-                        const count = gallery.querySelectorAll('.img-placeholder').length;
-                        const newPh = document.createElement('div');
-                        newPh.className = 'img-placeholder anim show';
-                        newPh.setAttribute('data-delay', String(700 + count * 200));
-                        newPh.innerHTML = `<span class="ph-icon">📸</span><span>Ảnh ${count + 1}</span>`;
-                        gallery.appendChild(newPh);
-                        attachEditorEvents();
-                        syncEditorContent();
-                        setPlaceholderVersion(v => v + 1);
-                      }}
-                      className="shrink-0 w-28 h-20 rounded-lg border-2 border-dashed border-amber-500/60 bg-amber-900/10 hover:bg-amber-900/30 hover:border-amber-400 cursor-pointer flex flex-col items-center justify-center gap-1 transition-all hover:scale-105"
-                      title="Thêm khung ảnh mới"
-                    >
-                      <Plus size={24} className="text-amber-400" />
-                      <span className="text-[10px] text-amber-400 font-medium">Thêm ảnh</span>
+                    {/* Add new placeholder buttons */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <div
+                        onClick={() => handleAddPlaceholder('landscape')}
+                        className="w-28 h-[36px] rounded-md border-2 border-dashed border-amber-500/60 bg-amber-900/10 hover:bg-amber-900/30 hover:border-amber-400 cursor-pointer flex items-center justify-center gap-1 transition-all hover:scale-105"
+                        title="Thêm khung ảnh Ngang"
+                      >
+                        <Plus size={14} className="text-amber-400" />
+                        <span className="text-[10px] text-amber-400 font-medium">Ảnh Ngang</span>
+                      </div>
+                      <div
+                        onClick={() => handleAddPlaceholder('portrait')}
+                        className="w-28 h-[36px] rounded-md border-2 border-dashed border-amber-500/60 bg-amber-900/10 hover:bg-amber-900/30 hover:border-amber-400 cursor-pointer flex items-center justify-center gap-1 transition-all hover:scale-105"
+                        title="Thêm khung ảnh Dọc"
+                      >
+                        <Plus size={14} className="text-amber-400" />
+                        <span className="text-[10px] text-amber-400 font-medium">Ảnh Dọc</span>
+                      </div>
                     </div>
                   </div>
                 </div>
