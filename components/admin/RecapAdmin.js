@@ -386,6 +386,7 @@ export default function RecapAdmin() {
     const slideDuration = parseInt(slides[currentIndex].duration) || 15;
     const slideOrderIndex = slides[currentIndex].order_index;
     
+    let contentToSave;
     // Read content directly from DOM to capture all text + image edits
     let savedHtml = slides[currentIndex].content.html;
     if (editorRef.current) {
@@ -412,17 +413,19 @@ export default function RecapAdmin() {
       // Update local state preserving other JSON fields like quotes
       const newSlides = [...slides];
       const currentContent = newSlides[currentIndex].content || {};
-      const newContent = { ...currentContent, html: savedHtml };
-      newSlides[currentIndex] = { ...newSlides[currentIndex], content: newContent, duration: slideDuration };
+      contentToSave = { ...currentContent, html: savedHtml };
+      newSlides[currentIndex] = { ...newSlides[currentIndex], content: contentToSave, duration: slideDuration };
       setSlides(newSlides);
+    } else {
+      contentToSave = slides[currentIndex].content;
     }
     
-    console.log('Saving slide:', { id: slideId, duration: slideDuration, order_index: slideOrderIndex, htmlLength: savedHtml.length });
+    console.log('Saving slide:', { id: slideId, duration: slideDuration, order_index: slideOrderIndex });
     
     const { error } = await supabase
       .from("recap_slides")
       .update({
-        content: slides[currentIndex].content, // Use the updated state
+        content: contentToSave, // Use the extracted variable, NOT the stale state
         duration: slideDuration,
         order_index: slideOrderIndex
       })
