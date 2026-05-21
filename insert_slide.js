@@ -54,7 +54,7 @@ async function insertSlide() {
         </div>
     </div>
 
-    <p class="slide-desc anim show" data-delay="8000" style="font-size: 1.2rem; font-style: italic; color: rgb(255, 179, 0); margin-top: 40px; min-height: 20px; min-width: 20px;">Thế nhưng, sau tất cả, những nụ cười lạc quan vẫn luôn nở trên môi. Áp lực không làm chúng ta chùn bước, mà chỉ làm thanh xuân thêm phần rực rỡ và đáng nhớ hơn bao giờ hết!</p>
+    <p class="slide-desc anim show" data-delay="8000" style="font-size: 1.2rem; font-style: italic; color: #c62828; margin-top: 40px; min-height: 20px; min-width: 20px;">Thế nhưng, sau tất cả, những nụ cười lạc quan vẫn luôn nở trên môi. Áp lực không làm chúng ta chùn bước, mà chỉ làm thanh xuân thêm phần rực rỡ và đáng nhớ hơn bao giờ hết!</p>
 </div>
 `;
 
