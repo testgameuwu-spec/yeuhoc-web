@@ -341,6 +341,7 @@ export default function RecapAdmin() {
     clone.querySelectorAll(".img-placeholder").forEach(node => {
       node.style.cursor = "";
       node.style.outline = "";
+      node.style.opacity = "";
     });
     
     // Remove active and show classes before saving so the public viewer animations work
@@ -381,6 +382,7 @@ export default function RecapAdmin() {
       clone.querySelectorAll(".img-placeholder, .credits-img").forEach(node => {
         node.style.cursor = "";
         node.style.outline = "";
+        node.style.opacity = "";
       });
       const slideEl = clone.querySelector('.slide');
       if (slideEl) {
