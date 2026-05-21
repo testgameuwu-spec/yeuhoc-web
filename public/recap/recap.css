@@ -357,10 +357,10 @@ p {
     width: max-content;
 }
 .gallery-track.dir-left {
-    animation: marqueeLeft 25s linear infinite;
+    animation: marqueeLeft 50s linear infinite;
 }
 .gallery-track.dir-right {
-    animation: marqueeRight 25s linear infinite;
+    animation: marqueeRight 50s linear infinite;
 }
 @keyframes marqueeLeft {
     0% { transform: translateX(0); }
@@ -376,7 +376,7 @@ p {
     100% { transform: translateX(-50%); }
 }
 .vd-compact-gallery .gallery-track.dir-left {
-    animation: marqueeFromRight 30s linear infinite;
+    animation: marqueeFromRight 60s linear infinite;
 }
 .gallery-track .img-placeholder {
     flex-shrink: 0;
