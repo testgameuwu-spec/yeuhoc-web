@@ -289,9 +289,11 @@ export default function RecapViewer() {
     const clickHandler = (e) => {
         // Handle start buttons
         if (e.target.classList.contains('start-btn')) {
-             if (e.target.textContent.includes('BẮT ĐẦU') || e.target.textContent.includes('Check - in') || e.target.textContent.includes('Check in')) {
+             if (e.target.textContent.toUpperCase().includes('BẮT ĐẦU') || e.target.textContent.toUpperCase().includes('CHECK - IN') || e.target.textContent.toUpperCase().includes('CHECK IN')) {
                  // Start background music
                  if (audioRef.current) {
+                   currentSongRef.current = 1;
+                   audioRef.current.src = "/recap/backgroundmusic.mp3";
                    audioRef.current.currentTime = 0;
                    audioRef.current.play().catch(() => {});
                  }
@@ -301,10 +303,7 @@ export default function RecapViewer() {
                  }
              } else if (e.target.textContent.toUpperCase().includes('XEM LẠI')) {
                  if (audioRef.current) {
-                   currentSongRef.current = 1;
-                   audioRef.current.src = "/recap/backgroundmusic.mp3";
-                   audioRef.current.currentTime = 0;
-                   audioRef.current.play().catch(() => {});
+                   audioRef.current.pause();
                  }
                  currentSlide = 0;
                  showSlide(currentSlide);
