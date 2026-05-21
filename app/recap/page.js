@@ -312,21 +312,21 @@ export default function RecapViewer() {
         }
 
         // Handle generic click to advance/go back
-        if (e.target.closest('.img-placeholder') || e.target.closest('.personal-award-card')) return;
+        // if (e.target.closest('.img-placeholder') || e.target.closest('.personal-award-card')) return;
         
-        const x = e.clientX;
-        const width = window.innerWidth;
-        if (x < width * 0.3) {
-            if (currentSlide > 0) {
-                currentSlide--;
-                showSlide(currentSlide);
-            }
-        } else {
-            if (currentSlide < domSlides.length - 1) {
-                currentSlide++;
-                showSlide(currentSlide);
-            }
-        }
+        // const x = e.clientX;
+        // const width = window.innerWidth;
+        // if (x < width * 0.3) {
+        //     if (currentSlide > 0) {
+        //         currentSlide--;
+        //         showSlide(currentSlide);
+        //     }
+        // } else {
+        //     if (currentSlide < domSlides.length - 1) {
+        //         currentSlide++;
+        //         showSlide(currentSlide);
+        //     }
+        // }
     };
     
     document.addEventListener('click', clickHandler);
