@@ -78,7 +78,8 @@ p {
 .slide-quote {
     color: #c62828; font-size: 1.45rem;
     font-weight: 700; font-style: italic;
-    margin: 8px auto; max-width: 600px;
+    margin: 8px auto 20px; max-width: 600px;
+    order: 5;
 }
 .big-title {
     font-size: 3.8rem; font-weight: 800;
@@ -344,6 +345,7 @@ p {
     padding: 10px 0;
     margin-top: 14px;
     margin-bottom: 14px;
+    order: 10;
 }
 /* Vinh Danh compact: smaller margin */
 .gallery-slideshow.vd-compact-gallery {
