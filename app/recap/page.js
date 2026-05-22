@@ -514,7 +514,7 @@ export default function RecapViewer() {
             const startAutoScroll = () => {
                 clearInterval(autoScrollTimer);
                 autoScrollTimer = setInterval(() => {
-                    if (!isDown) gallery.scrollLeft += 1.5;
+                    if (!isDown) gallery.scrollLeft += 0.75;
                     // Infinite loop check
                     if (gallery.scrollLeft >= gallery.scrollWidth / 2) {
                         gallery.scrollLeft = 0;
