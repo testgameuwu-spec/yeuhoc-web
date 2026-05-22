@@ -57,39 +57,39 @@
     font-size: 0.95rem; margin-bottom: 12px;
 }
 h1 {
-    font-size: 2.5rem; color: #1a1a1a;
+    font-size: 2.8rem; color: #1a1a1a;
     font-weight: 800; margin-bottom: 14px; line-height: 1.3;
 }
 h2 {
-    font-size: 1.8rem; color: #1a1a1a;
+    font-size: 2.0rem; color: #1a1a1a;
     font-weight: 700; margin-bottom: 10px; line-height: 1.4;
 }
 p {
-    color: #333; font-size: 1.25rem;
+    color: #333; font-size: 1.4rem;
     line-height: 1.85; max-width: 680px;
     font-weight: 600; margin: 0 auto;
 }
 .slide-desc {
-    color: #555; font-size: 1.2rem;
+    color: #555; font-size: 1.35rem;
     line-height: 1.7; max-width: 620px;
     margin: 4px auto 10px;
     font-style: italic; font-weight: 500;
 }
 .slide-quote {
-    color: #c62828; font-size: 1.3rem;
+    color: #c62828; font-size: 1.45rem;
     font-weight: 700; font-style: italic;
     margin: 8px auto; max-width: 600px;
 }
 .big-title {
-    font-size: 3.5rem; font-weight: 800;
+    font-size: 3.8rem; font-weight: 800;
     color: #1a1a1a; letter-spacing: 2px;
 }
 .subtitle {
-    font-size: 1.3rem; color: #555;
+    font-size: 1.45rem; color: #555;
     font-weight: 500; margin-top: 8px;
 }
 .achievement {
-    font-size: 1.6rem; font-weight: 700;
+    font-size: 1.8rem; font-weight: 700;
     color: #c62828; margin: 6px 0;
     text-transform: uppercase; letter-spacing: 1px;
 }
@@ -376,7 +376,7 @@ p {
     100% { transform: translateX(-50%); }
 }
 .vd-compact-gallery .gallery-track.dir-left {
-    animation: marqueeFromRight 60s linear infinite;
+    animation: marqueeFromRight 120s linear infinite;
 }
 .gallery-track .img-placeholder {
     flex-shrink: 0;
@@ -975,7 +975,7 @@ p {
     border: 1px solid rgba(0, 0, 0, 0.05);
     padding: 12px 18px;
     border-radius: 20px;
-    font-size: 0.95rem;
+    font-size: 1.45rem;
     font-weight: 500;
     color: #444;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
