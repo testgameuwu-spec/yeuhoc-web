@@ -678,5 +678,97 @@ p {
     }
 }
 @media (max-width: 768px) {
-    .floating-quotes { display: none; }
+    /* ----- VINH DANH FIX ----- */
+    #vinhDanhSlide {
+        padding-top: 25px; 
+    }
+    #vinhDanhSlide h2 {
+        font-size: 1.15rem;
+        margin-bottom: 2px;
+    }
+    #vinhDanhSlide .slide-desc {
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+    }
+    .personal-award-card.static-card {
+        width: 230px; 
+        margin: 0 10px 0 0;
+    }
+    .card-photo {
+        width: 170px;
+        height: 190px;
+        margin-bottom: 8px;
+    }
+    .card-name {
+        font-size: 1.15rem;
+        margin-bottom: 5px;
+    }
+    .card-achievements {
+        padding: 10px 8px;
+    }
+    .ach-label {
+        font-size: 0.7rem;
+        margin-bottom: 5px;
+    }
+    .ach-text {
+        font-size: 0.8rem;
+        line-height: 1.35;
+    }
+
+    /* ----- FLOATING QUOTES (BUBBLE TEXT) FIX ----- */
+    .floating-quotes {
+        width: 100%;
+        left: 0;
+        right: 0;
+        pointer-events: none;
+        z-index: 10;
+        display: block; /* enable on mobile */
+    }
+    .left-quotes, .right-quotes {
+        width: 100%;
+    }
+    .quote-item {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(50, 50, 50, 0.75);
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        animation-name: floatUpMobile;
+        backdrop-filter: blur(1px);
+        -webkit-backdrop-filter: blur(1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .quote-item::before {
+        background: rgba(255, 255, 255, 0.2);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    /* Randomize positions for mobile to cover screen */
+    .q1 { left: 5%; }
+    .q2 { left: 25%; }
+    .q3 { left: 45%; }
+    .q4 { left: 60%; }
+    .q5 { left: 15%; }
+    .q6 { left: 35%; right: auto; }
+    .q7 { left: 55%; right: auto; }
+    .q8 { left: 75%; right: auto; }
+    .q9 { left: 10%; right: auto; }
+    .q10 { left: 50%; right: auto; }
+}
+
+@keyframes floatUpMobile {
+    0% {
+        transform: translateY(100vh) scale(0.8);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.65;
+    }
+    90% {
+        opacity: 0.65;
+    }
+    100% {
+        transform: translateY(-20vh) scale(1);
+        opacity: 0;
+    }
 }
