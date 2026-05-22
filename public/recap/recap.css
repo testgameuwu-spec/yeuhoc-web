@@ -349,8 +349,22 @@ p {
 .gallery-slideshow.vd-compact-gallery {
     margin-top: 6px;
     margin-bottom: 6px;
-    padding: 6px 0;
+    padding: 6px 0 20px 0;
     gap: 6px;
+    overflow-x: auto;
+    cursor: grab;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+.gallery-slideshow.vd-compact-gallery::-webkit-scrollbar {
+    height: 8px;
+}
+.gallery-slideshow.vd-compact-gallery::-webkit-scrollbar-thumb {
+    background: rgba(198, 40, 40, 0.6);
+    border-radius: 4px;
+}
+.gallery-slideshow.vd-compact-gallery:active {
+    cursor: grabbing;
 }
 .gallery-track {
     display: flex;
@@ -376,7 +390,7 @@ p {
     100% { transform: translateX(-50%); }
 }
 .vd-compact-gallery .gallery-track.dir-left {
-    animation: marqueeFromRight 120s linear infinite;
+    animation: none !important;
 }
 .gallery-track .img-placeholder {
     flex-shrink: 0;
@@ -685,6 +699,13 @@ p {
     margin: 0 15px 0 0;
     background: transparent;
     width: 300px;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease !important;
+}
+
+.personal-award-card.static-card:hover {
+    transform: scale(1.08) translateY(-10px) !important;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    z-index: 20;
 }
 
 /* ===== VINH DANH COMPACT (smaller gallery + stats) ===== */
@@ -756,9 +777,9 @@ p {
 }
 
 .vd-stat-number {
-    font-size: 1.3rem !important;
+    font-size: 1.45rem !important;
     font-weight: 800;
-    color: #c62828;
+    color: #1a1a1a;
     line-height: 1.1;
     letter-spacing: -0.5px;
 }

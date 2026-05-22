@@ -442,8 +442,63 @@ export default function RecapViewer() {
         }
     }
     
+    function initVinhDanhInteraction() {
+        const galleries = containerRef.current.querySelectorAll('.vd-compact-gallery');
+        galleries.forEach(gallery => {
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+            let autoScrollTimer;
+
+            const startAutoScroll = () => {
+                clearInterval(autoScrollTimer);
+                autoScrollTimer = setInterval(() => {
+                    if (!isDown) gallery.scrollLeft += 1.5;
+                    // Infinite loop check
+                    if (gallery.scrollLeft >= gallery.scrollWidth / 2) {
+                        gallery.scrollLeft = 0;
+                    }
+                }, 30);
+            };
+
+            const stopAutoScroll = () => clearInterval(autoScrollTimer);
+
+            gallery.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX - gallery.offsetLeft;
+                scrollLeft = gallery.scrollLeft;
+                stopAutoScroll();
+            });
+
+            gallery.addEventListener('mouseleave', () => {
+                isDown = false;
+                startAutoScroll();
+            });
+
+            gallery.addEventListener('mouseup', () => {
+                isDown = false;
+                startAutoScroll();
+            });
+
+            gallery.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - gallery.offsetLeft;
+                const walk = (x - startX) * 2; 
+                gallery.scrollLeft = scrollLeft - walk;
+            });
+
+            gallery.addEventListener('touchstart', stopAutoScroll, {passive: true});
+            gallery.addEventListener('touchend', startAutoScroll);
+
+            startAutoScroll();
+            gallery._autoScrollTimer = autoScrollTimer;
+        });
+    }
+    
     initFloatingQuotes();
     initVinhDanhCarousel();
+    initVinhDanhInteraction();
 
     showSlide(0);
 
@@ -452,6 +507,11 @@ export default function RecapViewer() {
       clearInterval(progressInterval);
       clearInterval(vdAutoTimer);
       document.removeEventListener('click', clickHandler);
+      if (containerRef.current) {
+          containerRef.current.querySelectorAll('.vd-compact-gallery').forEach(g => {
+             if (g._autoScrollTimer) clearInterval(g._autoScrollTimer);
+          });
+      }
     };
   }, [slides, loading, vinhDanhMembers]);
 
