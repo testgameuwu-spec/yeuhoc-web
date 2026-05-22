@@ -70,6 +70,9 @@ export default function RecapViewer() {
     let progressFills = [];
     let slideTimer = null;
     let progressInterval = null;
+    let typewriterTimers = [];
+    let typewriterRunId = 0;
+    const collectiveIntervals = [];
     const CHAR_SPEED = 50;
 
     // Initialize typewriter texts
@@ -155,22 +158,48 @@ export default function RecapViewer() {
         }
     });
 
-    function typeWriter(el, text, delay, speed) {
+    function queueTypewriterTimer(callback, delay) {
+      const timer = setTimeout(callback, delay);
+      typewriterTimers.push(timer);
+      return timer;
+    }
+
+    function clearTypewriterTimers() {
+      typewriterTimers.forEach(timer => clearTimeout(timer));
+      typewriterTimers = [];
+      typewriterRunId++;
+    }
+
+    function waitForTypewriter(delay, runId) {
       return new Promise(resolve => {
-        setTimeout(() => {
+        queueTypewriterTimer(() => resolve(runId === typewriterRunId), delay);
+      });
+    }
+
+    function typeWriter(el, text, delay, speed, runId) {
+      return new Promise(resolve => {
+        queueTypewriterTimer(() => {
+          if (runId !== typewriterRunId) {
+            resolve(false);
+            return;
+          }
           el.style.visibility = "";
           el.textContent = "";
           el.classList.add("typing");
           let i = 0;
           function type() {
+            if (runId !== typewriterRunId) {
+              resolve(false);
+              return;
+            }
             if (i < text.length) {
               el.textContent += text.charAt(i);
               i++;
-              setTimeout(type, speed);
+              queueTypewriterTimer(type, speed);
             } else {
               el.classList.remove("typing");
               el.classList.add("done");
-              resolve();
+              resolve(true);
             }
           }
           type();
@@ -228,7 +257,54 @@ export default function RecapViewer() {
       container._interval = interval;
     }
 
+    function initCollectiveAwardSlides(scope) {
+      scope.querySelectorAll(".collective-photo-frame").forEach(frame => {
+        const items = Array.from(frame.querySelectorAll(".collective-photo-slot"));
+        if (items.length === 0 || frame.dataset.initialized === "true") return;
+
+        frame.dataset.initialized = "true";
+        let current = Math.max(0, items.findIndex(item => item.classList.contains("active")));
+
+        const render = () => {
+          items.forEach((item, index) => item.classList.toggle("active", index === current));
+        };
+        const next = () => {
+          current = (current + 1) % items.length;
+          render();
+        };
+        const prev = () => {
+          current = (current - 1 + items.length) % items.length;
+          render();
+        };
+
+        frame.addEventListener("click", event => {
+          event.stopPropagation();
+          const rect = frame.getBoundingClientRect();
+          if (event.clientX - rect.left < rect.width / 2) prev();
+          else next();
+        });
+
+        let touchStartX = 0;
+        frame.addEventListener("touchstart", event => {
+          touchStartX = event.touches[0].clientX;
+        }, { passive: true });
+        frame.addEventListener("touchend", event => {
+          const diff = touchStartX - event.changedTouches[0].clientX;
+          if (Math.abs(diff) > 40) {
+            if (diff > 0) next();
+            else prev();
+          }
+        });
+
+        render();
+        collectiveIntervals.push(setInterval(next, 3000));
+      });
+    }
+
     function animateSlide(slide) {
+      clearTypewriterTimers();
+      const runId = typewriterRunId;
+
       slide.querySelectorAll(".anim").forEach(el => {
         el.classList.remove("show");
       });
@@ -267,17 +343,20 @@ export default function RecapViewer() {
 
       // Run typewriters sequentially, then show after-typewriter anims
       if (typewriters.length > 0) {
-        let chain = new Promise(r => setTimeout(r, firstTwDelay));
+        let chain = waitForTypewriter(firstTwDelay, runId);
         typewriters.forEach(el => {
-          chain = chain.then(() => {
+          chain = chain.then(active => {
+            if (!active) return false;
             const text = el.dataset.textOriginal || "";
-            return typeWriter(el, text, 0, CHAR_SPEED).then(() => {
-              return new Promise(r => setTimeout(r, 500));
+            return typeWriter(el, text, 0, CHAR_SPEED, runId).then(done => {
+              if (!done) return false;
+              return waitForTypewriter(500, runId);
             });
           });
         });
         // After all typewriters done, show remaining anims
-        chain.then(() => {
+        chain.then(active => {
+          if (!active || runId !== typewriterRunId) return;
           animsAfter.forEach((el, i) => {
             setTimeout(() => el.classList.add("show"), i * 400);
           });
@@ -346,6 +425,18 @@ export default function RecapViewer() {
       }
     }
 
+    window.showSlide = (index) => {
+      const nextIndex = Math.max(0, Math.min(Number(index) || 0, domSlides.length - 1));
+      currentSlide = nextIndex;
+      showSlide(currentSlide);
+    };
+    window.nextSlide = () => {
+      if (currentSlide < domSlides.length - 1) {
+        currentSlide++;
+        showSlide(currentSlide);
+      }
+    };
+
     const clickHandler = (e) => {
         // Handle start buttons
         if (e.target.classList.contains('start-btn')) {
@@ -373,7 +464,7 @@ export default function RecapViewer() {
 
         // Handle generic click to advance/go back
         if (!manualNavEnabledRef.current) return;
-        if (e.target.closest('.img-placeholder') || e.target.closest('.personal-award-card')) return;
+        if (e.target.closest('.img-placeholder') || e.target.closest('.personal-award-card') || e.target.closest('.collective-photo-frame')) return;
         
         const x = e.clientX;
         const width = window.innerWidth;
@@ -560,13 +651,18 @@ export default function RecapViewer() {
     initFloatingQuotes();
     initVinhDanhCarousel();
     initVinhDanhInteraction();
+    initCollectiveAwardSlides(containerRef.current);
 
     showSlide(0);
 
     return () => {
       clearTimeout(slideTimer);
       clearInterval(progressInterval);
+      clearTypewriterTimers();
       clearInterval(vdAutoTimer);
+      collectiveIntervals.forEach(interval => clearInterval(interval));
+      delete window.showSlide;
+      delete window.nextSlide;
       document.removeEventListener('click', clickHandler);
       if (containerRef.current) {
           containerRef.current.querySelectorAll('.vd-compact-gallery').forEach(g => {

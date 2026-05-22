@@ -17,6 +17,9 @@ export default function RecapAdmin() {
   const previewRef = useRef(null);
   const previewTimerRef = useRef(null);
   const previewProgressRef = useRef(null);
+  const previewCollectiveTimersRef = useRef([]);
+  const previewTypewriterTimersRef = useRef([]);
+  const previewTypewriterRunRef = useRef(0);
   const [vdMembers, setVdMembers] = useState([]);
   const [vdLoading, setVdLoading] = useState(false);
   const [showVdPanel, setShowVdPanel] = useState(false);
@@ -247,6 +250,17 @@ export default function RecapAdmin() {
 
   const handleAddCollectiveAward = () => {
     if (!editorRef.current) return;
+    const awardsList = editorRef.current.querySelector('.collective-awards-list');
+    if (awardsList) {
+      const newItem = document.createElement('li');
+      newItem.className = 'collective-award-item';
+      newItem.innerHTML = `<span class="tag-icon">🥇</span><span>Nhập giải thưởng mới...</span>`;
+      awardsList.appendChild(newItem);
+      attachEditorEvents();
+      syncEditorContent();
+      return;
+    }
+
     const tagsContainer = editorRef.current.querySelector('.vd-award-tags');
     if (tagsContainer) {
       const newTag = document.createElement('span');
@@ -538,6 +552,10 @@ export default function RecapAdmin() {
 
     // 1. Extract existing images, texts and duration from current slides before deleting
     const existingData = {}; 
+    const hasOldCombinedVinhDanh = slides.some(slide => {
+      const html = slide.content?.html || "";
+      return html.includes("VINH_DANH_START") && html.includes("vd-stats-section") && !html.includes("collective-achievement-slide");
+    });
     const parser = new DOMParser();
     slides.forEach((slide, idx) => {
       const doc = parser.parseFromString(slide.content.html || "", "text/html");
@@ -578,7 +596,8 @@ export default function RecapAdmin() {
     // 3. Build new slides, merging saved data back in
     const inserts = slidesData.map((html, idx) => {
       let finalHtml = html;
-      const savedData = existingData[idx];
+      const savedIndex = hasOldCombinedVinhDanh && idx >= 16 ? idx - 1 : idx;
+      const savedData = hasOldCombinedVinhDanh && (idx === 15 || idx === 16) ? null : existingData[savedIndex];
       
       if (savedData) {
         const doc = parser.parseFromString(finalHtml, "text/html");
@@ -611,7 +630,7 @@ export default function RecapAdmin() {
         order_index: idx,
         slide_type: "a5k58_slide",
         content: { html: finalHtml },
-        duration: savedData ? savedData.duration : 15
+        duration: savedData ? savedData.duration : (finalHtml.includes("collective-achievement-slide") ? 25 : finalHtml.includes("vinh-danh-personal-slide") ? 70 : 15)
       };
     });
     
@@ -707,22 +726,48 @@ export default function RecapAdmin() {
   // ── Preview Engine ──
   const CHAR_SPEED = 35;
 
-  const runTypewriter = (el, text, delay, speed) => {
+  const queuePreviewTypewriterTimer = (callback, delay) => {
+    const timer = setTimeout(callback, delay);
+    previewTypewriterTimersRef.current.push(timer);
+    return timer;
+  };
+
+  const clearPreviewTypewriterTimers = () => {
+    previewTypewriterTimersRef.current.forEach(timer => clearTimeout(timer));
+    previewTypewriterTimersRef.current = [];
+    previewTypewriterRunRef.current += 1;
+  };
+
+  const waitPreviewTypewriter = (delay, runId) => {
     return new Promise(resolve => {
-      setTimeout(() => {
+      queuePreviewTypewriterTimer(() => resolve(runId === previewTypewriterRunRef.current), delay);
+    });
+  };
+
+  const runTypewriter = (el, text, delay, speed, runId) => {
+    return new Promise(resolve => {
+      queuePreviewTypewriterTimer(() => {
+        if (runId !== previewTypewriterRunRef.current) {
+          resolve(false);
+          return;
+        }
         el.style.visibility = "";
         el.textContent = "";
         el.classList.add("typing");
         let i = 0;
         function type() {
+          if (runId !== previewTypewriterRunRef.current) {
+            resolve(false);
+            return;
+          }
           if (i < text.length) {
             el.textContent += text.charAt(i);
             i++;
-            setTimeout(type, speed);
+            queuePreviewTypewriterTimer(type, speed);
           } else {
             el.classList.remove("typing");
             el.classList.add("done");
-            resolve();
+            resolve(true);
           }
         }
         type();
@@ -736,15 +781,33 @@ export default function RecapAdmin() {
       const delay = parseInt(el.dataset.delay || "0");
       maxEnd = Math.max(maxEnd, delay + 900);
     });
-    slide.querySelectorAll(".typewriter").forEach(el => {
-      const delay = parseInt(el.dataset.delay || "0");
-      const text = el.dataset.textOriginal || "";
-      maxEnd = Math.max(maxEnd, delay + text.length * CHAR_SPEED);
-    });
+    const typewriters = slide.querySelectorAll(".typewriter");
+    if (typewriters.length > 0) {
+      const firstDelay = parseInt(typewriters[0].dataset.delay || "0");
+      let totalTyping = firstDelay;
+      typewriters.forEach(el => {
+        const text = el.dataset.textOriginal || "";
+        totalTyping += text.length * CHAR_SPEED + 500;
+      });
+      maxEnd = Math.max(maxEnd, totalTyping);
+    }
     return maxEnd;
   };
 
   const animatePreviewSlide = (slide) => {
+    clearPreviewTypewriterTimers();
+    const runId = previewTypewriterRunRef.current;
+
+    slide.querySelectorAll(".gallery-track").forEach(track => {
+      if (track.children.length > 0 && !track.dataset.cloned) {
+        track.innerHTML += track.innerHTML;
+        track.dataset.cloned = "true";
+      }
+      track.style.animation = "none";
+      track.offsetHeight;
+      track.style.animation = "";
+    });
+
     slide.querySelectorAll(".anim").forEach(el => el.classList.remove("show"));
     slide.querySelectorAll(".typewriter").forEach(el => {
       el.classList.remove("typing", "done");
@@ -754,15 +817,44 @@ export default function RecapAdmin() {
     const credits = slide.querySelector(".credits-scroll");
     if (credits) { credits.style.animation = "none"; credits.offsetHeight; credits.style.animation = ""; }
 
+    const typewriters = Array.from(slide.querySelectorAll(".typewriter"));
+    const firstTwDelay = typewriters.length > 0 ? parseInt(typewriters[0].dataset.delay || "0") : Infinity;
+    const animsBefore = [];
+    const animsAfter = [];
+
     slide.querySelectorAll(".anim").forEach(el => {
+      const delay = parseInt(el.dataset.delay || "0");
+      if (delay < firstTwDelay || typewriters.length === 0) {
+        animsBefore.push(el);
+      } else {
+        animsAfter.push(el);
+      }
+    });
+
+    animsBefore.forEach(el => {
       const delay = parseInt(el.dataset.delay || "0");
       setTimeout(() => el.classList.add("show"), delay);
     });
-    slide.querySelectorAll(".typewriter").forEach(el => {
-      const delay = parseInt(el.dataset.delay || "0");
-      const text = el.dataset.textOriginal || "";
-      runTypewriter(el, text, delay, CHAR_SPEED);
-    });
+
+    if (typewriters.length > 0) {
+      let chain = waitPreviewTypewriter(firstTwDelay, runId);
+      typewriters.forEach(el => {
+        chain = chain.then(active => {
+          if (!active) return false;
+          const text = el.dataset.textOriginal || "";
+          return runTypewriter(el, text, 0, CHAR_SPEED, runId).then(done => {
+            if (!done) return false;
+            return waitPreviewTypewriter(500, runId);
+          });
+        });
+      });
+      chain.then(active => {
+        if (!active || runId !== previewTypewriterRunRef.current) return;
+        animsAfter.forEach((el, i) => {
+          setTimeout(() => el.classList.add("show"), i * 400);
+        });
+      });
+    }
 
     // Handle floating quotes for credits slide
     if (slide.querySelector('#leftQuotesBox')) {
@@ -807,6 +899,46 @@ export default function RecapAdmin() {
           });
       }
     }
+
+    slide.querySelectorAll(".collective-photo-frame").forEach(frame => {
+      const items = Array.from(frame.querySelectorAll(".collective-photo-slot"));
+      if (items.length === 0) return;
+
+      let current = Math.max(0, items.findIndex(item => item.classList.contains("active")));
+      const render = () => {
+        items.forEach((item, index) => item.classList.toggle("active", index === current));
+      };
+      const next = () => {
+        current = (current + 1) % items.length;
+        render();
+      };
+      const prev = () => {
+        current = (current - 1 + items.length) % items.length;
+        render();
+      };
+
+      frame.onclick = event => {
+        event.stopPropagation();
+        const rect = frame.getBoundingClientRect();
+        if (event.clientX - rect.left < rect.width / 2) prev();
+        else next();
+      };
+
+      let touchStartX = 0;
+      frame.ontouchstart = event => {
+        touchStartX = event.touches[0].clientX;
+      };
+      frame.ontouchend = event => {
+        const diff = touchStartX - event.changedTouches[0].clientX;
+        if (Math.abs(diff) > 40) {
+          if (diff > 0) next();
+          else prev();
+        }
+      };
+
+      render();
+      previewCollectiveTimersRef.current.push(setInterval(next, 3000));
+    });
   };
 
   const showPreviewSlide = useCallback((index) => {
@@ -814,6 +946,8 @@ export default function RecapAdmin() {
     if (!container) return;
     clearTimeout(previewTimerRef.current);
     clearInterval(previewProgressRef.current);
+    previewCollectiveTimersRef.current.forEach(timer => clearInterval(timer));
+    previewCollectiveTimersRef.current = [];
 
     const domSlides = container.querySelectorAll(".slide");
     const progressFills = container.querySelectorAll(".preview-progress-fill");
@@ -897,6 +1031,9 @@ export default function RecapAdmin() {
   const closePreview = () => {
     clearTimeout(previewTimerRef.current);
     clearInterval(previewProgressRef.current);
+    clearPreviewTypewriterTimers();
+    previewCollectiveTimersRef.current.forEach(timer => clearInterval(timer));
+    previewCollectiveTimersRef.current = [];
     setPreviewOpen(false);
   };
 
@@ -1050,7 +1187,7 @@ export default function RecapAdmin() {
                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 w-20 text-white"
                    />
                 </div>
-                {slides[currentIndex]?.content?.html?.includes('vd-award-tags') && (
+                {(slides[currentIndex]?.content?.html?.includes('vd-award-tags') || slides[currentIndex]?.content?.html?.includes('collective-awards-list')) && (
                   <button onClick={handleAddCollectiveAward} className="flex items-center gap-1 px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded font-medium transition ml-4">
                     <Plus size={16}/> Thêm Giải Tập Thể
                   </button>
