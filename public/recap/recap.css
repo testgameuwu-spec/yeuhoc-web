@@ -1,9 +1,15 @@
+/* ===== BASE STYLES ===== */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
 /* ===== FULL-SCREEN SLIDES (NO TRANSITION) ===== */
 .slide {
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
     justify-content: flex-start; align-items: center;
-    padding: 70px 60px 40px;
+    padding: clamp(30px, 5vh, 70px) clamp(16px, 4vw, 60px);
     background: linear-gradient(rgba(248, 249, 250, 0.93), rgba(248, 249, 250, 0.93)), url('/recap/bg.png') center/85vh no-repeat, #f8f9fa;
     opacity: 0; visibility: hidden;
     z-index: 1; text-align: center;
@@ -54,48 +60,48 @@
 .chapter-label {
     color: #c62828; font-weight: 800;
     letter-spacing: 3px; text-transform: uppercase;
-    font-size: 0.95rem; margin-bottom: 12px;
+    font-size: clamp(0.8rem, 2vw, 0.95rem); margin-bottom: 12px;
 }
 h1 {
-    font-size: 2.8rem; color: #1a1a1a;
+    font-size: clamp(2.2rem, 5vw, 2.8rem); color: #1a1a1a;
     font-weight: 800; margin-bottom: 14px; line-height: 1.3;
 }
 h2 {
-    font-size: 1.5rem; color: #1a1a1a;
-    font-weight: 600; margin-bottom: 10px; line-height: 1.4;
+    font-size: clamp(1.3rem, 3.5vw, 1.5rem); color: #1a1a1a;
+    font-weight: 700; margin-bottom: 10px; line-height: 1.4;
 }
 p {
-    color: #333; font-size: 1.4rem;
+    color: #333; font-size: clamp(1.1rem, 2.5vw, 1.4rem);
     line-height: 1.85; max-width: 680px;
-    font-weight: 600; margin: 0 auto;
+    font-weight: 700; margin: 0 auto;
 }
 .slide-desc {
-    color: #555; font-size: 1.35rem;
+    color: #555; font-size: clamp(1.05rem, 2.5vw, 1.35rem);
     line-height: 1.7; max-width: 620px;
     margin: 4px auto 10px;
-    font-style: italic; font-weight: 500;
+    font-style: italic; font-weight: 600;
 }
 .slide-quote {
-    color: #c62828; font-size: 1.45rem;
+    color: #c62828; font-size: clamp(1.1rem, 3vw, 1.45rem);
     font-weight: 700; font-style: italic;
     margin: 8px auto 20px; max-width: 600px;
     order: 5;
 }
 .big-title {
-    font-size: 3.5rem; font-weight: 800;
+    font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 800;
     color: #1a1a1a; letter-spacing: 2px;
 }
 .subtitle {
-    font-size: 1.45rem; color: #555;
-    font-weight: 500; margin-top: 8px;
+    font-size: clamp(1.1rem, 2.5vw, 1.45rem); color: #555;
+    font-weight: 600; margin-top: 8px;
 }
 .achievement {
-    font-size: 1.8rem; font-weight: 700;
+    font-size: clamp(1.2rem, 3vw, 1.8rem); font-weight: 700;
     color: #c62828; margin: 6px 0;
     text-transform: uppercase; letter-spacing: 1px;
 }
 .img-caption {
-    font-size: 0.85rem; color: #999;
+    font-size: clamp(0.75rem, 1.5vw, 0.85rem); color: #999;
     font-style: italic; margin-top: 6px;
 }
 
@@ -227,7 +233,9 @@ p {
     position: relative;
     width: 100%;
     max-width: 1350px;
-    height: 720px;
+    /* aspect-ratio thay cho height cố định giúp khung co giãn bảo toàn tỷ lệ */
+    aspect-ratio: 15 / 8;
+    max-height: 55vh; /* Chừa đủ chỗ cho title + description phía trên */
     margin: 20px auto;
 }
 .scattered-gallery .img-placeholder {
@@ -326,7 +334,7 @@ p {
 /* ===== GALLERY GRID ===== */
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 10px; max-width: 920px;
     width: 100%; margin: 12px 0;
 }
@@ -352,13 +360,14 @@ p {
     margin-left: -60px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: clamp(4px, 1vh, 10px);
     overflow: hidden;
-    padding: 10px 0;
+    padding: clamp(4px, 1vh, 10px) 0;
     margin-top: 14px;
     margin-bottom: 14px;
     order: 10;
 }
+
 /* Vinh Danh compact: smaller margin */
 .gallery-slideshow.vd-compact-gallery {
     margin-top: 6px;
@@ -414,8 +423,8 @@ p {
 }
 .gallery-track .img-placeholder {
     flex-shrink: 0;
-    width: 280px;
-    height: 200px;
+    width: clamp(180px, 25vw, 280px);
+    height: clamp(100px, 17vh, 200px);
     margin: 0 10px 0 0;
     max-width: none;
 }
@@ -520,17 +529,20 @@ p {
 }
 .overlay-images .img-placeholder.visible { opacity: 1; }
 
+/* ===== TABLET RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .slide { padding: 60px 40px 30px; }
+    /* Sử dụng aspect-ratio từ base thay vì height cố định */
+    .scattered-gallery .img-placeholder { transform: scale(0.9); }
+    .credits-layout { gap: 30px; }
+    .credits-layout .credits-img { width: 350px; height: 350px; }
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-    .slide { padding: 50px 24px 30px; }
-    h1 { font-size: 1.6rem; }
-    h2 { font-size: 1.2rem; }
-    .big-title { font-size: 2.5rem; }
-    p { font-size: 0.9rem; }
-    .achievement { font-size: 1.2rem; }
     .two-images { flex-direction: column; }
     .gallery-grid { grid-template-columns: repeat(2, 1fr); }
-    .scattered-gallery { height: 450px; }
+    .scattered-gallery { height: auto; aspect-ratio: 4/3; max-height: 55vh; }
     .scattered-gallery .img-placeholder:nth-child(1) { top: 0%; left: 2%; width: 42%; height: 45%; transform: rotate(-5deg); }
     .scattered-gallery .img-placeholder:nth-child(2) { top: 2%; right: 2%; width: 45%; height: 42%; transform: rotate(4deg); }
     .scattered-gallery .img-placeholder:nth-child(3) { bottom: 2%; left: 2%; width: 40%; height: 44%; transform: rotate(6deg); }
@@ -539,14 +551,29 @@ p {
     .scattered-gallery .img-placeholder:nth-child(6) { display: none; }
     .scattered-gallery .img-placeholder:nth-child(7) { display: none; }
     .scattered-gallery .img-placeholder:nth-child(n+8) { display: none; }
-    .gallery-track .img-placeholder { width: 220px; height: 160px; }
 }
 @media (max-width: 480px) {
-    .slide { padding: 40px 16px 24px; }
-    .big-title { font-size: 2rem; }
     .gallery-grid { grid-template-columns: 1fr 1fr; }
-    .scattered-gallery { height: 400px; }
-    .gallery-track .img-placeholder { width: 180px; height: 130px; }
+    .scattered-gallery { height: auto; aspect-ratio: 1/1; max-height: 55vh; }
+}
+
+/* ===== MÀN HÌNH THẤP (Máy chiếu 4:3, Laptop nhỏ) ===== */
+@media (max-height: 800px) {
+    .slide { padding: clamp(20px, 3vh, 40px) clamp(16px, 4vw, 60px); }
+    .gallery-track .img-placeholder { height: clamp(80px, 15vh, 160px); width: clamp(140px, 22vw, 240px); }
+    .scattered-gallery { max-height: 50vh; }
+    h2 { margin-bottom: 6px; }
+    p { margin-bottom: 4px; }
+    .slide-desc { margin: 2px auto 6px; }
+    .gallery-slideshow { gap: 3px; padding: 3px 0; margin-top: 8px; margin-bottom: 8px; }
+}
+
+/* ===== MÀN HÌNH RẤT THẤP (iPad ngang, máy chiếu cũ) ===== */
+@media (max-height: 650px) {
+    .gallery-track .img-placeholder { height: clamp(70px, 13vh, 130px); width: clamp(120px, 20vw, 200px); }
+    .scattered-gallery { max-height: 45vh; }
+    .gallery-slideshow { gap: 2px; padding: 2px 0; margin-top: 4px; margin-bottom: 4px; }
+    .slide-quote { margin: 4px auto 10px; }
 }
 
 /* ===== VINH DANH CAROUSEL ===== */
@@ -777,7 +804,7 @@ p {
 
 .vd-stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 6px;
     margin: 0 auto 10px;
     max-width: 750px;
