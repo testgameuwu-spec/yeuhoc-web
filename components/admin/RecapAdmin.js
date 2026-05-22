@@ -23,6 +23,7 @@ export default function RecapAdmin() {
 
   const [placeholderVersion, setPlaceholderVersion] = useState(0);
   const [selectedPlaceholder, setSelectedPlaceholder] = useState(null);
+  const [manualNavEnabled, setManualNavEnabled] = useState(false);
 
   // Extract placeholder info from current slide
   const getPlaceholders = useCallback(() => {
@@ -129,9 +130,26 @@ export default function RecapAdmin() {
       .select("*")
       .order("order_index", { ascending: true });
     if (data) {
-      setSlides(data);
+      const settingsRow = data.find(s => s.slide_type === 'system_settings');
+      if (settingsRow) setManualNavEnabled(settingsRow.content?.manualNavEnabled ?? false);
+      setSlides(data.filter(s => s.slide_type !== 'system_settings'));
     }
     setLoading(false);
+  };
+
+  const handleToggleManualNav = async () => {
+    const newVal = !manualNavEnabled;
+    setManualNavEnabled(newVal);
+    const { data } = await supabase.from('recap_slides').select('id').eq('slide_type', 'system_settings').maybeSingle();
+    if (data) {
+        await supabase.from('recap_slides').update({ content: { manualNavEnabled: newVal } }).eq('id', data.id);
+    } else {
+        await supabase.from('recap_slides').insert([{
+            order_index: -1,
+            slide_type: 'system_settings',
+            content: { manualNavEnabled: newVal }
+        }]);
+    }
   };
 
   // ── Vinh Danh Members Management ──
@@ -955,6 +973,18 @@ export default function RecapAdmin() {
       <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
         <div className="p-4 border-b border-gray-800 font-bold text-lg flex justify-between items-center">
           <span>Recap Slides</span>
+        </div>
+
+        <div className="p-3 border-b border-gray-800">
+          <div className="flex items-center justify-between">
+             <span className="text-xs text-gray-400">Chuyển Slide Thủ Công (Viewer)</span>
+             <button 
+                onClick={handleToggleManualNav}
+                className={`w-10 h-5 rounded-full relative transition-colors ${manualNavEnabled ? 'bg-emerald-500' : 'bg-gray-600'}`}
+             >
+                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${manualNavEnabled ? 'right-1' : 'left-1'}`}></div>
+             </button>
+          </div>
         </div>
         
         <div className="flex-1 overflow-y-auto p-2 space-y-2">

@@ -10,6 +10,7 @@ export default function RecapViewer() {
   const containerRef = useRef(null);
   const audioRef = useRef(null);
   const currentSongRef = useRef(1);
+  const manualNavEnabledRef = useRef(false);
 
   useEffect(() => {
     fetchSlides();
@@ -22,7 +23,11 @@ export default function RecapViewer() {
       .select("*")
       .order("order_index", { ascending: true });
     if (data && data.length > 0) {
-      setSlides(data);
+      const settingsRow = data.find(s => s.slide_type === 'system_settings');
+      if (settingsRow) {
+         manualNavEnabledRef.current = settingsRow.content?.manualNavEnabled ?? false;
+      }
+      setSlides(data.filter(s => s.slide_type !== 'system_settings'));
     }
     setLoading(false);
   };
@@ -312,6 +317,7 @@ export default function RecapViewer() {
         }
 
         // Handle generic click to advance/go back
+        if (!manualNavEnabledRef.current) return;
         if (e.target.closest('.img-placeholder') || e.target.closest('.personal-award-card')) return;
         
         const x = e.clientX;
