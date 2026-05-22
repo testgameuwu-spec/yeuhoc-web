@@ -888,9 +888,26 @@ p {
 @media (max-width: 600px) {
     .vd-stats-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+        margin-bottom: 5px;
+    }
+    .vd-stat-card {
+        padding: 4px 2px 3px;
     }
     .vd-stat-number {
-        font-size: 1.5rem;
+        font-size: 1.2rem !important;
+    }
+    .vd-stat-label {
+        font-size: 0.8rem;
+        margin-top: 2px;
+    }
+    .vd-collective-section {
+        padding: 6px 8px;
+    }
+    .vd-fun-fact {
+        padding: 6px 10px;
+        font-size: 0.9rem;
+        margin: 6px auto 0;
     }
     .vd-compact-gallery .gallery-track .personal-award-card.static-card {
         width: 160px;
@@ -1063,7 +1080,62 @@ p {
     }
 }
 @media (max-width: 768px) {
-    .floating-quotes { display: none; }
+    /* ----- FLOATING QUOTES (BUBBLE TEXT) FIX ----- */
+    .floating-quotes {
+        width: 100%;
+        left: 0;
+        right: 0;
+        pointer-events: none;
+        z-index: 10;
+        display: block; /* enable on mobile */
+    }
+    .left-quotes, .right-quotes {
+        width: 100%;
+    }
+    .quote-item {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(50, 50, 50, 0.75);
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        animation-name: floatUpMobile;
+        backdrop-filter: blur(1px);
+        -webkit-backdrop-filter: blur(1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .quote-item::before {
+        background: rgba(255, 255, 255, 0.2);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    /* Randomize positions for mobile to cover screen */
+    .q1 { left: 5%; }
+    .q2 { left: 25%; }
+    .q3 { left: 45%; }
+    .q4 { left: 60%; }
+    .q5 { left: 15%; }
+    .q6 { left: 35%; right: auto; }
+    .q7 { left: 55%; right: auto; }
+    .q8 { left: 75%; right: auto; }
+    .q9 { left: 10%; right: auto; }
+    .q10 { left: 50%; right: auto; }
+}
+
+@keyframes floatUpMobile {
+    0% {
+        transform: translateY(100vh) scale(0.8);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.65;
+    }
+    90% {
+        opacity: 0.65;
+    }
+    100% {
+        transform: translateY(-20vh) scale(1);
+        opacity: 0;
+    }
 }
 
 /* ===== CUSTOM ORIENTATIONS ===== */
