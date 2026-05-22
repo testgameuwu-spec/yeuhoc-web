@@ -886,6 +886,23 @@ p {
 }
 
 @media (max-width: 600px) {
+    /* Đảo vị trí hiển thị: Vinh danh cá nhân lên trên, thông số xuống dưới */
+    .vd-compact-gallery {
+        order: 1 !important;
+        margin-top: 5px !important;
+        margin-bottom: 5px !important;
+    }
+    .vd-stats-section {
+        order: 2 !important;
+        margin-top: 0 !important;
+    }
+    
+    /* Thu nhỏ chữ của thông số & giải thưởng */
+    .vd-stats-title {
+        font-size: 0.6rem !important;
+        margin-bottom: 6px !important;
+        letter-spacing: 2px !important;
+    }
     .vd-stats-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 4px;
@@ -895,26 +912,51 @@ p {
         padding: 4px 2px 3px;
     }
     .vd-stat-number {
-        font-size: 1.2rem !important;
+        font-size: 1.1rem !important;
     }
     .vd-stat-label {
-        font-size: 0.8rem;
+        font-size: 0.7rem !important;
         margin-top: 2px;
+        line-height: 1.2 !important;
     }
     .vd-collective-section {
-        padding: 6px 8px;
+        padding: 5px 6px;
+    }
+    .vd-collective-label {
+        font-size: 0.55rem;
+        margin-bottom: 4px;
+    }
+    .vd-award-tag {
+        font-size: 0.6rem;
+        padding: 3px 8px;
     }
     .vd-fun-fact {
-        padding: 6px 10px;
-        font-size: 0.9rem;
-        margin: 6px auto 0;
+        padding: 5px 8px;
+        font-size: 0.8rem;
+        margin: 5px auto 0;
     }
     .vd-compact-gallery .gallery-track .personal-award-card.static-card {
-        width: 160px;
+        width: 145px;
     }
     .vd-compact-gallery .gallery-track .personal-award-card.static-card .card-photo {
-        width: 110px;
-        height: 130px;
+        width: 95px;
+        height: 110px;
+        margin-bottom: 6px;
+    }
+    .vd-compact-gallery .gallery-track .personal-award-card.static-card .card-name {
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+    .vd-compact-gallery .gallery-track .personal-award-card.static-card .card-achievements {
+        padding: 6px 4px;
+    }
+    .vd-compact-gallery .gallery-track .personal-award-card.static-card .ach-label {
+        font-size: 0.6rem;
+        margin-bottom: 3px;
+    }
+    .vd-compact-gallery .gallery-track .personal-award-card.static-card .ach-text {
+        font-size: 0.65rem;
+        line-height: 1.3;
     }
 }
 
