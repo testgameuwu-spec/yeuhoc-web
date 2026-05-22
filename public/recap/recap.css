@@ -74,11 +74,12 @@ p {
     line-height: 1.7; max-width: 620px;
     margin: 4px auto 10px;
     font-style: italic; font-weight: 500;
-}
 .slide-quote {
-    display: none !important;
+    color: #c62828; font-size: 1.45rem;
+    font-weight: 700; font-style: italic;
+    margin: 8px auto 20px; max-width: 600px;
+    order: 5;
 }
-.big-title {
     font-size: 3.8rem; font-weight: 800;
     color: #1a1a1a; letter-spacing: 2px;
 }
@@ -362,21 +363,27 @@ p {
     margin-bottom: 6px;
     padding: 6px 0 20px 0;
     gap: 6px;
-    overflow-x: auto;
-    cursor: grab;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden; /* Hide scrollbar completely */
+    position: relative;
 }
-.gallery-slideshow.vd-compact-gallery::-webkit-scrollbar {
-    height: 8px;
+.vd-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    color: #c62828; font-weight: bold; font-size: 1.2rem;
+    transition: all 0.2s;
 }
-.gallery-slideshow.vd-compact-gallery::-webkit-scrollbar-thumb {
-    background: rgba(198, 40, 40, 0.6);
-    border-radius: 4px;
-}
-.gallery-slideshow.vd-compact-gallery:active {
-    cursor: grabbing;
-}
+.vd-nav-btn:hover { background: #c62828; color: #fff; }
+.vd-nav-btn.left { left: 10px; }
+.vd-nav-btn.right { right: 10px; }
 .gallery-track {
     display: flex;
     width: max-content;
@@ -863,16 +870,16 @@ p {
     background: #fafafa;
     border: 1px solid #f0f0f0;
     border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 0.8rem;
-    color: #666;
+    padding: 12px 16px;
+    font-size: 1.15rem;
+    color: #333;
     line-height: 1.5;
-    font-style: italic;
+    font-style: normal;
     text-align: center;
 }
 .vd-fun-fact strong {
     color: #c62828;
-    font-weight: 700;
+    font-weight: 900;
     font-style: normal;
 }
 

@@ -100,6 +100,61 @@ export default function RecapViewer() {
         }
     });
 
+    // Hide quotes only on "Tình Bạn Bắt Đầu Phát Tán" slide
+    domSlides.forEach(slide => {
+       const text = slide.textContent || "";
+       if (text.includes("Bắt Đầu Phát Tán")) {
+           const quote = slide.querySelector('.slide-quote');
+           if (quote) quote.style.display = 'none';
+       }
+    });
+
+    // Setup Compact Gallery (Vinh Danh) Navigation
+    containerRef.current.querySelectorAll('.vd-compact-gallery').forEach(gallery => {
+        if (!gallery.querySelector('.vd-nav-btn.left')) {
+            const leftBtn = document.createElement('button');
+            leftBtn.className = 'vd-nav-btn left';
+            leftBtn.innerHTML = '❮';
+            const rightBtn = document.createElement('button');
+            rightBtn.className = 'vd-nav-btn right';
+            rightBtn.innerHTML = '❯';
+            
+            gallery.appendChild(leftBtn);
+            gallery.appendChild(rightBtn);
+            
+            const cardWidth = 300; // 280 card + margin
+            let scrollInterval;
+            
+            const startAutoScroll = () => {
+                clearInterval(scrollInterval);
+                scrollInterval = setInterval(() => {
+                    gallery.scrollBy({ left: cardWidth, behavior: 'smooth' });
+                    // basic infinite scroll loop trick
+                    const track = gallery.querySelector('.gallery-track');
+                    if (track && gallery.scrollLeft >= track.scrollWidth / 2) {
+                        gallery.style.scrollBehavior = 'auto';
+                        gallery.scrollLeft = 0;
+                        gallery.style.scrollBehavior = 'smooth';
+                    }
+                }, 3000); // 3 seconds auto scroll
+            };
+            
+            leftBtn.onclick = (e) => {
+                e.stopPropagation(); // prevent advancing slide
+                gallery.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+                startAutoScroll();
+            };
+            
+            rightBtn.onclick = (e) => {
+                e.stopPropagation();
+                gallery.scrollBy({ left: cardWidth, behavior: 'smooth' });
+                startAutoScroll();
+            };
+            
+            startAutoScroll();
+        }
+    });
+
     function typeWriter(el, text, delay, speed) {
       return new Promise(resolve => {
         setTimeout(() => {
