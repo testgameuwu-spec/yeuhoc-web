@@ -340,7 +340,7 @@ export default function RecapViewer() {
         if (cards.length === 0) return;
         let current = 0;
         const N = cards.length;
-        const INTERVAL = 10000;
+        const INTERVAL = 5000;
 
         function render() {
             const indices = [((current - 1) + N) % N, current, (current + 1) % N];
