@@ -416,8 +416,8 @@ p {
 }
 .credits-scroll.paused { animation-play-state: paused; }
 .credits-name {
-    font-size: 1.05rem; color: #333;
-    padding: 5px 0; font-weight: 500;
+    font-size: 1.5rem; color: #000000;
+    padding: 6px 0; font-weight: 900;
 }
 .credits-divider {
     width: 40px; height: 2px;
@@ -779,9 +779,9 @@ p {
 }
 
 .vd-stat-number {
-    font-size: 1.45rem !important;
-    font-weight: 800;
-    color: #1a1a1a;
+    font-size: 3.9rem !important;
+    font-weight: 900;
+    color: #000000;
     line-height: 1.1;
     letter-spacing: -0.5px;
 }
