@@ -71,7 +71,7 @@ const VALID_ADMIN_TABS = new Set([
   'targetExams',
   'notifications',
   'scoring',
-  'tongket',
+  'recaptongket',
   'reports',
   'aiLogs',
   'practice',
@@ -549,7 +549,7 @@ export default function AdminDashboard() {
     if (activeTab === 'targetExams') {
       return <TargetExamManagement showAlert={showAlert} showConfirm={showConfirm} />;
     }
-    if (activeTab === 'tongket') {
+    if (activeTab === 'recaptongket') {
       return <RecapAdmin />;
     }
     if (activeTab === 'notifications') {
@@ -607,7 +607,7 @@ export default function AdminDashboard() {
                 {activeTab === 'overview' ? 'Tổng quan hệ thống' :
                  activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'targetExams' ? 'Quản lý kỳ thi mục tiêu' :
-                 activeTab === 'tongket' ? 'Tổng kết' :
+                 activeTab === 'recaptongket' ? 'Tổng kết' :
                  activeTab === 'notifications' ? 'Chỉnh thông báo' :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :

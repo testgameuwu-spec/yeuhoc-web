@@ -1,0 +1,724 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import DOMPurify from 'isomorphic-dompurify';
+import { supabase } from "@/lib/supabase";
+
+export default function RecapViewer() {
+  const [slides, setSlides] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [vinhDanhMembers, setVinhDanhMembers] = useState([]);
+  const containerRef = useRef(null);
+  const audioRef = useRef(null);
+  const currentSongRef = useRef(1);
+  const manualNavEnabledRef = useRef(false);
+
+  useEffect(() => {
+    fetchSlides();
+    fetchVinhDanhMembers();
+  }, []);
+
+  const fetchSlides = async () => {
+    const { data, error } = await supabase
+      .from("recap_slides")
+      .select("*")
+      .order("order_index", { ascending: true });
+    if (data && data.length > 0) {
+      const settingsRow = data.find(s => s.slide_type === 'system_settings');
+      if (settingsRow) {
+         manualNavEnabledRef.current = settingsRow.content?.manualNavEnabled ?? false;
+      }
+      setSlides(data.filter(s => s.slide_type !== 'system_settings'));
+    }
+    setLoading(false);
+  };
+
+  const fetchVinhDanhMembers = async () => {
+    const { data } = await supabase
+      .from("vinh_danh_members")
+      .select("*")
+      .order("order_index", { ascending: true });
+    if (data) setVinhDanhMembers(data);
+  };
+
+  const buildVinhDanhCards = () => {
+    return vinhDanhMembers.map(m => 
+      `<div class="personal-award-card static-card">
+        <div class="card-photo"><img src="${m.photo_url || ''}" alt="${m.name}"></div>
+        <div class="card-info-wrap">
+          <div class="card-name">${m.name}</div>
+          <div class="card-name-divider"></div>
+          <div class="card-achievements">
+            <div class="ach-label">Thành Tích</div>
+            <div class="ach-text">${(m.achievements || '').replace(/\n/g, '<br>')}</div>
+          </div>
+        </div>
+      </div>`
+    ).join('');
+  };
+
+  useEffect(() => {
+    if (slides.length === 0 || loading || !containerRef.current) return;
+
+    // A5K58 SLIDESHOW ENGINE (Next.js Adapted)
+    const domSlides = containerRef.current.querySelectorAll(".slide");
+    const progressBar = document.getElementById("progressBar");
+    if (!progressBar) return;
+    
+    progressBar.innerHTML = ''; // Reset
+    
+    let currentSlide = 0;
+    let progressFills = [];
+    let slideTimer = null;
+    let progressInterval = null;
+    let typewriterTimers = [];
+    let typewriterRunId = 0;
+    const collectiveIntervals = [];
+    const CHAR_SPEED = 50;
+
+    // Initialize typewriter texts
+    containerRef.current.querySelectorAll(".typewriter").forEach(el => {
+      if (!el.dataset.textOriginal) {
+        el.dataset.textOriginal = el.textContent.trim();
+      }
+      el.textContent = "";
+    });
+
+    // Build progress bar
+    domSlides.forEach(() => {
+      const seg = document.createElement("div");
+      seg.className = "progress-segment";
+      const fill = document.createElement("div");
+      fill.className = "progress-fill";
+      seg.appendChild(fill);
+      progressBar.appendChild(seg);
+      progressFills.push(fill);
+    });
+    
+    // Duplicate seamless tracks
+    containerRef.current.querySelectorAll('.gallery-track').forEach(track => {
+        // Prevent duplicate appending if component remounts
+        if (track.children.length > 0 && !track.dataset.cloned) {
+            track.innerHTML += track.innerHTML;
+            track.dataset.cloned = "true";
+        }
+    });
+
+    // Hide quotes only on "Tình Bạn Bắt Đầu Phát Tán" slide
+    domSlides.forEach(slide => {
+       const text = slide.textContent || "";
+       if (text.includes("Bắt Đầu Phát Tán")) {
+           const quote = slide.querySelector('.slide-quote');
+           if (quote) quote.style.display = 'none';
+       }
+    });
+
+    // Setup Compact Gallery (Vinh Danh) Navigation
+    containerRef.current.querySelectorAll('.vd-compact-gallery').forEach(gallery => {
+        if (!gallery.querySelector('.vd-nav-btn.left')) {
+            const leftBtn = document.createElement('button');
+            leftBtn.className = 'vd-nav-btn left';
+            leftBtn.innerHTML = '❮';
+            const rightBtn = document.createElement('button');
+            rightBtn.className = 'vd-nav-btn right';
+            rightBtn.innerHTML = '❯';
+            
+            gallery.appendChild(leftBtn);
+            gallery.appendChild(rightBtn);
+            
+            const cardWidth = 300; // 280 card + margin
+            let scrollInterval;
+            
+            const startAutoScroll = () => {
+                clearInterval(scrollInterval);
+                scrollInterval = setInterval(() => {
+                    gallery.scrollBy({ left: cardWidth, behavior: 'smooth' });
+                    // basic infinite scroll loop trick
+                    const track = gallery.querySelector('.gallery-track');
+                    if (track && gallery.scrollLeft >= track.scrollWidth / 2) {
+                        gallery.style.scrollBehavior = 'auto';
+                        gallery.scrollLeft = 0;
+                        gallery.style.scrollBehavior = 'smooth';
+                    }
+                }, 3000); // 3 seconds auto scroll
+            };
+            
+            leftBtn.onclick = (e) => {
+                e.stopPropagation(); // prevent advancing slide
+                gallery.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+                startAutoScroll();
+            };
+            
+            rightBtn.onclick = (e) => {
+                e.stopPropagation();
+                gallery.scrollBy({ left: cardWidth, behavior: 'smooth' });
+                startAutoScroll();
+            };
+            
+            startAutoScroll();
+        }
+    });
+
+    function queueTypewriterTimer(callback, delay) {
+      const timer = setTimeout(callback, delay);
+      typewriterTimers.push(timer);
+      return timer;
+    }
+
+    function clearTypewriterTimers() {
+      typewriterTimers.forEach(timer => clearTimeout(timer));
+      typewriterTimers = [];
+      typewriterRunId++;
+    }
+
+    function waitForTypewriter(delay, runId) {
+      return new Promise(resolve => {
+        queueTypewriterTimer(() => resolve(runId === typewriterRunId), delay);
+      });
+    }
+
+    function typeWriter(el, text, delay, speed, runId) {
+      return new Promise(resolve => {
+        queueTypewriterTimer(() => {
+          if (runId !== typewriterRunId) {
+            resolve(false);
+            return;
+          }
+          el.style.visibility = "";
+          el.textContent = "";
+          el.classList.add("typing");
+          let i = 0;
+          function type() {
+            if (runId !== typewriterRunId) {
+              resolve(false);
+              return;
+            }
+            if (i < text.length) {
+              el.textContent += text.charAt(i);
+              i++;
+              queueTypewriterTimer(type, speed);
+            } else {
+              el.classList.remove("typing");
+              el.classList.add("done");
+              resolve(true);
+            }
+          }
+          type();
+        }, delay);
+      });
+    }
+
+    // Calculate the time when the last animation/typewriter on a slide finishes
+    function getContentEndTime(slide) {
+      let maxEnd = 0;
+      // Check .anim elements (delay + ~900ms transition)
+      slide.querySelectorAll(".anim").forEach(el => {
+        const delay = parseInt(el.dataset.delay || "0");
+        maxEnd = Math.max(maxEnd, delay + 900);
+      });
+      // Typewriters run sequentially: first delay + sum of all typing times + gaps
+      const typewriters = slide.querySelectorAll(".typewriter");
+      if (typewriters.length > 0) {
+        const firstDelay = parseInt(typewriters[0].dataset.delay || "0");
+        let totalTyping = firstDelay;
+        typewriters.forEach(el => {
+          const text = el.dataset.textOriginal || el.textContent || "";
+          totalTyping += text.length * CHAR_SPEED + 500; // typing + gap
+        });
+        maxEnd = Math.max(maxEnd, totalTyping);
+      }
+      return maxEnd;
+    }
+
+    function getSlideDuration(slideDom, index) {
+      // Use DB configured duration strictly
+      const dbDuration = slides[index]?.duration;
+      return (dbDuration && dbDuration > 0) ? dbDuration * 1000 : 15000;
+    }
+
+    function cycleOverlayImages(container) {
+      const images = container.querySelectorAll(".img-placeholder");
+      let idx = 0;
+      images.forEach(img => img.classList.remove("visible"));
+      if (images.length === 0) return;
+
+      function showNext() {
+        images.forEach(img => img.classList.remove("visible"));
+        images[idx].classList.add("visible");
+        idx = (idx + 1) % images.length;
+      }
+      showNext();
+      const interval = setInterval(() => {
+        showNext();
+        if (idx === 0 && container.dataset.cycled) {
+          clearInterval(interval);
+        }
+        container.dataset.cycled = "true";
+      }, 2500);
+      container._interval = interval;
+    }
+
+    function initCollectiveAwardSlides(scope) {
+      scope.querySelectorAll(".collective-photo-frame").forEach(frame => {
+        const items = Array.from(frame.querySelectorAll(".collective-photo-slot"));
+        if (items.length === 0 || frame.dataset.initialized === "true") return;
+
+        frame.dataset.initialized = "true";
+        let current = Math.max(0, items.findIndex(item => item.classList.contains("active")));
+
+        const render = () => {
+          items.forEach((item, index) => item.classList.toggle("active", index === current));
+        };
+        const next = () => {
+          current = (current + 1) % items.length;
+          render();
+        };
+        const prev = () => {
+          current = (current - 1 + items.length) % items.length;
+          render();
+        };
+
+        frame.addEventListener("click", event => {
+          event.stopPropagation();
+          const rect = frame.getBoundingClientRect();
+          if (event.clientX - rect.left < rect.width / 2) prev();
+          else next();
+        });
+
+        let touchStartX = 0;
+        frame.addEventListener("touchstart", event => {
+          touchStartX = event.touches[0].clientX;
+        }, { passive: true });
+        frame.addEventListener("touchend", event => {
+          const diff = touchStartX - event.changedTouches[0].clientX;
+          if (Math.abs(diff) > 40) {
+            if (diff > 0) next();
+            else prev();
+          }
+        });
+
+        render();
+        collectiveIntervals.push(setInterval(next, 3000));
+      });
+    }
+
+    function animateSlide(slide) {
+      clearTypewriterTimers();
+      const runId = typewriterRunId;
+
+      slide.querySelectorAll(".anim").forEach(el => {
+        el.classList.remove("show");
+      });
+      slide.querySelectorAll(".typewriter").forEach(el => {
+        el.classList.remove("typing", "done");
+        el.textContent = "";
+        el.style.visibility = "hidden";
+      });
+      const credits = slide.querySelector(".credits-scroll");
+      if (credits) {
+        credits.style.animation = "none";
+        credits.offsetHeight; 
+        credits.style.animation = "";
+      }
+
+      // Split .anim into before/after typewriter groups
+      const typewriters = Array.from(slide.querySelectorAll(".typewriter"));
+      const firstTwDelay = typewriters.length > 0 ? parseInt(typewriters[0].dataset.delay || "0") : Infinity;
+      
+      const animsBefore = [];
+      const animsAfter = [];
+      slide.querySelectorAll(".anim").forEach(el => {
+        const delay = parseInt(el.dataset.delay || "0");
+        if (delay < firstTwDelay || typewriters.length === 0) {
+          animsBefore.push(el);
+        } else {
+          animsAfter.push(el);
+        }
+      });
+
+      // Show before-typewriter anims normally
+      animsBefore.forEach(el => {
+        const delay = parseInt(el.dataset.delay || "0");
+        setTimeout(() => el.classList.add("show"), delay);
+      });
+
+      // Run typewriters sequentially, then show after-typewriter anims
+      if (typewriters.length > 0) {
+        let chain = waitForTypewriter(firstTwDelay, runId);
+        typewriters.forEach(el => {
+          chain = chain.then(active => {
+            if (!active) return false;
+            const text = el.dataset.textOriginal || "";
+            return typeWriter(el, text, 0, CHAR_SPEED, runId).then(done => {
+              if (!done) return false;
+              return waitForTypewriter(500, runId);
+            });
+          });
+        });
+        // After all typewriters done, show remaining anims
+        chain.then(active => {
+          if (!active || runId !== typewriterRunId) return;
+          animsAfter.forEach((el, i) => {
+            setTimeout(() => el.classList.add("show"), i * 400);
+          });
+        });
+      }
+
+      const overlayContainer = slide.querySelector(".overlay-images");
+      if (overlayContainer) {
+        cycleOverlayImages(overlayContainer);
+      }
+    }
+
+    function startProgress(duration) {
+      let elapsed = 0;
+      const step = 50;
+      clearInterval(progressInterval);
+
+      progressInterval = setInterval(() => {
+        elapsed += step;
+        const pct = Math.min((elapsed / duration) * 100, 100);
+        if (progressFills[currentSlide]) {
+            progressFills[currentSlide].style.width = pct + "%";
+        }
+        if (pct >= 100) {
+          clearInterval(progressInterval);
+        }
+      }, step);
+    }
+
+    function showSlide(index) {
+      clearTimeout(slideTimer);
+      clearInterval(progressInterval);
+
+      for (let i = 0; i < domSlides.length; i++) {
+        if (i < index) {
+          progressFills[i].style.width = "100%";
+        } else if (i > index) {
+          progressFills[i].style.width = "0%";
+        }
+      }
+      if (progressFills[index]) {
+          progressFills[index].style.width = "0%";
+      }
+
+      domSlides.forEach(s => s.classList.remove("active"));
+      domSlides[index].classList.add("active");
+
+      animateSlide(domSlides[index]);
+
+      const totalDuration = getSlideDuration(domSlides[index], index);
+      
+      if (domSlides[index].dataset.manual === 'true') {
+        if (progressFills[index]) {
+            progressFills[index].style.width = '0%';
+        }
+      } else {
+        startProgress(totalDuration);
+        slideTimer = setTimeout(() => {
+          if (currentSlide < domSlides.length - 1) {
+            currentSlide++;
+            showSlide(currentSlide);
+          } else {
+            clearInterval(progressInterval);
+          }
+        }, totalDuration);
+      }
+    }
+
+    window.showSlide = (index) => {
+      const nextIndex = Math.max(0, Math.min(Number(index) || 0, domSlides.length - 1));
+      currentSlide = nextIndex;
+      showSlide(currentSlide);
+    };
+    window.nextSlide = () => {
+      if (currentSlide < domSlides.length - 1) {
+        currentSlide++;
+        showSlide(currentSlide);
+      }
+    };
+
+    const clickHandler = (e) => {
+        // Handle start buttons
+        if (e.target.classList.contains('start-btn')) {
+             if (e.target.textContent.toUpperCase().includes('BẮT ĐẦU') || e.target.textContent.toUpperCase().includes('CHECK - IN') || e.target.textContent.toUpperCase().includes('CHECK IN')) {
+                 // Start background music
+                 if (audioRef.current) {
+                   currentSongRef.current = 1;
+                   audioRef.current.src = "/recap/backgroundmusic.mp3";
+                   audioRef.current.currentTime = 0;
+                   audioRef.current.play().catch(() => {});
+                 }
+                 if (currentSlide < domSlides.length - 1) {
+                    currentSlide++;
+                    showSlide(currentSlide);
+                 }
+             } else if (e.target.textContent.toUpperCase().includes('XEM LẠI')) {
+                 if (audioRef.current) {
+                   audioRef.current.pause();
+                 }
+                 currentSlide = 0;
+                 showSlide(currentSlide);
+             }
+             return;
+        }
+
+        // Handle generic click to advance/go back
+        if (!manualNavEnabledRef.current) return;
+        if (e.target.closest('.img-placeholder') || e.target.closest('.personal-award-card') || e.target.closest('.collective-photo-frame')) return;
+        
+        const x = e.clientX;
+        const width = window.innerWidth;
+        if (x < width * 0.3) {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        } else {
+            if (currentSlide < domSlides.length - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+    };
+    
+    document.addEventListener('click', clickHandler);
+
+    // ===== VINH DANH CAROUSEL =====
+    let vdAutoTimer;
+    function initVinhDanhCarousel() {
+        const track = document.getElementById('vdTrack');
+        if (!track) return;
+        const cards = Array.from(track.querySelectorAll('.personal-award-card'));
+        if (cards.length === 0) return;
+        let current = 0;
+        const N = cards.length;
+        const INTERVAL = 10000;
+
+        function render() {
+            const indices = [((current - 1) + N) % N, current, (current + 1) % N];
+            cards.forEach((card, i) => {
+                card.className = 'personal-award-card';
+                if (i === indices[0]) card.classList.add('side-left');
+                else if (i === indices[1]) card.classList.add('center');
+                else if (i === indices[2]) card.classList.add('side-right');
+            });
+        }
+
+        function goTo(idx) {
+            current = ((idx % N) + N) % N;
+            render();
+            resetTimer();
+        }
+
+        window.vdPrev = () => goTo(current - 1);
+        window.vdNext = () => goTo(current + 1);
+
+        function resetTimer() {
+            clearInterval(vdAutoTimer);
+            vdAutoTimer = setInterval(() => goTo(current + 1), INTERVAL);
+        }
+        
+        cards.forEach((card, i) => {
+            card.onclick = () => {
+                if (!card.classList.contains('center')) {
+                    goTo(i);
+                }
+            };
+        });
+
+        let touchStartX = 0;
+        const container = document.getElementById('vdCarousel');
+        if(container) {
+            container.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+            container.addEventListener('touchend', e => {
+                const diff = touchStartX - e.changedTouches[0].clientX;
+                if (Math.abs(diff) > 40) goTo(diff > 0 ? current + 1 : current - 1);
+            });
+        }
+
+        render();
+        resetTimer();
+    }
+    
+    // ===== FLOATING QUOTES LOGIC =====
+    // Lấy dữ liệu quotes động từ slide credits (slide có id leftQuotesBox)
+    let floatingData = [];
+    const creditsSlide = slides.find(s => s.content?.html?.includes('leftQuotesBox'));
+    if (creditsSlide) {
+        const parsedContent = typeof creditsSlide.content === 'string' ? JSON.parse(creditsSlide.content) : creditsSlide.content;
+        if (parsedContent?.quotes && Array.isArray(parsedContent.quotes)) {
+            floatingData = parsedContent.quotes;
+        }
+    }
+
+    function initFloatingQuotes() {
+        const leftBox = document.getElementById('leftQuotesBox');
+        const rightBox = document.getElementById('rightQuotesBox');
+        
+        if (leftBox && rightBox && leftBox.children.length === 0) {
+            const shuffledData = [...floatingData].sort(() => 0.5 - Math.random());
+            shuffledData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'quote-item';
+                div.textContent = item.text;
+                
+                if (item.type === 'insta') {
+                    div.style.color = '#1a1a1a'; // Đen
+                    div.style.fontWeight = '600';
+                } else if (item.type === 'group') {
+                    div.style.color = '#c62828'; // Đỏ sẫm
+                    div.style.fontWeight = '700';
+                } else {
+                    div.style.color = '#1565c0'; // Xanh Navy đậm cho Quote
+                    div.style.fontWeight = '700';
+                }
+                
+                const duration = 18 + Math.random() * 8; // Từ 18s đến 26s
+                // Trải đều thời gian xuất hiện từ 0 đến 30s để đảm bảo ai cũng lên sóng 1 lần trước khi hết slide (Slide dài 45s)
+                const delay = (index / shuffledData.length) * 30; 
+                
+                // Vị trí left/right ngẫu nhiên nhưng giới hạn từ 0% đến 15% để không bị tràn ra khỏi khung 28%
+                const pos = Math.random() * 15; 
+                
+                div.style.animationDuration = `${duration}s`;
+                div.style.animationDelay = `${delay}s`;
+                
+                if (index % 2 === 0) {
+                    div.style.left = `${pos}%`;
+                    leftBox.appendChild(div);
+                } else {
+                    div.style.right = `${pos}%`;
+                    rightBox.appendChild(div);
+                }
+            });
+        }
+    }
+    
+    function initVinhDanhInteraction() {
+        const galleries = containerRef.current.querySelectorAll('.vd-compact-gallery');
+        galleries.forEach(gallery => {
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+            let autoScrollTimer;
+
+            const startAutoScroll = () => {
+                clearInterval(autoScrollTimer);
+                autoScrollTimer = setInterval(() => {
+                    if (!isDown) gallery.scrollLeft += 0.75;
+                    // Infinite loop check
+                    if (gallery.scrollLeft >= gallery.scrollWidth / 2) {
+                        gallery.scrollLeft = 0;
+                    }
+                }, 30);
+            };
+
+            const stopAutoScroll = () => clearInterval(autoScrollTimer);
+
+            gallery.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX - gallery.offsetLeft;
+                scrollLeft = gallery.scrollLeft;
+                stopAutoScroll();
+            });
+
+            gallery.addEventListener('mouseleave', () => {
+                isDown = false;
+                startAutoScroll();
+            });
+
+            gallery.addEventListener('mouseup', () => {
+                isDown = false;
+                startAutoScroll();
+            });
+
+            gallery.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - gallery.offsetLeft;
+                const walk = (x - startX) * 2; 
+                gallery.scrollLeft = scrollLeft - walk;
+            });
+
+            gallery.addEventListener('touchstart', stopAutoScroll, {passive: true});
+            gallery.addEventListener('touchend', startAutoScroll);
+
+            startAutoScroll();
+            gallery._autoScrollTimer = autoScrollTimer;
+        });
+    }
+    
+    initFloatingQuotes();
+    initVinhDanhCarousel();
+    initVinhDanhInteraction();
+    initCollectiveAwardSlides(containerRef.current);
+
+    showSlide(0);
+
+    return () => {
+      clearTimeout(slideTimer);
+      clearInterval(progressInterval);
+      clearTypewriterTimers();
+      clearInterval(vdAutoTimer);
+      collectiveIntervals.forEach(interval => clearInterval(interval));
+      delete window.showSlide;
+      delete window.nextSlide;
+      document.removeEventListener('click', clickHandler);
+      if (containerRef.current) {
+          containerRef.current.querySelectorAll('.vd-compact-gallery').forEach(g => {
+             if (g._autoScrollTimer) clearInterval(g._autoScrollTimer);
+          });
+      }
+    };
+  }, [slides, loading, vinhDanhMembers]);
+
+  if (loading) {
+    return <div className="bg-[#0a0a0a] h-screen w-screen flex items-center justify-center text-white">Loading...</div>;
+  }
+
+  if (slides.length === 0) {
+    return <div className="bg-[#0a0a0a] h-screen w-screen flex items-center justify-center text-white">Chưa có dữ liệu Recap.</div>;
+  }
+
+  return (
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&display=swap" rel="stylesheet" />
+      <link rel="stylesheet" href="/recap/recap.css" />
+      <audio 
+        ref={audioRef} 
+        src="/recap/backgroundmusic.mp3" 
+        preload="auto" 
+        onEnded={() => {
+          if (currentSongRef.current === 1) {
+            currentSongRef.current = 2;
+            if (audioRef.current) {
+              audioRef.current.src = "/recap/backgroundmusic2.mp3";
+              audioRef.current.play().catch(() => {});
+            }
+          }
+        }}
+      />
+      
+      <div style={{ background: '#0a0a0a', fontFamily: "'Be Vietnam Pro', sans-serif", overflow: 'hidden', height: '100vh', width: '100vw', position: 'relative' }}>
+          <img src="/recap/imgbackground.png" className="background-watermark" alt="watermark" />
+          <div className="progress-container" id="progressBar"></div>
+          
+          <div ref={containerRef}>
+            {slides.map((slide) => {
+                let html = slide.content.html || '';
+                if (html.includes('VINH_DANH_START') && vinhDanhMembers.length > 0) {
+                  html = html.replace(/<!-- VINH_DANH_START -->[\s\S]*?<!-- VINH_DANH_END -->/, buildVinhDanhCards());
+                }
+                return (
+                  <div 
+                    key={slide.id} 
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target'] }) }} 
+                  />
+                );
+            })}
+          </div>
+      </div>
+    </>
+  );
+}
