@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import DOMPurify from 'isomorphic-dompurify';
 import { supabase } from "@/lib/supabase";
 
 export default function RecapViewer() {
@@ -712,7 +713,7 @@ export default function RecapViewer() {
                 return (
                   <div 
                     key={slide.id} 
-                    dangerouslySetInnerHTML={{ __html: html }} 
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target'] }) }} 
                   />
                 );
             })}
