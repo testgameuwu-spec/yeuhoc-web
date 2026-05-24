@@ -4396,11 +4396,3 @@ html[data-theme='dark'] .tsa-exam-root input[type='text']::placeholder {
 }
 
 
-/* ===== GLOBAL SCHOOL WATERMARK ===== */
-body::before {
-  content: "";
-html[data-theme='dark'] body::before {
-  opacity: 0.02;
-  filter: invert(1) brightness(0.6);
-}
-
