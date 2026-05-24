@@ -16,7 +16,7 @@ import PracticeProgressManagement from '@/components/admin/PracticeProgressManag
 import AdminOverview from '@/components/admin/AdminOverview';
 import NotificationManagement from '@/components/admin/NotificationManagement';
 import TargetExamManagement from '@/components/admin/TargetExamManagement';
-import RecapAdmin from '@/components/admin/RecapAdmin';
+
 import { parseImageMap } from '@/components/ContentWithInlineImage';
 import { TSA_TOTAL_DURATION_MINUTES } from '@/lib/examScoring';
 import {
@@ -71,7 +71,7 @@ const VALID_ADMIN_TABS = new Set([
   'targetExams',
   'notifications',
   'scoring',
-  'recaptongket',
+
   'reports',
   'aiLogs',
   'practice',
@@ -549,9 +549,7 @@ export default function AdminDashboard() {
     if (activeTab === 'targetExams') {
       return <TargetExamManagement showAlert={showAlert} showConfirm={showConfirm} />;
     }
-    if (activeTab === 'recaptongket') {
-      return <RecapAdmin />;
-    }
+
     if (activeTab === 'notifications') {
       return <NotificationManagement showAlert={showAlert} showConfirm={showConfirm} />;
     }
@@ -607,7 +605,6 @@ export default function AdminDashboard() {
                 {activeTab === 'overview' ? 'Tổng quan hệ thống' :
                  activeTab === 'exams' ? (isCreating ? (editingExam?.id ? 'Chỉnh sửa đề thi' : 'Tạo đề mới') : 'Quản lý đề thi') :
                  activeTab === 'targetExams' ? 'Quản lý kỳ thi mục tiêu' :
-                 activeTab === 'recaptongket' ? 'Tổng kết' :
                  activeTab === 'notifications' ? 'Chỉnh thông báo' :
                  activeTab === 'scoring' ? 'Cấu hình điểm số' :
                  activeTab === 'reports' ? 'Quản lý báo cáo câu hỏi' :
