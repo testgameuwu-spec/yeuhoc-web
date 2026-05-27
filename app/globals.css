@@ -4396,25 +4396,3 @@ html[data-theme='dark'] .tsa-exam-root input[type='text']::placeholder {
 }
 
 
-/* ===== GLOBAL SCHOOL WATERMARK ===== */
-body::before {
-  content: "";
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(550px, 90vw);
-  height: min(550px, 90vw);
-  background: url('/recap/bg.png') center/contain no-repeat;
-  opacity: 0.06;
-  pointer-events: none;
-  z-index: -1;
-  transition: opacity 0.3s ease;
-}
-
-/* Extremely faint and inverted for beautiful dark mode blending */
-html[data-theme='dark'] body::before {
-  opacity: 0.02;
-  filter: invert(1) brightness(0.6);
-}
-
