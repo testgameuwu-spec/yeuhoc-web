@@ -869,19 +869,23 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const [practiceSaving, setPracticeSaving] = useState(false);
   const practiceSaveTimerRef = useRef(null);
 
-  const savePracticeProgress = async ({ notify = false, showSpinner = false, overrides = {} } = {}) => {
-    if (!activeExam?.id || !user?.id) return false;
-
+  const writePracticeSnapshot = useCallback((overrides = {}, { skipIfLocalExists = false } = {}) => {
+    if (!activeExam?.id || !user?.id || typeof window === 'undefined') return null;
+    const storageKey = getPracticeProgressKey(activeExam.id);
+    if (skipIfLocalExists && localStorage.getItem(storageKey)) return null;
     const snapshot = createPracticeSnapshot({
       answers: overrides.answers ?? answers,
       bookmarks: overrides.bookmarks ?? bookmarks,
       currentQ: overrides.currentQ ?? currentQ,
       practiceRevealed: overrides.practiceRevealed ?? practiceRevealed,
-      realQuestions,
+      realQuestions: (activeExam.questions || []).filter(question => question.type !== 'TEXT'),
     });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(getPracticeProgressKey(activeExam.id), JSON.stringify(snapshot));
-    }
+    localStorage.setItem(storageKey, JSON.stringify(snapshot));
+    return snapshot;
+  }, [activeExam, answers, bookmarks, currentQ, getPracticeProgressKey, practiceRevealed, user]);
+
+  const upsertPracticeProgressSnapshot = useCallback(async (snapshot, { notify = false, showSpinner = false } = {}) => {
+    if (!activeExam?.id || !user?.id || !snapshot) return false;
 
     if (showSpinner) setPracticeSaving(true);
     try {
@@ -910,25 +914,81 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
       if (notify) showAlert('Đã lưu', 'Tiến trình ôn luyện đã được lưu.');
       return true;
+    } catch (error) {
+      console.error('Error saving practice progress:', error);
+      if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + (error.message || 'Vui lòng thử lại.'));
+      return false;
     } finally {
       if (showSpinner) setPracticeSaving(false);
     }
+  }, [activeExam, showAlert, user]);
+
+  const savePracticeProgress = async ({ notify = false, showSpinner = false, overrides = {}, snapshot = null } = {}) => {
+    const nextSnapshot = snapshot || writePracticeSnapshot(overrides);
+    if (!nextSnapshot) return false;
+    return upsertPracticeProgressSnapshot(nextSnapshot, { notify, showSpinner });
+  };
+
+  const getBoundedPracticeQuestionIndex = (index) => (
+    Math.min(Math.max(Number(index) || 0, 0), Math.max(realQuestions.length - 1, 0))
+  );
+
+  const setPracticeQuestion = (index, { closeAI = true } = {}) => {
+    const nextQ = getBoundedPracticeQuestionIndex(index);
+    if (closeAI) setIsAIChatOpen(false);
+    setCurrentQ(nextQ);
+    writePracticeSnapshot({ currentQ: nextQ });
+    return nextQ;
+  };
+
+  const togglePracticeBookmark = (questionId) => {
+    const next = new Set(bookmarks);
+    if (next.has(questionId)) next.delete(questionId);
+    else next.add(questionId);
+    setBookmarks(next);
+    writePracticeSnapshot({ bookmarks: next });
+  };
+
+  const revealPracticeQuestion = (questionIndex = currentQ, { makeCurrent = false, closeAI = false } = {}) => {
+    const nextQ = getBoundedPracticeQuestionIndex(questionIndex);
+    const nextRevealed = { ...practiceRevealed, [nextQ]: true };
+    setPracticeRevealed(nextRevealed);
+    if (closeAI) setIsAIChatOpen(false);
+    if (makeCurrent) setCurrentQ(nextQ);
+    writePracticeSnapshot({
+      currentQ: makeCurrent ? nextQ : currentQ,
+      practiceRevealed: nextRevealed,
+    });
   };
 
   const applyPracticeSnapshot = async (snapshot) => {
-    await preloadExamImages('practice-loading', snapshot?.currentQ || 0);
+    const nextCurrentQ = Math.min(Math.max(Number(snapshot?.currentQ) || 0, 0), Math.max(realQuestions.length - 1, 0));
+    writePracticeSnapshot({
+      answers: snapshot?.answers || {},
+      bookmarks: snapshot?.bookmarks || [],
+      currentQ: nextCurrentQ,
+      practiceRevealed: snapshot?.practiceRevealed || {},
+    });
+    await preloadExamImages('practice-loading', nextCurrentQ);
     setAnswers(snapshot?.answers || {});
     setBookmarks(new Set(snapshot?.bookmarks || []));
-    setCurrentQ(Math.min(Math.max(Number(snapshot?.currentQ) || 0, 0), Math.max(realQuestions.length - 1, 0)));
+    setCurrentQ(nextCurrentQ);
     setPracticeRevealed(snapshot?.practiceRevealed || {});
     setIsAIChatOpen(false);
     setQuizPhase('practice');
   };
 
   const startFreshPractice = async () => {
+    const resetBookmarks = new Set();
+    writePracticeSnapshot({
+      answers: {},
+      bookmarks: resetBookmarks,
+      currentQ: 0,
+      practiceRevealed: {},
+    });
     await preloadExamImages('practice-loading', 0);
     setAnswers({});
-    setBookmarks(new Set());
+    setBookmarks(resetBookmarks);
     setCurrentQ(0);
     setPracticeRevealed({});
     setIsAIChatOpen(false);
@@ -1032,10 +1092,17 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       );
 
       if (!hasSavedProgress) return;
-      await preloadExamImages('practice-loading', saved?.currentQ || 0);
+      const nextCurrentQ = Math.min(Math.max(Number(saved?.currentQ) || 0, 0), Math.max(questionCount - 1, 0));
+      writePracticeSnapshot({
+        answers: saved?.answers || {},
+        bookmarks: saved?.bookmarks || [],
+        currentQ: nextCurrentQ,
+        practiceRevealed: saved?.practiceRevealed || {},
+      });
+      await preloadExamImages('practice-loading', nextCurrentQ);
       setAnswers(saved?.answers || {});
       setBookmarks(new Set(saved?.bookmarks || []));
-      setCurrentQ(Math.min(Math.max(Number(saved?.currentQ) || 0, 0), Math.max(questionCount - 1, 0)));
+      setCurrentQ(nextCurrentQ);
       setPracticeRevealed(saved?.practiceRevealed || {});
       setIsAIChatOpen(false);
       setQuizPhase('practice');
@@ -1043,7 +1110,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }, 0);
 
     return () => clearTimeout(resumeTimer);
-  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions.length, shouldResumePractice, user]);
+  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions.length, shouldResumePractice, user, writePracticeSnapshot]);
 
   const handleStartPractice = async () => {
     if (realQuestions.length === 0) {
@@ -1074,7 +1141,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const handlePracticeReveal = () => {
-    setPracticeRevealed(prev => ({ ...prev, [currentQ]: true }));
+    revealPracticeQuestion(currentQ);
   };
 
   const handleSavePracticeProgress = () => {
@@ -1385,45 +1452,39 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
     if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
     practiceSaveTimerRef.current = setTimeout(() => {
-      const practiceQuestions = (activeExam.questions || []).filter(question => question.type !== 'TEXT');
-      const snapshot = createPracticeSnapshot({
-        answers,
-        bookmarks,
-        currentQ,
-        practiceRevealed,
-        realQuestions: practiceQuestions,
-      });
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(getPracticeProgressKey(activeExam.id), JSON.stringify(snapshot));
-      }
-
-      supabase
-        .from('practice_progress')
-        .upsert({
-          user_id: user.id,
-          exam_id: activeExam.id,
-          current_question: snapshot.currentQ,
-          answered_count: snapshot.answeredCount,
-          revealed_count: snapshot.revealedCount,
-          total_questions: snapshot.totalQuestions,
-          answers: snapshot.answers,
-          bookmarks: snapshot.bookmarks,
-          revealed_map: snapshot.practiceRevealed,
-          completed: snapshot.completed,
-          saved_at: snapshot.savedAt,
-          updated_at: snapshot.savedAt,
-        }, { onConflict: 'user_id,exam_id' })
-        .then(({ error }) => {
-          if (error) console.warn('Practice progress autosave failed:', error.message);
-        });
+      const snapshot = writePracticeSnapshot();
+      if (snapshot) void upsertPracticeProgressSnapshot(snapshot);
     }, 900);
 
     return () => {
       if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
     };
-  }, [activeExam, answers, bookmarks, currentQ, getPracticeProgressKey, practiceRevealed, quizPhase, user]);
+  }, [activeExam?.id, quizPhase, upsertPracticeProgressSnapshot, user?.id, writePracticeSnapshot]);
+
+  useEffect(() => {
+    if (quizPhase !== 'practice' || !activeExam?.id || !user?.id || typeof window === 'undefined') return;
+
+    const flushPracticeSnapshot = () => {
+      writePracticeSnapshot({}, { skipIfLocalExists: true });
+    };
+
+    window.addEventListener('pagehide', flushPracticeSnapshot);
+    window.addEventListener('beforeunload', flushPracticeSnapshot);
+
+    return () => {
+      window.removeEventListener('pagehide', flushPracticeSnapshot);
+      window.removeEventListener('beforeunload', flushPracticeSnapshot);
+    };
+  }, [activeExam?.id, quizPhase, user?.id, writePracticeSnapshot]);
 
   const handleAnswerChange = (questionId, answer) => {
+    if (quizPhase === 'practice') {
+      const nextAnswers = { ...answers, [questionId]: answer };
+      setAnswers(nextAnswers);
+      writePracticeSnapshot({ answers: nextAnswers });
+      return;
+    }
+
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
@@ -1436,7 +1497,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
   const performResetHome = () => {
     if (quizPhase === 'practice') {
-      savePracticeProgress();
+      const snapshot = writePracticeSnapshot();
+      if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
+      if (snapshot) void savePracticeProgress({ snapshot });
+      setQuizPhase('preview');
     }
     // Suppress anti-cheat listener before exiting fullscreen
     isSubmittingRef.current = true;
@@ -1833,7 +1897,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       {isTSA && (i === 40 || i === 60) && (
                         <span className="px-1 text-xs font-black text-violet-400">|</span>
                       )}
-                      <button onClick={() => { setIsAIChatOpen(false); setCurrentQ(i); }} style={{
+                      <button onClick={() => setPracticeQuestion(i)} style={{
                         width: isCurrent ? 22 : 9, height: 9, borderRadius: 20, border: 'none', cursor: 'pointer',
                         background: bg, transition: 'all .2s', flexShrink: 0,
                       }} title={`Câu ${i + 1}${isMarked ? ' (đánh dấu)' : done ? (correctness ? ' (đúng)' : ' (sai)') : ''}`} />
@@ -1883,12 +1947,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           disabled={isRev}
                           isBookmarked={bookmarks.has(gq.id)}
                           preloadImages={rqIndex === currentQ}
-                          onToggleBookmark={() => {
-                            const next = new Set(bookmarks);
-                            if (next.has(gq.id)) next.delete(gq.id);
-                            else next.add(gq.id);
-                            setBookmarks(next);
-                          }}
+                          onToggleBookmark={() => togglePracticeBookmark(gq.id)}
                           onReport={handleOpenReport}
                           onSaveErrorLog={getErrorLogSaveHandler(gq, rqIndex, { visible: isRev })}
                         />
@@ -1896,7 +1955,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           <button
                             onClick={() => {
                               if (isRev) return;
-                              setCurrentQ(rqIndex);
+                              setPracticeQuestion(rqIndex, { closeAI: false });
                               openAIChat();
                             }}
                             disabled={isRev}
@@ -1908,9 +1967,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           {!isRev && hasAns && (
                             <button
                               onClick={() => {
-                                setPracticeRevealed(prev => ({ ...prev, [rqIndex]: true }));
-                                setIsAIChatOpen(false);
-                                setCurrentQ(rqIndex); // Cập nhật currentQ để dot sáng lên
+                                revealPracticeQuestion(rqIndex, { makeCurrent: true, closeAI: true });
                               }}
                               className="practice-action-btn is-answer"
                               type="button"
@@ -1936,12 +1993,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     disabled={isRevealed}
                     isBookmarked={bookmarks.has(q.id)}
                     preloadImages
-                    onToggleBookmark={() => {
-                      const next = new Set(bookmarks);
-                      if (next.has(q.id)) next.delete(q.id);
-                      else next.add(q.id);
-                      setBookmarks(next);
-                    }}
+                    onToggleBookmark={() => togglePracticeBookmark(q.id)}
                     onReport={handleOpenReport}
                     onSaveErrorLog={getErrorLogSaveHandler(q, currentQ, { visible: isRevealed })}
                   />
@@ -1953,8 +2005,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               <button
                 onClick={() => {
                   const target = Math.max(0, firstIndex - 1);
-                  setIsAIChatOpen(false);
-                  setCurrentQ(target);
+                  setPracticeQuestion(target);
                   document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={firstIndex === 0}
@@ -1992,8 +2043,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               <button
                 onClick={() => {
                   const target = Math.min(realQuestions.length - 1, lastIndex + 1);
-                  setIsAIChatOpen(false);
-                  setCurrentQ(target);
+                  setPracticeQuestion(target);
                   document.getElementById('practice-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={lastIndex === realQuestions.length - 1}
@@ -2011,7 +2061,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {realQuestions.map((qItem, i) => bookmarks.has(qItem.id) && (
-                    <button key={i} onClick={() => { setIsAIChatOpen(false); setCurrentQ(i); }}
+                    <button key={i} onClick={() => setPracticeQuestion(i)}
                       className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                       style={{
                         background: i === currentQ ? '#d97706' : '#fff',

@@ -84,6 +84,7 @@ export default function ContinueExamsPanel({
 
 function ContinueExamItem({ item }) {
   const isPractice = item.mode === 'practice';
+  const actionText = isPractice && item.completed ? 'Xem lại' : 'Tiếp tục';
   const badgeStyle = getBadgeStyle(isPractice ? CONTINUE_BADGES.practice : CONTINUE_BADGES.exam);
   const examTypeStyle = getBadgeStyle(EXAM_TYPE_BADGES[item.examType] || EXAM_TYPE_BADGES.Other);
   const Icon = isPractice ? BookOpen : Clock;
@@ -124,7 +125,7 @@ function ContinueExamItem({ item }) {
         <div className="flex items-center justify-between gap-3 text-xs text-gray-400">
           <span className="truncate">{formatContinueTime(item.updatedAt)}</span>
           <span className="inline-flex shrink-0 items-center gap-1 font-bold text-[var(--home-brand-primary)]">
-            Tiếp tục
+            {actionText}
             <PlayCircle className="w-3.5 h-3.5" />
           </span>
         </div>
