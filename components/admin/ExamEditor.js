@@ -212,6 +212,7 @@ export default function ExamEditor({
 
     onDraftChange({
       id: exam?.id || null,
+      orderIndex: exam?.orderIndex,
       title,
       subject,
       examType,
@@ -229,6 +230,7 @@ export default function ExamEditor({
     antiCheatEnabled,
     duration,
     exam?.id,
+    exam?.orderIndex,
     examType,
     folderId,
     note,
@@ -434,6 +436,7 @@ export default function ExamEditor({
   const handleSave = () => {
     onSave({
       id: exam?.id || null,
+      orderIndex: exam?.orderIndex,
       title, subject, examType, year, duration, published, note, folderId: folderId === 'root' ? null : folderId,
       questions, scoringConfig, totalQ: realQuestionCount,
       antiCheatEnabled,

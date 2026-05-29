@@ -331,16 +331,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       setCurrentQElapsed(0);
     }, 0);
     return () => clearTimeout(resetTimer);
-  }, [currentQ]);
+  }, [currentQ, quizPhase]);
 
   useEffect(() => {
-    if (quizPhase === 'quiz' && timerRunning) {
-      const interval = setInterval(() => {
-        setCurrentQElapsed(Math.floor((Date.now() - currentQStartTimeRef.current) / 1000));
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [quizPhase, timerRunning, currentQ]);
+    if (quizPhase !== 'practice') return;
+
+    const interval = setInterval(() => {
+      setCurrentQElapsed(Math.floor((Date.now() - currentQStartTimeRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [quizPhase, currentQ]);
 
   const [globalImageModal, setGlobalImageModal] = useState({ isOpen: false, src: '', alt: '' });
 
@@ -1965,7 +1965,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           </button>
         </Topbar>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" id="practice-scroll-container">
+        <div className="practice-scroll-container flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" id="practice-scroll-container">
           <div className={`mx-auto transition-all duration-300 ${contextQ ? 'max-w-6xl' : 'w-full lg:w-[75vw]'}`}>
             {/* Progress dots */}
             <div className="mb-5">
@@ -2186,6 +2186,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </div>
             )}
           </div>
+        </div>
+        <div className="practice-current-question-timer" aria-label={`Thời gian làm câu hiện tại: ${formatClock(currentQElapsed)}`}>
+          <span>Thời gian làm câu hiện tại:</span>
+          <strong>{formatClock(currentQElapsed)}</strong>
         </div>
         {aiChatMounted && (
           <PracticeAIChatbox
@@ -2792,10 +2796,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                    >
                       Câu tiếp <CaretRight weight="bold" />
                    </button>
-                   
-                   <div className="ml-4 text-xs font-medium text-gray-500">
-                      Thời gian làm câu hiện tại: <span className="font-bold text-gray-700 font-mono text-[13px]">{formatClock(currentQElapsed)}</span>
-                   </div>
                 </div>
              </div>
           </div>

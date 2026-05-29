@@ -2624,6 +2624,45 @@ html[data-theme='dark'] .ep-lb-score-val {
 }
 
 /* ─── Practice Mode (ôn luyện) ─── */
+.practice-scroll-container {
+  padding-bottom: calc(2rem + 70px) !important;
+}
+
+.practice-current-question-timer {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 70;
+  display: inline-flex;
+  max-width: calc(100vw - 32px);
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .96);
+  color: var(--app-muted);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, .14);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.practice-current-question-timer span {
+  min-width: 0;
+}
+
+.practice-current-question-timer strong {
+  color: var(--app-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
 .practice-card-wrap .et-q-card {
   border-radius: 16px;
   border-width: 2px;
@@ -2793,6 +2832,22 @@ html[data-theme='dark'] .ep-lb-score-val {
 
   .exam-status-panel {
     padding: 4px 8px !important;
+    font-size: 13px;
+  }
+
+  .practice-scroll-container {
+    padding-bottom: calc(1.5rem + 64px) !important;
+  }
+
+  .practice-current-question-timer {
+    left: max(12px, env(safe-area-inset-left));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  .practice-current-question-timer strong {
     font-size: 13px;
   }
 
@@ -3319,6 +3374,17 @@ html[data-theme='dark'] .exam-timer-pause {
 html[data-theme='dark'] .exam-timer-pause:hover {
   background: rgba(127, 29, 29, .28);
   border-color: rgba(248, 113, 113, .62);
+}
+
+html[data-theme='dark'] .practice-current-question-timer {
+  background: rgba(15, 23, 42, .92);
+  border-color: var(--app-border-strong);
+  color: var(--app-text-soft);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .36);
+}
+
+html[data-theme='dark'] .practice-current-question-timer strong {
+  color: #fff;
 }
 
 html[data-theme='dark'] .et-screen {
