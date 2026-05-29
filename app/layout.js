@@ -12,11 +12,11 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.yeuhoc.site"),
   title: "YeuHoc",
-  description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
+  description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động",
   keywords: ["trắc nghiệm", "luyện thi", "THPT", "HSA", "TSA", "toán", "yeuhoc"],
   openGraph: {
     title: "YeuHoc",
-    description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
+    description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động",
     siteName: "YeuHoc",
     locale: "vi_VN",
     type: "website",
@@ -33,7 +33,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "YeuHoc",
-    description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động và AI",
+    description: "Kho đề thi THPT QG, HSA, TSA — luyện tập với chấm điểm tự động",
     images: ["/opengraph-image.png"],
   },
 };
