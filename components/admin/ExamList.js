@@ -278,6 +278,7 @@ export default function ExamList({
   const renderExam = (exam, index, parentFolderId) => {
     const sc = SUBJECT_COLORS[exam.subject] || 'from-gray-500/20 to-gray-600/20 text-gray-400 border-gray-500/30';
     const isDragged = draggedItem?.id === exam.id;
+    const showDuration = exam.antiCheatEnabled !== false;
     
     return (
       <div key={exam.id}
@@ -303,8 +304,12 @@ export default function ExamList({
         <div className="flex-1">
           <p className="text-sm font-semibold text-white/90 group-hover:text-white transition-colors">{exam.title}</p>
           <p className="text-xs text-white/30 mt-0.5 flex items-center gap-1.5">
-            <Clock className="w-3 h-3" /> {exam.duration} phút
-            <span className="text-white/10">·</span>
+            {showDuration && (
+              <>
+                <Clock className="w-3 h-3" /> {exam.duration} phút
+                <span className="text-white/10">·</span>
+              </>
+            )}
             <Calendar className="w-3 h-3" /> {exam.createdAt ? exam.createdAt.split('T')[0] : ''}
           </p>
         </div>

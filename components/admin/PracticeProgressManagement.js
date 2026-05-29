@@ -509,14 +509,15 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
 
                   return (
                     <div key={row.id} className="p-4 hover:bg-white/[0.03] transition-colors min-w-0">
-                      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,520px)] 2xl:items-center">
+                      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_minmax(0,620px)] 2xl:items-center">
                         <StudentCell row={row} />
                         <ExamCell row={row} />
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 min-w-0">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 min-w-0">
                           <Metric label="Đã xem" value={`${revealedCount}/${totalQuestions}`} className="text-emerald-400 font-black" />
                           <Metric label="Đã trả lời" value={`${answeredCount}/${totalQuestions}`} />
                           <Metric label="Câu hiện tại" value={`${currentQuestion}/${totalQuestions}`} />
+                          <Metric label="Thời gian" value={formatDuration(row.time_spent)} />
                           <Metric label="Cập nhật" value={formatDateTime(row.updated_at || row.saved_at)} compact />
                         </div>
                       </div>
@@ -765,12 +766,13 @@ const PracticeDetailModal = ({ row, exam, loading, error, onClose }) => {
             </div>
           ) : (
             <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-3 lg:grid-cols-7">
                 <Metric label="Đã xem" value={`${row.revealed_count || 0}/${row.total_questions || realQuestions.length}`} className="text-emerald-300 font-black" />
                 <Metric label="Đã trả lời" value={`${row.answered_count || 0}/${row.total_questions || realQuestions.length}`} />
                 <Metric label="Đúng" value={resultStats.correct} className="text-emerald-300 font-black" />
                 <Metric label="Sai" value={resultStats.wrong} className="text-red-300 font-black" />
                 <Metric label="Chưa trả lời" value={resultStats.unanswered} className="text-amber-300 font-black" />
+                <Metric label="Thời gian" value={formatDuration(row.time_spent)} />
                 <Metric label="Câu hiện tại" value={`${currentQuestion}/${realQuestions.length}`} />
               </div>
 

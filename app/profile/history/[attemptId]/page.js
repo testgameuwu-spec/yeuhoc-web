@@ -47,6 +47,7 @@ function mapExamQuestions(examData) {
       return {
         ...q,
         answer,
+        image: q.image_url || q.image || null,
         tfSubQuestions: tfSubs,
         statements: stmts,
       };

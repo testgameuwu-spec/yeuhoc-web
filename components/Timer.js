@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true, compact = false }) {
+export default function Timer({ initialMinutes = 30, initialSeconds = null, onTimeUp, onTick, isRunning = true, compact = false, countUp = false }) {
     const totalDuration = initialMinutes * 60;
+    const getInitialValue = useCallback(() => (
+        countUp ? (initialSeconds || 0) : (initialSeconds !== null ? initialSeconds : totalDuration)
+    ), [countUp, initialSeconds, totalDuration]);
 
     // Anchor-based timing: track when the timer started and how many seconds were on the clock
     const anchorRef = useRef(null);        // { startedAt: number, startValue: number }
     const onTickRef = useRef(onTick);
     const onTimeUpRef = useRef(onTimeUp);
-    const [displaySeconds, setDisplaySeconds] = useState(() =>
-        initialSeconds !== null ? initialSeconds : totalDuration
-    );
+    const [displaySeconds, setDisplaySeconds] = useState(getInitialValue);
     const displaySecondsRef = useRef(displaySeconds);
     const timeUpFiredRef = useRef(false);
 
@@ -20,20 +21,25 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
     useEffect(() => { onTimeUpRef.current = onTimeUp; }, [onTimeUp]);
 
     // When initialSeconds changes from parent (e.g. resume), reset the anchor
-    const prevInitialConfigRef = useRef({ initialSeconds, initialMinutes });
+    const prevInitialConfigRef = useRef({ initialSeconds, initialMinutes, countUp });
     useEffect(() => {
-        const nextVal = initialSeconds !== null ? initialSeconds : initialMinutes * 60;
+        const nextVal = getInitialValue();
         const prevConfig = prevInitialConfigRef.current;
         const initialConfigChanged = (
             prevConfig.initialSeconds !== initialSeconds
             || prevConfig.initialMinutes !== initialMinutes
+            || prevConfig.countUp !== countUp
         );
 
         // Only reset if the value actually changed from outside.
         if (initialConfigChanged) {
-            prevInitialConfigRef.current = { initialSeconds, initialMinutes };
+            prevInitialConfigRef.current = { initialSeconds, initialMinutes, countUp };
             const currentDisplay = displaySecondsRef.current;
-            const isLiveTickFromParent = isRunning && nextVal <= currentDisplay && currentDisplay - nextVal <= 1;
+            const isLiveTickFromParent = isRunning && (
+                countUp
+                    ? nextVal >= currentDisplay && nextVal - currentDisplay <= 1
+                    : nextVal <= currentDisplay && currentDisplay - nextVal <= 1
+            );
             if (isLiveTickFromParent) return;
 
             displaySecondsRef.current = nextVal;
@@ -46,7 +52,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
                 anchorRef.current = null;
             }
         }
-    }, [initialSeconds, initialMinutes, isRunning]);
+    }, [countUp, getInitialValue, initialSeconds, initialMinutes, isRunning]);
 
     // Core timing loop using Date.now() anchoring
     useEffect(() => {
@@ -66,7 +72,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
             if (!anchor) return;
 
             const elapsed = Math.floor((Date.now() - anchor.startedAt) / 1000);
-            const newVal = Math.max(0, anchor.startValue - elapsed);
+            const newVal = countUp ? anchor.startValue + elapsed : Math.max(0, anchor.startValue - elapsed);
 
             setDisplaySeconds(prev => {
                 if (prev === newVal) return prev;
@@ -74,7 +80,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
                 return newVal;
             });
 
-            if (newVal <= 0 && !timeUpFiredRef.current) {
+            if (!countUp && newVal <= 0 && !timeUpFiredRef.current) {
                 timeUpFiredRef.current = true;
                 onTimeUpRef.current?.();
             }
@@ -85,7 +91,7 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
         const id = setInterval(tick, 250);
         return () => clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isRunning]);
+    }, [countUp, isRunning]);
 
     // Notify parent whenever displayed seconds changes
     useEffect(() => {
@@ -95,11 +101,11 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
     const pct = totalDuration > 0 ? (displaySeconds / totalDuration) * 100 : 100;
     const minutes = Math.floor(displaySeconds / 60);
     const seconds = displaySeconds % 60;
-    const warnCls = pct <= 10 ? 'danger' : pct <= 25 ? 'warn' : '';
+    const warnCls = countUp ? '' : (pct <= 10 ? 'danger' : pct <= 25 ? 'warn' : '');
 
     if (compact) {
         return (
-            <div className={`font-bold tabular-nums ${warnCls === 'danger' ? 'text-red-500 animate-pulse' : warnCls === 'warn' ? 'text-amber-500' : 'text-indigo-600'}`} style={warnCls ? undefined : { color: 'var(--tsa-timer-color, #4f46e5)' }}>
+            <div className={`font-bold tabular-nums ${countUp ? 'text-emerald-600' : warnCls === 'danger' ? 'text-red-500 animate-pulse' : warnCls === 'warn' ? 'text-amber-500' : 'text-indigo-600'}`} style={countUp || warnCls ? undefined : { color: 'var(--tsa-timer-color, #4f46e5)' }}>
                 {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
             </div>
         );
@@ -107,8 +113,8 @@ export default function Timer({ initialMinutes = 30, initialSeconds = null, onTi
 
     return (
         <div className="et-timer-block">
-            <div className="et-timer-lbl">⏱ Thời gian còn lại</div>
-            <div className={`et-timer-disp ${warnCls}`}>
+            <div className="et-timer-lbl">⏱ {countUp ? 'Thời gian đã làm' : 'Thời gian còn lại'}</div>
+            <div className={`et-timer-disp ${countUp ? 'count-up' : warnCls}`}>
                 {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
             </div>
         </div>

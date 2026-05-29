@@ -69,6 +69,7 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
   const saCount = exam.sa ?? (exam.questions || []).filter(q => q.type === 'SA').length;
   const dragCount = exam.drag ?? (exam.questions || []).filter(q => q.type === 'DRAG').length;
   const totalQ = exam.totalQ ?? (exam.questions || []).filter(q => q.type !== 'TEXT').length;
+  const showDuration = exam.antiCheatEnabled !== false;
 
   const cardClassName = `
     home-box bg-white rounded-2xl border flex flex-col gap-3.5 p-5
@@ -121,9 +122,11 @@ export default function ExamCard({ exam, onStart, href, isSaved, isLocked }) {
 
       {/* Meta */}
       <div className="flex items-center flex-wrap gap-3">
-        <span className="flex items-center gap-1 text-xs text-gray-500">
-          <Clock weight="duotone" className="w-[15px] h-[15px]" /> {exam.duration} phút
-        </span>
+        {showDuration && (
+          <span className="flex items-center gap-1 text-xs text-gray-500">
+            <Clock weight="duotone" className="w-[15px] h-[15px]" /> {exam.duration} phút
+          </span>
+        )}
         <span className="text-xs text-gray-500">{totalQ} câu</span>
         <div className="flex flex-wrap gap-1.5 sm:ml-auto">
           {mcqCount > 0 && <QBadge label={`${mcqCount} ${QUESTION_LABEL.MCQ}`} tone="MCQ" />}

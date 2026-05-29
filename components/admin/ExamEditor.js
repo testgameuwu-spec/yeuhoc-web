@@ -36,6 +36,12 @@ const getHsaDurationBySubject = (subj) => {
   return null;
 };
 
+const getDefaultDuration = (type, subj) => {
+  if (type === 'TSA') return TSA_TOTAL_DURATION_MINUTES;
+  if (type === 'HSA') return getHsaDurationBySubject(subj) || 60;
+  return 90;
+};
+
 export default function ExamEditor({
   exam,
   folders = [],
@@ -283,6 +289,15 @@ export default function ExamEditor({
     updatePreset(subject, newType);
   };
 
+  const handleAntiCheatToggle = () => {
+    const nextEnabled = !antiCheatEnabled;
+    setAntiCheatEnabled(nextEnabled);
+    if (nextEnabled && (!Number.isFinite(Number(duration)) || duration < 1 || duration > 180)) {
+      setDuration(getDefaultDuration(examType, subject));
+    }
+    setHasUnsavedChanges(true);
+  };
+
   const handleQuestionUpdate = useCallback((index, updatedQ) => {
     setQuestions(prev => prev.map((q, i) => i === index ? updatedQ : q));
     setHasUnsavedChanges(true);
@@ -437,6 +452,7 @@ export default function ExamEditor({
 
   const isTsaExam = examType === 'TSA';
   const showTsaCountWarning = isTsaExam && realQuestionCount !== TSA_TOTAL_QUESTIONS;
+  const durationSummary = antiCheatEnabled ? `${duration} phút` : 'Không giới hạn thời gian';
 
   return (
     <div className="space-y-6 w-full">
@@ -602,8 +618,13 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
               {/* Duration */}
               <div>
                 <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">Thời gian (phút)</label>
-                <input type="number" value={duration} onChange={e => { setDuration(Number(e.target.value)); setHasUnsavedChanges(true); }} min={1} max={180}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
+                {antiCheatEnabled ? (
+                  <input type="number" value={duration} onChange={e => { setDuration(Number(e.target.value)); setHasUnsavedChanges(true); }} min={1} max={180}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all" />
+                ) : (
+                  <input type="text" value="Không giới hạn thời gian" disabled
+                    className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 text-white/40 text-sm cursor-not-allowed" />
+                )}
               </div>
             </div>
             {showTsaCountWarning && (
@@ -698,7 +719,7 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
                 </p>
               </div>
               <button
-                onClick={() => { setAntiCheatEnabled(!antiCheatEnabled); setHasUnsavedChanges(true); }}
+                onClick={handleAntiCheatToggle}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${
                   antiCheatEnabled
                     ? 'bg-emerald-500 shadow-md shadow-emerald-500/30'
@@ -789,7 +810,7 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
               {published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               {published ? 'Published' : 'Draft'}
             </button>
-            <span className="text-xs text-white/30">{realQuestionCount} câu · {duration} phút</span>
+            <span className="text-xs text-white/30">{realQuestionCount} câu · {durationSummary}</span>
           </div>
           <button onClick={handleSave}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white text-sm font-semibold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/25">

@@ -236,13 +236,18 @@ const formatClock = (seconds) => {
   return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 };
 
+const normalizeElapsedSeconds = (seconds) => {
+  const total = Math.floor(Number(seconds) || 0);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+};
+
 const hasPracticeAnswer = (answer) => {
   if (!answer) return false;
   if (typeof answer === 'object') return Object.keys(answer).length > 0;
   return answer !== '';
 };
 
-const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, realQuestions }) => {
+const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, realQuestions, elapsedSeconds = 0 }) => {
   const nextAnswers = answers || {};
   const nextRevealed = practiceRevealed || {};
   const bookmarkList = bookmarks instanceof Set ? Array.from(bookmarks) : (Array.isArray(bookmarks) ? bookmarks : []);
@@ -259,14 +264,16 @@ const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed
     revealedCount,
     totalQuestions,
     completed: totalQuestions > 0 && revealedCount >= totalQuestions,
+    timeSpent: normalizeElapsedSeconds(elapsedSeconds),
     savedAt,
   };
 };
 
-const createQuizProgressSnapshot = ({ answers, bookmarks, secondsLeft, currentQ, violationCount, tsaSectionIndex = 0, tsaElapsedSeconds = 0 }) => ({
+const createQuizProgressSnapshot = ({ answers, bookmarks, secondsLeft, currentQ, violationCount, tsaSectionIndex = 0, tsaElapsedSeconds = 0, elapsedSeconds = 0 }) => ({
   answers: answers || {},
   bookmarks: bookmarks instanceof Set ? Array.from(bookmarks) : (Array.isArray(bookmarks) ? bookmarks : []),
   secondsLeft,
+  elapsedSeconds: normalizeElapsedSeconds(elapsedSeconds),
   currentQ: Number(currentQ) || 0,
   violationCount: Number(violationCount) || 0,
   tsaSectionIndex: Number(tsaSectionIndex) || 0,
@@ -297,10 +304,22 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // Pause & Resume states
   const [isPaused, setIsPaused] = useState(false);
   const [savedSecondsLeft, setSavedSecondsLeft] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const elapsedSecondsRef = useRef(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [aiChatMounted, setAiChatMounted] = useState(false);
+
+  const setElapsedSecondsValue = useCallback((seconds) => {
+    const next = normalizeElapsedSeconds(seconds);
+    elapsedSecondsRef.current = next;
+    setElapsedSeconds(next);
+  }, []);
+
+  const handleElapsedTick = useCallback((seconds) => {
+    setElapsedSecondsValue(seconds);
+  }, [setElapsedSecondsValue]);
 
   // Time spent per question tracking
   const currentQStartTimeRef = useRef(0);
@@ -422,6 +441,19 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const section = getTsaSectionByIndex(data?.tsaSectionIndex || 0);
     return Math.min(rawSeconds, section.durationMinutes * 60);
   }, [activeExam]);
+  const getRestoredQuizElapsedSeconds = useCallback((data) => {
+    const directElapsed = data?.elapsedSeconds ?? data?.timeSpent ?? data?.time_spent;
+    if (directElapsed !== undefined && directElapsed !== null) {
+      return normalizeElapsedSeconds(directElapsed);
+    }
+
+    const rawSecondsLeft = Number(data?.secondsLeft);
+    const durationSeconds = Number(activeExam?.duration) * 60;
+    if (Number.isFinite(rawSecondsLeft) && Number.isFinite(durationSeconds) && durationSeconds > 0) {
+      return Math.max(0, durationSeconds - rawSecondsLeft);
+    }
+    return 0;
+  }, [activeExam?.duration]);
 
   const openAIChat = useCallback(() => {
     setAiChatMounted(true);
@@ -536,6 +568,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         setTsaElapsedSeconds(0);
         setBookmarks(new Set());
         setSavedSecondsLeft(null);
+        setElapsedSecondsValue(0);
         setIsPaused(false);
         setQuizPhase('preview');
       }
@@ -543,7 +576,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
     if (examId) init();
     return () => { cancelled = true; };
-  }, [examId]);
+  }, [examId, setElapsedSecondsValue]);
 
   // Auto-resume from profile
   useEffect(() => {
@@ -555,12 +588,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       if (!saved) return;
       try {
         const data = JSON.parse(saved);
+        const isLowPressureResume = activeExam.antiCheatEnabled === false && !isTsaExam(activeExam);
         setAnswers(data.answers || {});
         setBookmarks(new Set(data.bookmarks || []));
         setCurrentQ(data.currentQ || 0);
         setTsaSectionIndex(data.tsaSectionIndex || 0);
         setTsaElapsedSeconds(data.tsaElapsedSeconds || 0);
-        setSavedSecondsLeft(getRestoredQuizSecondsLeft(data));
+        setSavedSecondsLeft(isLowPressureResume ? null : getRestoredQuizSecondsLeft(data));
+        setElapsedSecondsValue(getRestoredQuizElapsedSeconds(data));
         setIsPaused(false);
         setViolationCount(data.violationCount || 0);
         setShowViolationWarning(false);
@@ -585,7 +620,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       }
     }, 0);
     return () => clearTimeout(resumeTimer);
-  }, [shouldResume, user, activeExam, getRestoredQuizSecondsLeft, preloadExamImages]);
+  }, [shouldResume, user, activeExam, getRestoredQuizElapsedSeconds, getRestoredQuizSecondsLeft, preloadExamImages, setElapsedSecondsValue]);
 
   // Fetch session
   useEffect(() => {
@@ -715,6 +750,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   const isTHPT = activeExam?.examType === 'THPT';
   const isAntiCheatEnabled = activeExam?.antiCheatEnabled !== false;
+  const isLowPressureExam = !isTSA && !isAntiCheatEnabled;
   realQuestions.forEach((q, i) => {
     q._globalIndex = i;
     q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i - 1].type !== 'MCQ');
@@ -879,10 +915,11 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       currentQ: overrides.currentQ ?? currentQ,
       practiceRevealed: overrides.practiceRevealed ?? practiceRevealed,
       realQuestions: (activeExam.questions || []).filter(question => question.type !== 'TEXT'),
+      elapsedSeconds: overrides.elapsedSeconds ?? elapsedSeconds,
     });
     localStorage.setItem(storageKey, JSON.stringify(snapshot));
     return snapshot;
-  }, [activeExam, answers, bookmarks, currentQ, getPracticeProgressKey, practiceRevealed, user]);
+  }, [activeExam, answers, bookmarks, currentQ, elapsedSeconds, getPracticeProgressKey, practiceRevealed, user]);
 
   const upsertPracticeProgressSnapshot = useCallback(async (snapshot, { notify = false, showSpinner = false } = {}) => {
     if (!activeExam?.id || !user?.id || !snapshot) return false;
@@ -902,6 +939,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           bookmarks: snapshot.bookmarks,
           revealed_map: snapshot.practiceRevealed,
           completed: snapshot.completed,
+          time_spent: normalizeElapsedSeconds(snapshot.timeSpent),
           saved_at: snapshot.savedAt,
           updated_at: snapshot.savedAt,
         }, { onConflict: 'user_id,exam_id' });
@@ -963,28 +1001,33 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   const applyPracticeSnapshot = async (snapshot) => {
     const nextCurrentQ = Math.min(Math.max(Number(snapshot?.currentQ) || 0, 0), Math.max(realQuestions.length - 1, 0));
+    const nextElapsedSeconds = normalizeElapsedSeconds(snapshot?.timeSpent ?? snapshot?.time_spent);
     writePracticeSnapshot({
       answers: snapshot?.answers || {},
       bookmarks: snapshot?.bookmarks || [],
       currentQ: nextCurrentQ,
       practiceRevealed: snapshot?.practiceRevealed || {},
+      elapsedSeconds: nextElapsedSeconds,
     });
     await preloadExamImages('practice-loading', nextCurrentQ);
     setAnswers(snapshot?.answers || {});
     setBookmarks(new Set(snapshot?.bookmarks || []));
     setCurrentQ(nextCurrentQ);
     setPracticeRevealed(snapshot?.practiceRevealed || {});
+    setElapsedSecondsValue(nextElapsedSeconds);
     setIsAIChatOpen(false);
     setQuizPhase('practice');
   };
 
   const startFreshPractice = async () => {
     const resetBookmarks = new Set();
+    setElapsedSecondsValue(0);
     writePracticeSnapshot({
       answers: {},
       bookmarks: resetBookmarks,
       currentQ: 0,
       practiceRevealed: {},
+      elapsedSeconds: 0,
     });
     await preloadExamImages('practice-loading', 0);
     setAnswers({});
@@ -1011,7 +1054,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     try {
       const { data, error } = await supabase
         .from('practice_progress')
-        .select('answers, bookmarks, current_question, revealed_map, saved_at, updated_at')
+        .select('answers, bookmarks, current_question, revealed_map, time_spent, saved_at, updated_at')
         .eq('user_id', user.id)
         .eq('exam_id', activeExam.id)
         .maybeSingle();
@@ -1028,6 +1071,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         bookmarks: data.bookmarks || [],
         currentQ: data.current_question || 0,
         practiceRevealed: data.revealed_map || {},
+        timeSpent: data.time_spent || 0,
         savedAt: data.updated_at || data.saved_at,
       };
 
@@ -1061,7 +1105,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       try {
         const { data, error } = await supabase
           .from('practice_progress')
-          .select('answers, bookmarks, current_question, revealed_map, saved_at, updated_at')
+          .select('answers, bookmarks, current_question, revealed_map, time_spent, saved_at, updated_at')
           .eq('user_id', userId)
           .eq('exam_id', examId)
           .maybeSingle();
@@ -1074,6 +1118,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             bookmarks: data.bookmarks || [],
             currentQ: data.current_question || 0,
             practiceRevealed: data.revealed_map || {},
+            timeSpent: data.time_spent || 0,
             savedAt: data.updated_at || data.saved_at,
           };
 
@@ -1088,29 +1133,33 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       const hasSavedProgress = saved && (
         Object.keys(saved.answers || {}).length > 0 ||
         Object.keys(saved.practiceRevealed || {}).length > 0 ||
-        (saved.currentQ || 0) > 0
+        (saved.currentQ || 0) > 0 ||
+        normalizeElapsedSeconds(saved.timeSpent ?? saved.time_spent) > 0
       );
 
       if (!hasSavedProgress) return;
       const nextCurrentQ = Math.min(Math.max(Number(saved?.currentQ) || 0, 0), Math.max(questionCount - 1, 0));
+      const nextElapsedSeconds = normalizeElapsedSeconds(saved?.timeSpent ?? saved?.time_spent);
       writePracticeSnapshot({
         answers: saved?.answers || {},
         bookmarks: saved?.bookmarks || [],
         currentQ: nextCurrentQ,
         practiceRevealed: saved?.practiceRevealed || {},
+        elapsedSeconds: nextElapsedSeconds,
       });
       await preloadExamImages('practice-loading', nextCurrentQ);
       setAnswers(saved?.answers || {});
       setBookmarks(new Set(saved?.bookmarks || []));
       setCurrentQ(nextCurrentQ);
       setPracticeRevealed(saved?.practiceRevealed || {});
+      setElapsedSecondsValue(nextElapsedSeconds);
       setIsAIChatOpen(false);
       setQuizPhase('practice');
       window.history.replaceState({}, '', window.location.pathname);
     }, 0);
 
     return () => clearTimeout(resumeTimer);
-  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions.length, shouldResumePractice, user, writePracticeSnapshot]);
+  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions.length, setElapsedSecondsValue, shouldResumePractice, user, writePracticeSnapshot]);
 
   const handleStartPractice = async () => {
     if (realQuestions.length === 0) {
@@ -1122,7 +1171,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const hasSavedProgress = saved && (
       Object.keys(saved.answers || {}).length > 0 ||
       Object.keys(saved.practiceRevealed || {}).length > 0 ||
-      (saved.currentQ || 0) > 0
+      (saved.currentQ || 0) > 0 ||
+      normalizeElapsedSeconds(saved.timeSpent ?? saved.time_spent) > 0
     );
 
     if (hasSavedProgress) {
@@ -1155,6 +1205,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       setBookmarks(resetBookmarks);
       setCurrentQ(0);
       setPracticeRevealed({});
+      setElapsedSecondsValue(0);
       setIsAIChatOpen(false);
       savePracticeProgress({
         overrides: {
@@ -1162,6 +1213,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           bookmarks: resetBookmarks,
           currentQ: 0,
           practiceRevealed: {},
+          elapsedSeconds: 0,
         },
       });
     });
@@ -1193,6 +1245,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setTsaSectionIndex(0);
     setTsaElapsedSeconds(0);
     setSavedSecondsLeft(null);
+    setElapsedSecondsValue(0);
     setIsPaused(false);
     setViolationCount(0);
     setShowViolationWarning(false);
@@ -1231,7 +1284,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             setCurrentQ(data.currentQ || 0);
             setTsaSectionIndex(data.tsaSectionIndex || 0);
             setTsaElapsedSeconds(data.tsaElapsedSeconds || 0);
-            setSavedSecondsLeft(getRestoredQuizSecondsLeft(data));
+            setSavedSecondsLeft(isLowPressureExam ? null : getRestoredQuizSecondsLeft(data));
+            setElapsedSecondsValue(getRestoredQuizElapsedSeconds(data));
             setIsPaused(false);
             setViolationCount(data.violationCount || 0);
             setShowViolationWarning(false);
@@ -1284,11 +1338,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         subject: activeExam.subject,
       });
       const isTsaSubmit = isTsaExam(activeExam);
+      const isLowPressureSubmit = !isTsaSubmit && activeExam.antiCheatEnabled === false;
       const timeSpentSecs = isTsaSubmit
         ? Math.min(
           TSA_TOTAL_DURATION_MINUTES * 60,
           tsaElapsedSeconds + getTsaSectionElapsedSeconds(tsaSectionIndex, savedSecondsLeft)
         )
+        : isLowPressureSubmit
+          ? elapsedSecondsRef.current
         : (savedSecondsLeft !== null ? (activeExam.duration * 60 - savedSecondsLeft) : (startTime ? Math.floor((Date.now() - startTime) / 1000) : 0));
 
       const { data, error } = await supabase.from('exam_attempts').insert({
@@ -1405,11 +1462,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // Auto-save progress
   useEffect(() => {
     if (exitViolationRecordedRef.current) return;
-    if (quizPhase === 'quiz' && activeExam && user && !isPaused && savedSecondsLeft !== null) {
+    if (quizPhase === 'quiz' && activeExam && user && !isPaused && (savedSecondsLeft !== null || isLowPressureExam)) {
       const data = createQuizProgressSnapshot({
         answers,
         bookmarks,
-        secondsLeft: savedSecondsLeft,
+        secondsLeft: isLowPressureExam ? null : savedSecondsLeft,
+        elapsedSeconds: elapsedSecondsRef.current,
         currentQ,
         violationCount,
         tsaSectionIndex,
@@ -1417,7 +1475,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       });
       localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(data));
     }
-  }, [answers, bookmarks, savedSecondsLeft, currentQ, violationCount, tsaSectionIndex, tsaElapsedSeconds, quizPhase, activeExam, user, isPaused, getProgressKey]);
+  }, [answers, bookmarks, savedSecondsLeft, elapsedSeconds, currentQ, violationCount, tsaSectionIndex, tsaElapsedSeconds, quizPhase, activeExam, user, isPaused, isLowPressureExam, getProgressKey]);
 
   useEffect(() => {
     if (quizPhase !== 'quiz' || !activeExam?.id || !user?.id || !isAntiCheatEnabled) return;
@@ -1430,6 +1488,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         answers,
         bookmarks,
         secondsLeft: savedSecondsLeft ?? (activeQuizDuration * 60),
+        elapsedSeconds: elapsedSecondsRef.current,
         currentQ,
         violationCount: nextViolationCount,
         tsaSectionIndex,
@@ -1452,20 +1511,28 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
     if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
     practiceSaveTimerRef.current = setTimeout(() => {
-      const snapshot = writePracticeSnapshot();
+      const snapshot = createPracticeSnapshot({
+        answers,
+        bookmarks,
+        currentQ,
+        practiceRevealed,
+        realQuestions: (activeExam.questions || []).filter(question => question.type !== 'TEXT'),
+        elapsedSeconds: elapsedSecondsRef.current,
+      });
+      localStorage.setItem(getPracticeProgressKey(activeExam.id), JSON.stringify(snapshot));
       if (snapshot) void upsertPracticeProgressSnapshot(snapshot);
     }, 900);
 
     return () => {
       if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
     };
-  }, [activeExam?.id, quizPhase, upsertPracticeProgressSnapshot, user?.id, writePracticeSnapshot]);
+  }, [activeExam, answers, bookmarks, currentQ, getPracticeProgressKey, practiceRevealed, quizPhase, upsertPracticeProgressSnapshot, user?.id]);
 
   useEffect(() => {
     if (quizPhase !== 'practice' || !activeExam?.id || !user?.id || typeof window === 'undefined') return;
 
     const flushPracticeSnapshot = () => {
-      writePracticeSnapshot({}, { skipIfLocalExists: true });
+      writePracticeSnapshot();
     };
 
     window.addEventListener('pagehide', flushPracticeSnapshot);
@@ -1502,6 +1569,19 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       if (snapshot) void savePracticeProgress({ snapshot });
       setQuizPhase('preview');
     }
+    if (quizPhase === 'quiz' && activeExam && user && !exitViolationRecordedRef.current) {
+      localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(createQuizProgressSnapshot({
+        answers,
+        bookmarks,
+        secondsLeft: isLowPressureExam ? null : savedSecondsLeft ?? (activeQuizDuration * 60),
+        elapsedSeconds: elapsedSecondsRef.current,
+        currentQ,
+        violationCount,
+        tsaSectionIndex,
+        tsaElapsedSeconds,
+      })));
+      exitViolationRecordedRef.current = true;
+    }
     // Suppress anti-cheat listener before exiting fullscreen
     isSubmittingRef.current = true;
     exitFullscreen();
@@ -1510,6 +1590,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setCurrentQ(0);
     setTsaSectionIndex(0);
     setTsaElapsedSeconds(0);
+    setElapsedSecondsValue(0);
     setIsAIChatOpen(false);
     setStartTime(null);
     setIsPaused(false);
@@ -1541,6 +1622,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       answers,
       bookmarks,
       secondsLeft: savedSecondsLeft ?? (activeQuizDuration * 60),
+      elapsedSeconds: elapsedSecondsRef.current,
       currentQ,
       violationCount: nextViolationCount,
       tsaSectionIndex,
@@ -1850,6 +1932,17 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     return (
       <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
         <Topbar activeExam={activeExam} handleReset={handleReset}>
+          <div className="exam-timer-card exam-timer-card--navbar is-count-up">
+            <div className="exam-timer-head">
+              <Clock weight="duotone" className="exam-timer-icon" />
+              <div className="exam-timer-copy">
+                <span className="exam-timer-label">Thời gian đã làm</span>
+                <div className="exam-timer-value">
+                  <Timer compact countUp initialSeconds={elapsedSeconds} onTick={handleElapsedTick} isRunning />
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs font-bold">
             📖 Chế độ ôn luyện
           </div>
@@ -2137,7 +2230,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   </div>
                   <h1>{activeExam.title}</h1>
                   <div className="ep-hero-meta">
-                    <span><Clock weight="bold" size={15} /> {activeExam.duration} phút</span>
+                    {!isLowPressureExam && <span><Clock weight="bold" size={15} /> {activeExam.duration} phút</span>}
                     <span>📝 {realQuestions.length} câu</span>
                     {examStats && <span><Users weight="bold" size={15} /> {examStats.totalParticipants} lượt thi</span>}
                   </div>
@@ -2153,7 +2246,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     <div className="ep-mode-desc">
                       {isAntiCheatEnabled
                         ? 'Toàn màn hình · Chống gian lận · Tính giờ'
-                        : 'Tính thời gian · Lưu kết quả'}
+                        : 'Không giới hạn thời gian · Lưu kết quả'}
                     </div>
                   </div>
                   <CaretRight weight="bold" size={18} className="ep-mode-arrow" />
@@ -2174,7 +2267,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                 <div className="ep-rules">
                   <div className="ep-rules-title">Lưu ý khi làm bài</div>
                   <ul>
-                    <li>Thời gian làm bài: {activeExam.duration} phút</li>
+                    {!isLowPressureExam && <li>Thời gian làm bài: {activeExam.duration} phút</li>}
+                    {isLowPressureExam && <li>Không giới hạn thời gian; hệ thống chỉ ghi nhận thời gian đã làm</li>}
                     <li>Tổng số câu hỏi: {realQuestions.length} câu</li>
                     {isAntiCheatEnabled && <li>Bài thi yêu cầu toàn màn hình, thoát sẽ bị tính vi phạm</li>}
                     {isAntiCheatEnabled && <li>Vi phạm {MAX_VIOLATIONS} lần sẽ tự động nộp bài</li>}
@@ -2434,8 +2528,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   ⚠ {violationCount}/{MAX_VIOLATIONS}
                 </div>
               )}
-              <div className="tsa-mobile-timer font-mono font-black text-[20px] tracking-tight" style={{ '--tsa-timer-color': '#E53935' }}>
-                <Timer key={`tsa-m-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+              <div className="tsa-navbar-timer" style={{ '--tsa-timer-color': '#E53935' }}>
+                <Clock weight="duotone" className="tsa-navbar-timer-icon" />
+                <div className="tsa-navbar-timer-copy">
+                  <span className="tsa-navbar-timer-label">Thời gian còn lại</span>
+                  <div className="tsa-navbar-timer-value">
+                    <Timer key={`tsa-nav-${tsaSectionIndex}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+                  </div>
+                </div>
               </div>
               <button onClick={() => {
                 if (window.innerWidth < 1024) {
@@ -2800,6 +2900,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const pct = quizTotalCount > 0 ? Math.round((quizAnsweredCount / quizTotalCount) * 100) : 0;
     const unansweredCount = Math.max(0, quizTotalCount - quizAnsweredCount);
     const quizSecondsLeft = savedSecondsLeft ?? (activeQuizDuration * 60);
+    const quizTimeLabel = isLowPressureExam ? 'Thời gian đã làm' : 'Thời gian còn lại';
+    const quizTimeSeconds = isLowPressureExam ? elapsedSeconds : quizSecondsLeft;
     const getQuizNavClass = (q, i) => {
       const isAnswered = hasPracticeAnswer(answers[q.id]);
       const isBookmarked = bookmarks.has(q.id);
@@ -2819,6 +2921,27 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         () => (isTSA && !isLastTsaSection ? handleSubmitTsaSection() : handleSubmit())
       );
     };
+    const quizTimerModeClass = isLowPressureExam ? 'is-count-up' : 'is-count-down';
+    const renderQuizTimerValue = (keyPrefix, live = true) => {
+      if (!live) return formatClock(quizTimeSeconds);
+      return isLowPressureExam ? (
+        <Timer key={`${keyPrefix}-elapsed`} compact countUp initialSeconds={elapsedSeconds} onTick={handleElapsedTick} isRunning={timerRunning} />
+      ) : (
+        <Timer key={`${keyPrefix}-${isTSA ? tsaSectionIndex : 'all'}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+      );
+    };
+    const renderQuizTimerHead = (keyPrefix, onPause, live = true) => (
+      <div className="exam-timer-head">
+        <Clock weight="duotone" className="exam-timer-icon" />
+        <div className="exam-timer-copy">
+          <span className="exam-timer-label">{quizTimeLabel}</span>
+          <div className="exam-timer-value">{renderQuizTimerValue(keyPrefix, live)}</div>
+        </div>
+        <button className="exam-timer-pause" onClick={onPause} title="Tạm dừng">
+          <PauseIcon /> <span>Tạm dừng</span>
+        </button>
+      </div>
+    );
 
     return (
       <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--et-gray-800)' }}>
@@ -2835,13 +2958,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             () => handleExitQuiz()
           );
         }}>
-          <div className="exam-status-panel mobile-only bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
-            <Clock weight="duotone" className="w-4 h-4 text-indigo-600" />
-            <Timer key={`mobile-${isTSA ? tsaSectionIndex : 'all'}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
+          <div className={`exam-timer-card exam-timer-card--navbar ${quizTimerModeClass}`}>
+            {renderQuizTimerHead('navbar', handlePause)}
           </div>
-          <button className="et-btn-outline" style={{ fontSize: 12, padding: '5px 11px' }} onClick={handlePause} title="Tạm dừng">
-            <PauseIcon /> <span className="hidden sm:inline">Tạm dừng</span>
-          </button>
           {isAntiCheatEnabled && violationCount > 0 && (
             <div title={`Vi phạm: ${violationCount}/${MAX_VIOLATIONS}`} style={{
               background: violationCount >= 3 ? '#ef4444' : '#f59e0b',
@@ -3117,16 +3236,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </button>
             </div>
 
-            <div className="exam-status-panel rounded-xl bg-indigo-50 border border-indigo-100 p-4 mb-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Thời gian</div>
-                  <div className="mt-1 text-2xl font-black text-indigo-600 tabular-nums">{formatClock(quizSecondsLeft)}</div>
-                </div>
-                <button className="px-3 py-2 rounded-lg bg-white text-red-600 font-bold text-xs border border-red-100 shadow-sm" onClick={() => { setIsDrawerOpen(false); handlePause(); }}>
-                  Tạm dừng
-                </button>
-              </div>
+            <div className={`exam-timer-card exam-timer-card--panel ${quizTimerModeClass}`}>
+              {renderQuizTimerHead('drawer', () => { setIsDrawerOpen(false); handlePause(); }, false)}
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <div>
                   <div className="text-xl font-black text-indigo-600">{quizAnsweredCount}</div>
@@ -3187,18 +3298,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </button>
             </div>
 
-            <div className="exam-status-panel rounded-xl bg-indigo-50 border border-indigo-100 p-3 m-[17px] mb-2">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Thời gian</div>
-                  <div className="mt-1 text-2xl font-black text-indigo-600 tabular-nums">
-                    <Timer key={`desktop-${isTSA ? tsaSectionIndex : 'all'}`} compact initialMinutes={activeQuizDuration} initialSeconds={savedSecondsLeft} onTick={handleTick} onTimeUp={handleTimeUp} isRunning={timerRunning} />
-                  </div>
-                </div>
-                <button className="px-3 py-2 rounded-lg bg-white text-red-600 font-bold text-xs border border-red-100 shadow-sm" onClick={handlePause}>
-                  Tạm dừng
-                </button>
-              </div>
+            <div className={`exam-timer-card exam-timer-card--panel ${quizTimerModeClass}`}>
+              {renderQuizTimerHead('desktop', handlePause, false)}
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <div>
                   <div className="text-xl font-black text-indigo-600">{quizAnsweredCount}</div>
