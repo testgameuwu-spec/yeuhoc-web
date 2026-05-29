@@ -274,6 +274,35 @@ function inferMentionedExamIdsFromDraft(draft, exams) {
     .map((exam) => exam.id);
 }
 
+function createFallbackDraft(sourcePayload) {
+  const exams = (sourcePayload.exams || []).filter((exam) => !exam.alreadyMentioned);
+  const highlightedExams = exams.slice(0, 4);
+  const resolvedCount = Number(sourcePayload.counts?.resolvedReportsInInput || 0);
+  const lines = [];
+
+  if (exams.length > 0) {
+    lines.push(`Anh em ơi, YeuHoc vừa cập nhật ${exams.length} đề mới trong 7 ngày gần nhất.`);
+    highlightedExams.forEach((exam) => {
+      lines.push(`- ${exam.title}${exam.subject ? ` (${exam.subject})` : ''}`);
+    });
+  }
+
+  if (resolvedCount > 0) {
+    lines.push(`${resolvedCount} câu hỏi báo lỗi cũng đã được xử lý để anh em ôn tập yên tâm hơn.`);
+  }
+
+  if (lines.length === 0 && sourcePayload.folders?.length > 0) {
+    lines.push(`Anh em ơi, YeuHoc vừa cập nhật ${sourcePayload.folders.length} thư mục đề trong 7 ngày gần nhất.`);
+  }
+
+  return {
+    title: 'Cập nhật đề mới tuần này',
+    body: lines.join('\n'),
+    sourceSummary: 'Tạo nháp dự phòng từ dữ liệu 7 ngày gần nhất do AI trả format chưa hợp lệ.',
+    mentionedExamIds: highlightedExams.map((exam) => exam.id),
+  };
+}
+
 export async function POST(req) {
   const startedAt = Date.now();
   const auth = await requireNotificationAdmin(req);
@@ -540,21 +569,9 @@ Hãy viết một nháp thông báo để admin review.`;
       abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
     });
 
-    const draft = parseDraft(result.text);
-    if (!draft.title || !draft.body) {
-      const usage = getUsageTokenCounts(result.usage);
-      await logDraftAttempt({
-        status: 'failed',
-        ...usage,
-        errorMessage: 'AI chưa tạo được nháp thông báo hợp lệ.',
-        metadata: {
-          hasChanges: true,
-          counts: sourcePayload.counts,
-          stage: 'parse_draft',
-        },
-      });
-      return NextResponse.json({ error: 'AI chưa tạo được nháp thông báo hợp lệ.' }, { status: 502 });
-    }
+    const parsedDraft = parseDraft(result.text);
+    const fallbackUsed = !parsedDraft.title || !parsedDraft.body;
+    const draft = fallbackUsed ? createFallbackDraft(sourcePayload) : parsedDraft;
 
     const inputExamIds = new Set(inputExamRows.map((exam) => exam.id));
     const mentionedExamIds = [...new Set([
@@ -569,6 +586,7 @@ Hãy viết một nháp thông báo để admin review.`;
         hasChanges: true,
         counts: sourcePayload.counts,
         mentionedExamIds,
+        fallbackUsed,
       },
     });
 
