@@ -19,6 +19,7 @@ const emptyForm = {
   mediaAlt: '',
   isPublished: false,
   publishedAt: null,
+  mentionedExamIds: [],
 };
 
 function formatDateTime(value) {
@@ -48,6 +49,7 @@ function formFromNotification(notification) {
     mediaAlt: notification.mediaAlt || '',
     isPublished: notification.isPublished === true,
     publishedAt: notification.publishedAt || null,
+    mentionedExamIds: Array.isArray(notification.mentionedExamIds) ? notification.mentionedExamIds : [],
   };
 }
 
@@ -221,6 +223,7 @@ export default function NotificationManagement({ showAlert, showConfirm }) {
         mediaAlt: '',
         isPublished: false,
         publishedAt: null,
+        mentionedExamIds: Array.isArray(payload.mentionedExamIds) ? payload.mentionedExamIds : [],
       });
       setSourceSummary(payload.sourceSummary || '');
     } catch (error) {
@@ -469,10 +472,15 @@ export default function NotificationManagement({ showAlert, showConfirm }) {
               <AdminMediaPreview form={form} />
             </div>
 
-            {sourceSummary && (
+            {(sourceSummary || form.mentionedExamIds.length > 0) && (
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-indigo-300/70">Nguồn AI</p>
-                <p className="mt-1 text-sm leading-relaxed text-indigo-100/80">{sourceSummary}</p>
+                {sourceSummary && <p className="mt-1 text-sm leading-relaxed text-indigo-100/80">{sourceSummary}</p>}
+                {form.mentionedExamIds.length > 0 && (
+                  <p className="mt-1 text-xs font-semibold text-indigo-200/70">
+                    AI đã đánh dấu {form.mentionedExamIds.length} đề được nhắc trong thông báo này.
+                  </p>
+                )}
               </div>
             )}
 
