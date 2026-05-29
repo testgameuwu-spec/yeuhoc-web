@@ -1375,6 +1375,22 @@ html[data-theme='dark'] .ep-lb-score-val {
   justify-content: center;
 }
 
+.et-q-time-badge {
+  min-height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(79, 70, 229, .24);
+  background: #eef2ff;
+  color: #4338ca;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .et-q-type-badge {
   font-size: 10px;
   font-weight: 600;

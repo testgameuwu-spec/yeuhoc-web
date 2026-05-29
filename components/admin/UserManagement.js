@@ -267,7 +267,8 @@ export default function UserManagement() {
         : [];
       setAttemptDetails({
         exam: { ...examData, questions: orderedQuestions },
-        answers: attempt.user_answers || {}
+        answers: attempt.user_answers || {},
+        questionTimeSpent: attempt.question_time_spent || {},
       });
     } else {
       showAlert("Lỗi", "Tải chi tiết đề thi thất bại hoặc đề thi đã bị xóa.");
@@ -611,6 +612,7 @@ export default function UserManagement() {
                                 selectedAnswer={attemptDetails.answers[q.id] ?? getEmptyAnswerForType(q.type)}
                                 onAnswerChange={() => {}}
                                 showResult
+                                timeSpentSeconds={attemptDetails.questionTimeSpent?.[q.id]}
                                 disabled
                               />
                             </div>

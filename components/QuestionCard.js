@@ -6,6 +6,7 @@ import ImageModal from './ImageModal';
 import ContentWithInlineImage, { parseImageMap } from './ContentWithInlineImage';
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle, BookMarked } from 'lucide-react';
 import { getDragBlankIds, getQuestionResultState, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
+import { formatQuestionTimeSpent } from '@/lib/questionTimeSpent';
 
 const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', MA: 'Chọn nhiều đáp án', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', DRAG: 'Kéo thả', TEXT: 'Ngữ liệu' };
 
@@ -21,6 +22,7 @@ export default function QuestionCard({
     onReport = null,
     onSaveErrorLog = null,
     preloadImages = false,
+    timeSpentSeconds = null,
 }) {
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [modalImageSrc, setModalImageSrc] = useState(null);
@@ -31,6 +33,7 @@ export default function QuestionCard({
     const hasImage = Object.keys(parseImageMap(rawImage)).length > 0;
     const isTextBlock = type === 'TEXT';
     const shouldShowResultStatus = showResult && !isTextBlock;
+    const timeSpentLabel = shouldShowResultStatus ? formatQuestionTimeSpent(timeSpentSeconds) : '';
 
     // ── TF answer stored as object { a: 'D', b: 'S', ... } ──
     const tfAnswer = (type === 'TF' && answer && typeof answer === 'object') ? answer : {};
@@ -89,6 +92,7 @@ export default function QuestionCard({
             <div className="et-q-card-hd">
                 <div className="et-q-badge">
                     {!isTextBlock && <span className="et-q-num-badge">{index + 1}</span>}
+                    {timeSpentLabel && <span className="et-q-time-badge">{timeSpentLabel}</span>}
                     <span className="et-q-type-badge">{TYPE_LABEL[type] || type}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -47,6 +47,7 @@ export default function ImageModal({ isOpen, onClose, src, alt }) {
     const canZoomOut = zoom > MIN_ZOOM;
     const canZoomIn = zoom < MAX_ZOOM;
     const buttonClassName = 'p-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/10';
+    const closeButtonClassName = 'p-2 rounded-full bg-red-500/90 border border-red-400/70 text-white hover:bg-red-600 transition-colors';
 
     return (
         <div
@@ -80,7 +81,7 @@ export default function ImageModal({ isOpen, onClose, src, alt }) {
                 <button
                     type="button"
                     onClick={handleClose}
-                    className={buttonClassName}
+                    className={closeButtonClassName}
                     title="Đóng ảnh"
                     aria-label="Đóng ảnh"
                 >

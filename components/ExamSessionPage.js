@@ -21,6 +21,15 @@ import LogoIcon from '@/components/LogoIcon';
 import { supabase } from '@/lib/supabase';
 import { getEmptyAnswerForType, getQuestionResultState, hasCompletedAnswer } from '@/lib/questionResult';
 import {
+  addActiveQuestionTimeSpent,
+  appendAnswerTimeEvent,
+  areQuestionAnswersEqual,
+  calculateAnswerTimelineQuestionTimeSpent,
+  normalizeAnswerTimeEvents,
+  normalizeQuestionTimeSpent,
+  scaleQuestionTimeSpent,
+} from '@/lib/questionTimeSpent';
+import {
   buildErrorLogEntriesForMode,
   buildErrorLogEntry,
   getErrorLogQuestionEntriesForMode,
@@ -247,7 +256,7 @@ const hasPracticeAnswer = (answer) => {
   return answer !== '';
 };
 
-const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, realQuestions, elapsedSeconds = 0 }) => {
+const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, questionTimeSpent = {}, realQuestions, elapsedSeconds = 0 }) => {
   const nextAnswers = answers || {};
   const nextRevealed = practiceRevealed || {};
   const bookmarkList = bookmarks instanceof Set ? Array.from(bookmarks) : (Array.isArray(bookmarks) ? bookmarks : []);
@@ -260,6 +269,7 @@ const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed
     bookmarks: bookmarkList,
     currentQ: Math.min(Math.max(Number(currentQ) || 0, 0), Math.max(totalQuestions - 1, 0)),
     practiceRevealed: nextRevealed,
+    questionTimeSpent: normalizeQuestionTimeSpent(questionTimeSpent),
     answeredCount: realQuestions.filter(question => hasPracticeAnswer(nextAnswers[question.id])).length,
     revealedCount,
     totalQuestions,
@@ -269,11 +279,13 @@ const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed
   };
 };
 
-const createQuizProgressSnapshot = ({ answers, bookmarks, secondsLeft, currentQ, violationCount, tsaSectionIndex = 0, tsaElapsedSeconds = 0, elapsedSeconds = 0 }) => ({
+const createQuizProgressSnapshot = ({ answers, bookmarks, secondsLeft, currentQ, violationCount, tsaSectionIndex = 0, tsaElapsedSeconds = 0, elapsedSeconds = 0, answerTimeEvents = [], questionTimeSpent = {} }) => ({
   answers: answers || {},
   bookmarks: bookmarks instanceof Set ? Array.from(bookmarks) : (Array.isArray(bookmarks) ? bookmarks : []),
   secondsLeft,
   elapsedSeconds: normalizeElapsedSeconds(elapsedSeconds),
+  answerTimeEvents: normalizeAnswerTimeEvents(answerTimeEvents),
+  questionTimeSpent: normalizeQuestionTimeSpent(questionTimeSpent),
   currentQ: Number(currentQ) || 0,
   violationCount: Number(violationCount) || 0,
   tsaSectionIndex: Number(tsaSectionIndex) || 0,
@@ -320,27 +332,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const handleElapsedTick = useCallback((seconds) => {
     setElapsedSecondsValue(seconds);
   }, [setElapsedSecondsValue]);
-
-  // Time spent per question tracking
-  const currentQStartTimeRef = useRef(0);
-  const [currentQElapsed, setCurrentQElapsed] = useState(0);
-
-  useEffect(() => {
-    currentQStartTimeRef.current = Date.now();
-    const resetTimer = setTimeout(() => {
-      setCurrentQElapsed(0);
-    }, 0);
-    return () => clearTimeout(resetTimer);
-  }, [currentQ, quizPhase]);
-
-  useEffect(() => {
-    if (quizPhase !== 'practice') return;
-
-    const interval = setInterval(() => {
-      setCurrentQElapsed(Math.floor((Date.now() - currentQStartTimeRef.current) / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [quizPhase, currentQ]);
 
   const [globalImageModal, setGlobalImageModal] = useState({ isOpen: false, src: '', alt: '' });
 
@@ -404,6 +395,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const [errorLogBatchModal, setErrorLogBatchModal] = useState({ isOpen: false, exitAfterSave: false });
   const [errorLogSaving, setErrorLogSaving] = useState(false);
   const [savedAttemptId, setSavedAttemptId] = useState(null);
+  const [answerTimeEvents, setAnswerTimeEvents] = useState([]);
+  const answerTimeEventsRef = useRef([]);
+  const [questionTimeSpent, setQuestionTimeSpent] = useState({});
+  const questionTimeSpentRef = useRef({});
+  const [activeQuestionTimer, setActiveQuestionTimer] = useState({ mode: null, questionId: null, startedAt: 0 });
+  const activeQuestionTimerRef = useRef({ mode: null, questionId: null, startedAt: 0 });
 
   const handleOpenReport = (question) => {
     setReportModal({ isOpen: true, question });
@@ -563,6 +560,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       } else {
         setActiveExam(ex);
         setAnswers({});
+        answerTimeEventsRef.current = [];
+        setAnswerTimeEvents([]);
+        questionTimeSpentRef.current = {};
+        setQuestionTimeSpent({});
+        activeQuestionTimerRef.current = { mode: null, questionId: null, startedAt: 0 };
+        setActiveQuestionTimer({ mode: null, questionId: null, startedAt: 0 });
         setCurrentQ(0);
         setTsaSectionIndex(0);
         setTsaElapsedSeconds(0);
@@ -589,7 +592,15 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       try {
         const data = JSON.parse(saved);
         const isLowPressureResume = activeExam.antiCheatEnabled === false && !isTsaExam(activeExam);
+        const restoredAnswerTimeEvents = normalizeAnswerTimeEvents(data.answerTimeEvents);
+        const restoredQuestionTimeSpent = normalizeQuestionTimeSpent(data.questionTimeSpent);
         setAnswers(data.answers || {});
+        answerTimeEventsRef.current = restoredAnswerTimeEvents;
+        setAnswerTimeEvents(restoredAnswerTimeEvents);
+        questionTimeSpentRef.current = restoredQuestionTimeSpent;
+        setQuestionTimeSpent(restoredQuestionTimeSpent);
+        activeQuestionTimerRef.current = { mode: null, questionId: null, startedAt: 0 };
+        setActiveQuestionTimer({ mode: null, questionId: null, startedAt: 0 });
         setBookmarks(new Set(data.bookmarks || []));
         setCurrentQ(data.currentQ || 0);
         setTsaSectionIndex(data.tsaSectionIndex || 0);
@@ -751,6 +762,136 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const isTHPT = activeExam?.examType === 'THPT';
   const isAntiCheatEnabled = activeExam?.antiCheatEnabled !== false;
   const isLowPressureExam = !isTSA && !isAntiCheatEnabled;
+  const setAnswerTimeEventsValue = useCallback((events) => {
+    const normalized = normalizeAnswerTimeEvents(events);
+    setAnswerTimeEvents(normalized);
+    return normalized;
+  }, []);
+
+  const setQuestionTimeSpentValue = useCallback((value) => {
+    const normalized = normalizeQuestionTimeSpent(value);
+    setQuestionTimeSpent(normalized);
+    return normalized;
+  }, []);
+
+  const setActiveQuestionTimerValue = useCallback((value) => {
+    const normalized = {
+      mode: value?.mode || null,
+      questionId: value?.questionId ? String(value.questionId) : null,
+      startedAt: Math.max(0, Math.floor(Number(value?.startedAt) || 0)),
+    };
+    setActiveQuestionTimer(normalized);
+    return normalized;
+  }, []);
+
+  useEffect(() => {
+    answerTimeEventsRef.current = answerTimeEvents;
+  }, [answerTimeEvents]);
+
+  useEffect(() => {
+    questionTimeSpentRef.current = questionTimeSpent;
+  }, [questionTimeSpent]);
+
+  useEffect(() => {
+    activeQuestionTimerRef.current = activeQuestionTimer;
+  }, [activeQuestionTimer]);
+
+  const getQuestionTimeLimitSeconds = useCallback(() => {
+    const configuredDuration = Number(activeExam?.duration);
+    if (Number.isFinite(configuredDuration) && configuredDuration > 0) return configuredDuration * 60;
+    if (isTSA) return TSA_TOTAL_DURATION_MINUTES * 60;
+    return 90 * 60;
+  }, [activeExam?.duration, isTSA]);
+
+  const getDisplayedQuestionTimeSpent = useCallback((value) => (
+    scaleQuestionTimeSpent(value, getQuestionTimeLimitSeconds())
+  ), [getQuestionTimeLimitSeconds]);
+
+  const displayedQuestionTimeSpent = useMemo(() => (
+    getDisplayedQuestionTimeSpent(questionTimeSpent)
+  ), [getDisplayedQuestionTimeSpent, questionTimeSpent]);
+
+  const resetQuestionTimeTracking = useCallback(() => {
+    setAnswerTimeEventsValue([]);
+    setQuestionTimeSpentValue({});
+    setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: 0 });
+  }, [setActiveQuestionTimerValue, setAnswerTimeEventsValue, setQuestionTimeSpentValue]);
+
+  const getAnswerTimelineElapsedSeconds = useCallback(() => {
+    if (isLowPressureExam) return elapsedSeconds;
+    const durationSeconds = getQuestionTimeLimitSeconds();
+    if (savedSecondsLeft === null) return 0;
+    return Math.max(0, durationSeconds - normalizeElapsedSeconds(savedSecondsLeft));
+  }, [elapsedSeconds, getQuestionTimeLimitSeconds, isLowPressureExam, savedSecondsLeft]);
+
+  const getTsaQuestionElapsedSeconds = useCallback((overrides = {}) => {
+    const sectionIndex = overrides.tsaSectionIndex ?? tsaSectionIndex;
+    const totalElapsed = overrides.tsaElapsedSeconds ?? tsaElapsedSeconds;
+    const secondsLeft = overrides.secondsLeft ?? savedSecondsLeft;
+    return normalizeElapsedSeconds(totalElapsed + getTsaSectionElapsedSeconds(sectionIndex, secondsLeft));
+  }, [savedSecondsLeft, tsaElapsedSeconds, tsaSectionIndex]);
+
+  const getQuestionTimeSpentWithActiveDelta = useCallback((mode, endedAt) => {
+    return addActiveQuestionTimeSpent(questionTimeSpentRef.current, activeQuestionTimerRef.current, mode, endedAt);
+  }, []);
+
+  const getQuestionTimeSpentWithStateDelta = useCallback((mode, endedAt) => (
+    addActiveQuestionTimeSpent(questionTimeSpent, activeQuestionTimer, mode, endedAt)
+  ), [activeQuestionTimer, questionTimeSpent]);
+
+  const commitActiveQuestionTimer = useCallback((mode, endedAt) => {
+    const next = getQuestionTimeSpentWithStateDelta(mode, endedAt);
+    setQuestionTimeSpentValue(next);
+    setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: endedAt });
+    return next;
+  }, [getQuestionTimeSpentWithStateDelta, setActiveQuestionTimerValue, setQuestionTimeSpentValue]);
+
+  const commitActiveQuestionTimerFromRef = useCallback((mode, endedAt) => {
+    const next = getQuestionTimeSpentWithActiveDelta(mode, endedAt);
+    setQuestionTimeSpentValue(next);
+    setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: endedAt });
+    return next;
+  }, [getQuestionTimeSpentWithActiveDelta, setActiveQuestionTimerValue, setQuestionTimeSpentValue]);
+
+  const startActiveQuestionTimer = useCallback((mode, questionId, startedAt) => {
+    setActiveQuestionTimerValue({
+      mode,
+      questionId: questionId ? String(questionId) : null,
+      startedAt: Math.max(0, Math.floor(Number(startedAt) || 0)),
+    });
+  }, [setActiveQuestionTimerValue]);
+
+  const startTsaQuestionTimerAtIndex = (questionIndex, startedAt) => {
+    const question = realQuestions[questionIndex];
+    startActiveQuestionTimer('tsa', question?.id, startedAt);
+  };
+
+  const setTsaCurrentQuestion = (questionIndex) => {
+    const nextQuestionIndex = Math.min(Math.max(Number(questionIndex) || 0, currentTsaSection.startIndex), Math.max(currentTsaSection.endIndex - 1, 0));
+    if (nextQuestionIndex === currentQ && activeQuestionTimer.mode === 'tsa') return;
+
+    const elapsedAtChange = getTsaQuestionElapsedSeconds();
+    commitActiveQuestionTimer('tsa', elapsedAtChange);
+    setCurrentQ(nextQuestionIndex);
+    startTsaQuestionTimerAtIndex(nextQuestionIndex, elapsedAtChange);
+  };
+
+  useEffect(() => {
+    if (quizPhase !== 'quiz' || !isTSA || !timerRunning || isPaused) return;
+    const question = realQuestions[currentQ];
+    if (!question) return;
+
+    const active = activeQuestionTimerRef.current;
+    const questionId = String(question.id);
+    if (active.mode === 'tsa' && active.questionId === questionId) return;
+
+    const elapsedNow = getTsaQuestionElapsedSeconds();
+    if (active.mode === 'tsa' && active.questionId && active.questionId !== questionId) {
+      commitActiveQuestionTimerFromRef('tsa', elapsedNow);
+    }
+    startActiveQuestionTimer('tsa', questionId, elapsedNow);
+  }, [commitActiveQuestionTimerFromRef, currentQ, getTsaQuestionElapsedSeconds, isPaused, isTSA, quizPhase, realQuestions, startActiveQuestionTimer, timerRunning]);
+
   realQuestions.forEach((q, i) => {
     q._globalIndex = i;
     q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i - 1].type !== 'MCQ');
@@ -914,12 +1055,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       bookmarks: overrides.bookmarks ?? bookmarks,
       currentQ: overrides.currentQ ?? currentQ,
       practiceRevealed: overrides.practiceRevealed ?? practiceRevealed,
+      questionTimeSpent: overrides.questionTimeSpent ?? questionTimeSpent,
       realQuestions: (activeExam.questions || []).filter(question => question.type !== 'TEXT'),
       elapsedSeconds: overrides.elapsedSeconds ?? elapsedSeconds,
     });
     localStorage.setItem(storageKey, JSON.stringify(snapshot));
     return snapshot;
-  }, [activeExam, answers, bookmarks, currentQ, elapsedSeconds, getPracticeProgressKey, practiceRevealed, user]);
+  }, [activeExam, answers, bookmarks, currentQ, elapsedSeconds, getPracticeProgressKey, practiceRevealed, questionTimeSpent, user]);
 
   const upsertPracticeProgressSnapshot = useCallback(async (snapshot, { notify = false, showSpinner = false } = {}) => {
     if (!activeExam?.id || !user?.id || !snapshot) return false;
@@ -938,6 +1080,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           answers: snapshot.answers,
           bookmarks: snapshot.bookmarks,
           revealed_map: snapshot.practiceRevealed,
+          question_time_spent: getDisplayedQuestionTimeSpent(snapshot.questionTimeSpent),
           completed: snapshot.completed,
           time_spent: normalizeElapsedSeconds(snapshot.timeSpent),
           saved_at: snapshot.savedAt,
@@ -959,7 +1102,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     } finally {
       if (showSpinner) setPracticeSaving(false);
     }
-  }, [activeExam, showAlert, user]);
+  }, [activeExam, getDisplayedQuestionTimeSpent, showAlert, user]);
 
   const savePracticeProgress = async ({ notify = false, showSpinner = false, overrides = {}, snapshot = null } = {}) => {
     const nextSnapshot = snapshot || writePracticeSnapshot(overrides);
@@ -975,6 +1118,11 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const nextQ = getBoundedPracticeQuestionIndex(index);
     if (closeAI) setIsAIChatOpen(false);
     setCurrentQ(nextQ);
+    if (practiceRevealed[nextQ]) {
+      setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: elapsedSeconds });
+    } else {
+      startActiveQuestionTimer('practice', realQuestions[nextQ]?.id, elapsedSeconds);
+    }
     writePracticeSnapshot({ currentQ: nextQ });
     return nextQ;
   };
@@ -989,24 +1137,39 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   const revealPracticeQuestion = (questionIndex = currentQ, { makeCurrent = false, closeAI = false } = {}) => {
     const nextQ = getBoundedPracticeQuestionIndex(questionIndex);
+    const question = realQuestions[nextQ];
+    const wasRevealed = Boolean(practiceRevealed[nextQ]);
+    let nextQuestionTimeSpent = questionTimeSpent;
+    if (question && !wasRevealed) {
+      const active = activeQuestionTimer;
+      nextQuestionTimeSpent = active.mode === 'practice' && active.questionId === String(question.id)
+        ? commitActiveQuestionTimer('practice', elapsedSeconds)
+        : normalizeQuestionTimeSpent(questionTimeSpent);
+    }
     const nextRevealed = { ...practiceRevealed, [nextQ]: true };
     setPracticeRevealed(nextRevealed);
     if (closeAI) setIsAIChatOpen(false);
-    if (makeCurrent) setCurrentQ(nextQ);
+    if (makeCurrent) {
+      setCurrentQ(nextQ);
+      setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: elapsedSeconds });
+    }
     writePracticeSnapshot({
       currentQ: makeCurrent ? nextQ : currentQ,
       practiceRevealed: nextRevealed,
+      questionTimeSpent: nextQuestionTimeSpent,
     });
   };
 
   const applyPracticeSnapshot = async (snapshot) => {
     const nextCurrentQ = Math.min(Math.max(Number(snapshot?.currentQ) || 0, 0), Math.max(realQuestions.length - 1, 0));
     const nextElapsedSeconds = normalizeElapsedSeconds(snapshot?.timeSpent ?? snapshot?.time_spent);
+    const nextQuestionTimeSpent = normalizeQuestionTimeSpent(snapshot?.questionTimeSpent ?? snapshot?.question_time_spent);
     writePracticeSnapshot({
       answers: snapshot?.answers || {},
       bookmarks: snapshot?.bookmarks || [],
       currentQ: nextCurrentQ,
       practiceRevealed: snapshot?.practiceRevealed || {},
+      questionTimeSpent: nextQuestionTimeSpent,
       elapsedSeconds: nextElapsedSeconds,
     });
     await preloadExamImages('practice-loading', nextCurrentQ);
@@ -1014,7 +1177,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setBookmarks(new Set(snapshot?.bookmarks || []));
     setCurrentQ(nextCurrentQ);
     setPracticeRevealed(snapshot?.practiceRevealed || {});
+    setQuestionTimeSpentValue(nextQuestionTimeSpent);
     setElapsedSecondsValue(nextElapsedSeconds);
+    if (snapshot?.practiceRevealed?.[nextCurrentQ]) {
+      setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: nextElapsedSeconds });
+    } else {
+      startActiveQuestionTimer('practice', realQuestions[nextCurrentQ]?.id, nextElapsedSeconds);
+    }
     setIsAIChatOpen(false);
     setQuizPhase('practice');
   };
@@ -1027,6 +1196,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       bookmarks: resetBookmarks,
       currentQ: 0,
       practiceRevealed: {},
+      questionTimeSpent: {},
       elapsedSeconds: 0,
     });
     await preloadExamImages('practice-loading', 0);
@@ -1034,6 +1204,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setBookmarks(resetBookmarks);
     setCurrentQ(0);
     setPracticeRevealed({});
+    setQuestionTimeSpentValue({});
+    startActiveQuestionTimer('practice', realQuestions[0]?.id, 0);
     setIsAIChatOpen(false);
     setQuizPhase('practice');
   };
@@ -1054,7 +1226,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     try {
       const { data, error } = await supabase
         .from('practice_progress')
-        .select('answers, bookmarks, current_question, revealed_map, time_spent, saved_at, updated_at')
+        .select('answers, bookmarks, current_question, revealed_map, question_time_spent, time_spent, saved_at, updated_at')
         .eq('user_id', user.id)
         .eq('exam_id', activeExam.id)
         .maybeSingle();
@@ -1071,6 +1243,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         bookmarks: data.bookmarks || [],
         currentQ: data.current_question || 0,
         practiceRevealed: data.revealed_map || {},
+        questionTimeSpent: data.question_time_spent || {},
         timeSpent: data.time_spent || 0,
         savedAt: data.updated_at || data.saved_at,
       };
@@ -1105,7 +1278,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       try {
         const { data, error } = await supabase
           .from('practice_progress')
-          .select('answers, bookmarks, current_question, revealed_map, time_spent, saved_at, updated_at')
+          .select('answers, bookmarks, current_question, revealed_map, question_time_spent, time_spent, saved_at, updated_at')
           .eq('user_id', userId)
           .eq('exam_id', examId)
           .maybeSingle();
@@ -1118,6 +1291,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             bookmarks: data.bookmarks || [],
             currentQ: data.current_question || 0,
             practiceRevealed: data.revealed_map || {},
+            questionTimeSpent: data.question_time_spent || {},
             timeSpent: data.time_spent || 0,
             savedAt: data.updated_at || data.saved_at,
           };
@@ -1133,6 +1307,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       const hasSavedProgress = saved && (
         Object.keys(saved.answers || {}).length > 0 ||
         Object.keys(saved.practiceRevealed || {}).length > 0 ||
+        Object.keys(saved.questionTimeSpent || saved.question_time_spent || {}).length > 0 ||
         (saved.currentQ || 0) > 0 ||
         normalizeElapsedSeconds(saved.timeSpent ?? saved.time_spent) > 0
       );
@@ -1140,11 +1315,13 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       if (!hasSavedProgress) return;
       const nextCurrentQ = Math.min(Math.max(Number(saved?.currentQ) || 0, 0), Math.max(questionCount - 1, 0));
       const nextElapsedSeconds = normalizeElapsedSeconds(saved?.timeSpent ?? saved?.time_spent);
+      const nextQuestionTimeSpent = normalizeQuestionTimeSpent(saved?.questionTimeSpent ?? saved?.question_time_spent);
       writePracticeSnapshot({
         answers: saved?.answers || {},
         bookmarks: saved?.bookmarks || [],
         currentQ: nextCurrentQ,
         practiceRevealed: saved?.practiceRevealed || {},
+        questionTimeSpent: nextQuestionTimeSpent,
         elapsedSeconds: nextElapsedSeconds,
       });
       await preloadExamImages('practice-loading', nextCurrentQ);
@@ -1152,14 +1329,20 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       setBookmarks(new Set(saved?.bookmarks || []));
       setCurrentQ(nextCurrentQ);
       setPracticeRevealed(saved?.practiceRevealed || {});
+      setQuestionTimeSpentValue(nextQuestionTimeSpent);
       setElapsedSecondsValue(nextElapsedSeconds);
+      if (saved?.practiceRevealed?.[nextCurrentQ]) {
+        setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: nextElapsedSeconds });
+      } else {
+        startActiveQuestionTimer('practice', realQuestions[nextCurrentQ]?.id, nextElapsedSeconds);
+      }
       setIsAIChatOpen(false);
       setQuizPhase('practice');
       window.history.replaceState({}, '', window.location.pathname);
     }, 0);
 
     return () => clearTimeout(resumeTimer);
-  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions.length, setElapsedSecondsValue, shouldResumePractice, user, writePracticeSnapshot]);
+  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions, realQuestions.length, setActiveQuestionTimerValue, setElapsedSecondsValue, setQuestionTimeSpentValue, shouldResumePractice, startActiveQuestionTimer, user, writePracticeSnapshot]);
 
   const handleStartPractice = async () => {
     if (realQuestions.length === 0) {
@@ -1171,6 +1354,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const hasSavedProgress = saved && (
       Object.keys(saved.answers || {}).length > 0 ||
       Object.keys(saved.practiceRevealed || {}).length > 0 ||
+      Object.keys(saved.questionTimeSpent || saved.question_time_spent || {}).length > 0 ||
       (saved.currentQ || 0) > 0 ||
       normalizeElapsedSeconds(saved.timeSpent ?? saved.time_spent) > 0
     );
@@ -1205,7 +1389,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       setBookmarks(resetBookmarks);
       setCurrentQ(0);
       setPracticeRevealed({});
+      setQuestionTimeSpentValue({});
       setElapsedSecondsValue(0);
+      startActiveQuestionTimer('practice', realQuestions[0]?.id, 0);
       setIsAIChatOpen(false);
       savePracticeProgress({
         overrides: {
@@ -1213,6 +1399,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           bookmarks: resetBookmarks,
           currentQ: 0,
           practiceRevealed: {},
+          questionTimeSpent: {},
           elapsedSeconds: 0,
         },
       });
@@ -1240,6 +1427,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   const startFreshQuiz = async () => {
     setAnswers({});
+    resetQuestionTimeTracking();
     setBookmarks(new Set());
     setCurrentQ(0);
     setTsaSectionIndex(0);
@@ -1279,7 +1467,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           // Resume
           try {
             const data = JSON.parse(saved);
+            const restoredAnswerTimeEvents = normalizeAnswerTimeEvents(data.answerTimeEvents);
+            const restoredQuestionTimeSpent = normalizeQuestionTimeSpent(data.questionTimeSpent);
             setAnswers(data.answers || {});
+            setAnswerTimeEventsValue(restoredAnswerTimeEvents);
+            setQuestionTimeSpentValue(restoredQuestionTimeSpent);
+            setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: 0 });
             setBookmarks(new Set(data.bookmarks || []));
             setCurrentQ(data.currentQ || 0);
             setTsaSectionIndex(data.tsaSectionIndex || 0);
@@ -1339,14 +1532,22 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       });
       const isTsaSubmit = isTsaExam(activeExam);
       const isLowPressureSubmit = !isTsaSubmit && activeExam.antiCheatEnabled === false;
-      const timeSpentSecs = isTsaSubmit
+      const tsaElapsedAtSubmit = isTsaSubmit
         ? Math.min(
           TSA_TOTAL_DURATION_MINUTES * 60,
           tsaElapsedSeconds + getTsaSectionElapsedSeconds(tsaSectionIndex, savedSecondsLeft)
         )
+        : 0;
+      const timeSpentSecs = isTsaSubmit
+        ? tsaElapsedAtSubmit
         : isLowPressureSubmit
-          ? elapsedSecondsRef.current
+          ? elapsedSeconds
         : (savedSecondsLeft !== null ? (activeExam.duration * 60 - savedSecondsLeft) : (startTime ? Math.floor((Date.now() - startTime) / 1000) : 0));
+      const finalQuestionTimeSpent = isTsaSubmit
+        ? scaleQuestionTimeSpent(getQuestionTimeSpentWithStateDelta('tsa', tsaElapsedAtSubmit), getQuestionTimeLimitSeconds())
+        : calculateAnswerTimelineQuestionTimeSpent(answerTimeEvents, getQuestionTimeLimitSeconds());
+      setQuestionTimeSpentValue(finalQuestionTimeSpent);
+      setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: timeSpentSecs });
 
       const { data, error } = await supabase.from('exam_attempts').insert({
         user_id: user.id,
@@ -1356,6 +1557,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         total_questions: realQs.length,
         time_spent: timeSpentSecs,
         user_answers: answers,
+        question_time_spent: finalQuestionTimeSpent,
         violation_count: finalViolationCount,
       }).select('id').single();
 
@@ -1366,7 +1568,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         setSavedAttemptId(data?.id || null);
       }
     }
-  }, [activeExam, answers, exitFullscreen, getProgressKey, savedSecondsLeft, showAlert, startTime, tsaElapsedSeconds, tsaSectionIndex, user, violationCount]);
+  }, [activeExam, answerTimeEvents, answers, elapsedSeconds, exitFullscreen, getProgressKey, getQuestionTimeLimitSeconds, getQuestionTimeSpentWithStateDelta, savedSecondsLeft, setActiveQuestionTimerValue, setQuestionTimeSpentValue, showAlert, startTime, tsaElapsedSeconds, tsaSectionIndex, user, violationCount]);
 
   const handleSubmitTsaSection = () => {
     if (!isTSA) return;
@@ -1378,6 +1580,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     isAdvancingTsaSectionRef.current = true;
 
     const elapsedThisSection = getTsaSectionElapsedSeconds(tsaSectionIndex, savedSecondsLeft);
+    commitActiveQuestionTimer('tsa', tsaElapsedSeconds + elapsedThisSection);
     const nextSectionIndex = tsaSectionIndex + 1;
 
     setTimerRunning(false);
@@ -1450,6 +1653,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const handlePause = () => {
+    if (isTSA) commitActiveQuestionTimer('tsa', getTsaQuestionElapsedSeconds());
     setIsPaused(true);
     setTimerRunning(false);
   };
@@ -1457,6 +1661,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const handleResume = () => {
     setIsPaused(false);
     setTimerRunning(true);
+    if (isTSA) startTsaQuestionTimerAtIndex(currentQ, getTsaQuestionElapsedSeconds());
   };
 
   // Auto-save progress
@@ -1472,10 +1677,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         violationCount,
         tsaSectionIndex,
         tsaElapsedSeconds,
+        answerTimeEvents: answerTimeEventsRef.current,
+        questionTimeSpent: isTSA
+          ? getQuestionTimeSpentWithActiveDelta('tsa', getTsaQuestionElapsedSeconds())
+          : questionTimeSpentRef.current,
       });
       localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(data));
     }
-  }, [answers, bookmarks, savedSecondsLeft, elapsedSeconds, currentQ, violationCount, tsaSectionIndex, tsaElapsedSeconds, quizPhase, activeExam, user, isPaused, isLowPressureExam, getProgressKey]);
+  }, [answers, bookmarks, savedSecondsLeft, elapsedSeconds, currentQ, violationCount, tsaSectionIndex, tsaElapsedSeconds, quizPhase, activeExam, user, isPaused, isLowPressureExam, isTSA, getProgressKey, getQuestionTimeSpentWithActiveDelta, getTsaQuestionElapsedSeconds]);
 
   useEffect(() => {
     if (quizPhase !== 'quiz' || !activeExam?.id || !user?.id || !isAntiCheatEnabled) return;
@@ -1493,6 +1702,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         violationCount: nextViolationCount,
         tsaSectionIndex,
         tsaElapsedSeconds,
+        answerTimeEvents: answerTimeEventsRef.current,
+        questionTimeSpent: isTSA
+          ? getQuestionTimeSpentWithActiveDelta('tsa', getTsaQuestionElapsedSeconds({ secondsLeft: savedSecondsLeft ?? (activeQuizDuration * 60) }))
+          : questionTimeSpentRef.current,
       });
       localStorage.setItem(getProgressKey(activeExam.id), JSON.stringify(data));
     };
@@ -1504,7 +1717,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       window.removeEventListener('pagehide', recordExitViolation);
       window.removeEventListener('beforeunload', recordExitViolation);
     };
-  }, [activeExam, activeQuizDuration, answers, bookmarks, currentQ, getProgressKey, isAntiCheatEnabled, quizPhase, savedSecondsLeft, tsaSectionIndex, tsaElapsedSeconds, user, violationCount]);
+  }, [activeExam, activeQuizDuration, answers, bookmarks, currentQ, getProgressKey, getQuestionTimeSpentWithActiveDelta, getTsaQuestionElapsedSeconds, isAntiCheatEnabled, isTSA, quizPhase, savedSecondsLeft, tsaSectionIndex, tsaElapsedSeconds, user, violationCount]);
 
   useEffect(() => {
     if (quizPhase !== 'practice' || !activeExam?.id || !user?.id) return;
@@ -1516,6 +1729,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         bookmarks,
         currentQ,
         practiceRevealed,
+        questionTimeSpent: questionTimeSpentRef.current,
         realQuestions: (activeExam.questions || []).filter(question => question.type !== 'TEXT'),
         elapsedSeconds: elapsedSecondsRef.current,
       });
@@ -1552,6 +1766,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       return;
     }
 
+    if (quizPhase === 'quiz' && activeExam && !isTSA && !areQuestionAnswersEqual(answers[questionId], answer)) {
+      setAnswerTimeEventsValue(appendAnswerTimeEvent(
+        answerTimeEvents,
+        questionId,
+        getAnswerTimelineElapsedSeconds()
+      ));
+    }
+
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
@@ -1579,6 +1801,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         violationCount,
         tsaSectionIndex,
         tsaElapsedSeconds,
+        answerTimeEvents: answerTimeEventsRef.current,
+        questionTimeSpent: isTSA
+          ? getQuestionTimeSpentWithActiveDelta('tsa', getTsaQuestionElapsedSeconds({ secondsLeft: savedSecondsLeft ?? (activeQuizDuration * 60) }))
+          : questionTimeSpentRef.current,
       })));
       exitViolationRecordedRef.current = true;
     }
@@ -1597,6 +1823,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setViolationCount(0);
     setShowViolationWarning(false);
     setSavedAttemptId(null);
+    resetQuestionTimeTracking();
     // Reset ref after fullscreenchange event has fired
     setTimeout(() => { isSubmittingRef.current = false; }, 300);
     router.push('/');
@@ -1627,6 +1854,10 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       violationCount: nextViolationCount,
       tsaSectionIndex,
       tsaElapsedSeconds,
+      answerTimeEvents: answerTimeEventsRef.current,
+      questionTimeSpent: isTSA
+        ? getQuestionTimeSpentWithActiveDelta('tsa', getTsaQuestionElapsedSeconds({ secondsLeft: savedSecondsLeft ?? (activeQuizDuration * 60) }))
+        : questionTimeSpentRef.current,
     })));
 
     if (nextViolationCount >= MAX_VIOLATIONS) {
@@ -1674,7 +1905,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   const scrollToQ = (i) => {
-    setCurrentQ(i);
+    if (isTSA) setTsaCurrentQuestion(i);
+    else setCurrentQ(i);
     const el = document.getElementById(`q-card-${i}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
@@ -1889,6 +2121,12 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const isRevealed = practiceRevealed[currentQ] || false;
     const currentAnswer = q ? (answers[q.id] ?? getEmptyAnswerForType(q.type)) : undefined;
     const hasAnswered = q ? hasCompletedAnswer(q, currentAnswer) : false;
+    const lockedCurrentQElapsed = q ? displayedQuestionTimeSpent[q.id] : null;
+    const currentQElapsed = q && isRevealed && lockedCurrentQElapsed !== null && lockedCurrentQElapsed !== undefined
+      ? lockedCurrentQElapsed
+      : q && activeQuestionTimer.mode === 'practice' && activeQuestionTimer.questionId === String(q.id)
+        ? Math.max(0, elapsedSeconds - activeQuestionTimer.startedAt)
+        : 0;
 
     // Check correctness for dot colors
     const checkCorrect = (qItem, idx) => {
@@ -2037,6 +2275,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           selectedAnswer={answers[gq.id] ?? getEmptyAnswerForType(gq.type)}
                           onAnswerChange={(val) => !isRev && handleAnswerChange(gq.id, val)}
                           showResult={isRev}
+                          timeSpentSeconds={displayedQuestionTimeSpent[gq.id]}
                           disabled={isRev}
                           isBookmarked={bookmarks.has(gq.id)}
                           preloadImages={rqIndex === currentQ}
@@ -2083,6 +2322,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     selectedAnswer={answers[q.id] ?? getEmptyAnswerForType(q.type)}
                     onAnswerChange={(val) => !isRevealed && handleAnswerChange(q.id, val)}
                     showResult={isRevealed}
+                    timeSpentSeconds={displayedQuestionTimeSpent[q.id]}
                     disabled={isRevealed}
                     isBookmarked={bookmarks.has(q.id)}
                     preloadImages
@@ -2454,7 +2694,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                          <button disabled className="tsa-menu-action tsa-menu-action-future w-full sm:w-auto px-8 py-2.5 rounded-lg font-bold text-sm cursor-not-allowed">Tiếp tục</button>
                        ) : (
                          <button onClick={() => {
-                            setCurrentQ(Math.min(section.startIndex, Math.max(realQuestions.length - 1, 0)));
+                            setTsaCurrentQuestion(Math.min(section.startIndex, Math.max(realQuestions.length - 1, 0)));
                             setQuizPhase('quiz');
                             setTimerRunning(true);
                             setIsTsaNavbarCollapsed(false);
@@ -2501,10 +2741,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const quizSecondsLeft = savedSecondsLeft ?? (activeQuizDuration * 60);
 
     const confirmSubmit = () => {
+      commitActiveQuestionTimer('tsa', getTsaQuestionElapsedSeconds());
       const msg = unansweredCount > 0
         ? `⚠️ CẢNH BÁO: Bạn còn ${unansweredCount} câu chưa làm!\n\nBạn đã trả lời ${quizAnsweredCount}/${quizQuestionEntries.length} câu. Bạn có chắc chắn muốn nộp phần này?`
         : `Bạn đã trả lời ${quizAnsweredCount}/${quizQuestionEntries.length} câu. Bạn có chắc chắn muốn nộp phần này?`;
-      showConfirm('Xác nhận nộp bài', msg, () => handleSubmitTsaSection());
+      showConfirm(
+        'Xác nhận nộp bài',
+        msg,
+        () => handleSubmitTsaSection(),
+        () => startTsaQuestionTimerAtIndex(currentQ, getTsaQuestionElapsedSeconds())
+      );
     };
 
     const currentQuestionObj = realQuestions[currentQ];
@@ -2767,7 +3013,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                              if (firstGroupIdx <= currentQ) targetPrev = firstGroupIdx - 1;
                            }
                          }
-                         setCurrentQ(Math.max(currentTsaSection.startIndex, targetPrev));
+                         setTsaCurrentQuestion(Math.max(currentTsaSection.startIndex, targetPrev));
                       }}
                       disabled={currentQ <= currentTsaSection.startIndex}
                       className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 disabled:opacity-50 hover:bg-gray-200 transition-colors"
@@ -2789,7 +3035,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         if (isLastQ) {
                            confirmSubmit();
                         } else {
-                           setCurrentQ(nextQ);
+                           setTsaCurrentQuestion(nextQ);
                         }
                       }}
                       className="px-6 h-10 rounded-lg bg-[#1A237E] hover:bg-blue-900 text-white font-bold transition-colors flex items-center gap-2"
@@ -2857,7 +3103,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       return (
                          <button 
                             key={i}
-                            onClick={() => setCurrentQ(i)}
+                            onClick={() => setTsaCurrentQuestion(i)}
                             className={`w-9 h-9 rounded-full border flex items-center justify-center text-[13px] font-bold transition-all ${bgClass}`}
                          >
                             {i - currentTsaSection.startIndex + 1}
@@ -3512,6 +3758,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     selectedAnswer={answers[childQ.id] ?? getEmptyAnswerForType(childQ.type)}
                                     onAnswerChange={() => { }}
                                     showResult
+                                    timeSpentSeconds={displayedQuestionTimeSpent[childQ.id]}
                                     disabled
                                     onReport={handleOpenReport}
                                     onSaveErrorLog={getErrorLogSaveHandler(childQ, currentI)}
@@ -3545,6 +3792,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         selectedAnswer={answers[firstChild.id] ?? getEmptyAnswerForType(firstChild.type)}
                         onAnswerChange={() => { }}
                         showResult
+                        timeSpentSeconds={displayedQuestionTimeSpent[firstChild.id]}
                         disabled
                         onReport={handleOpenReport}
                         onSaveErrorLog={getErrorLogSaveHandler(firstChild, currentI)}

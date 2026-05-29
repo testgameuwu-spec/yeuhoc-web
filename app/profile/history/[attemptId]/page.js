@@ -152,6 +152,7 @@ export default function AttemptHistoryDetailPage() {
   }, [attemptId, router]);
 
   const answers = useMemo(() => attempt?.user_answers || {}, [attempt?.user_answers]);
+  const questionTimeSpent = useMemo(() => attempt?.question_time_spent || {}, [attempt?.question_time_spent]);
   const examTitle = exam?.title || attempt?.exams?.title || 'Chi tiết bài làm';
   const realQuestions = useMemo(() => (
     (exam?.questions || []).filter((question) => question.type !== 'TEXT')
@@ -341,6 +342,7 @@ export default function AttemptHistoryDetailPage() {
                           onAnswerChange={() => {}}
                           onReport={handleOpenReport}
                           showResult
+                          timeSpentSeconds={questionTimeSpent[question.id]}
                           disabled
                         />
                       </div>

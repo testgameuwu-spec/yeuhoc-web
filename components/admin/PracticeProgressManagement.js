@@ -139,7 +139,7 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
     try {
       const { data, error } = await supabase
         .from('exam_attempts')
-        .select('id, user_id, exam_id, score, correct_answers, total_questions, time_spent, created_at, violation_count, user_answers')
+        .select('id, user_id, exam_id, score, correct_answers, total_questions, time_spent, question_time_spent, created_at, violation_count, user_answers')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -706,6 +706,7 @@ const DeleteButton = ({ label, loading, onClick }) => (
 const PracticeDetailModal = ({ row, exam, loading, error, onClose }) => {
   const answers = getJsonObject(row.answers);
   const revealedMap = getJsonObject(row.revealed_map);
+  const questionTimeSpent = getJsonObject(row.question_time_spent);
   const bookmarkedIds = new Set(getJsonArray(row.bookmarks));
   const questions = exam?.questions || [];
   const realQuestions = questions.filter(question => question.type !== 'TEXT');
@@ -828,6 +829,7 @@ const PracticeDetailModal = ({ row, exam, loading, error, onClose }) => {
                         selectedAnswer={selectedAnswer}
                         onAnswerChange={() => {}}
                         showResult={!isTextBlock}
+                        timeSpentSeconds={questionTimeSpent[question.id]}
                         disabled
                       />
                     </div>
@@ -844,6 +846,7 @@ const PracticeDetailModal = ({ row, exam, loading, error, onClose }) => {
 
 const ExamAttemptDetailModal = ({ row, exam, loading, error, onClose }) => {
   const answers = getJsonObject(row.user_answers);
+  const questionTimeSpent = getJsonObject(row.question_time_spent);
   const questions = exam?.questions || [];
   const realQuestions = questions.filter(question => question.type !== 'TEXT');
   const score = Number(row.score) || 0;
@@ -944,6 +947,7 @@ const ExamAttemptDetailModal = ({ row, exam, loading, error, onClose }) => {
                         selectedAnswer={selectedAnswer}
                         onAnswerChange={() => {}}
                         showResult={!isTextBlock}
+                        timeSpentSeconds={questionTimeSpent[question.id]}
                         disabled
                       />
                     </div>
