@@ -12,11 +12,14 @@ import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import ContinueExamsPanel from '@/components/ContinueExamsPanel';
 import ThemeToggle from '@/components/ThemeToggle';
+import { useTheme } from '@/components/ThemeProvider';
 import { markResolvedReportsAsSeen } from '@/lib/reportSeenStorage';
 import { getAllFolders, getPublishedExams } from '@/lib/examStore';
 import { getContinueExamItems } from '@/lib/continueExamStore';
 import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
 import { formatTargetExamDate } from '@/lib/targetExamDisplay';
+import { ActivityCalendar } from 'react-activity-calendar';
+import { format, parseISO, eachDayOfInterval } from 'date-fns';
 
 const PROFILE_TABS = new Set(['overview', 'history', 'reports', 'info']);
 
@@ -53,6 +56,7 @@ const COVER_GRADIENTS = [
 ];
 
 function ProfilePageInner() {
+  const { theme } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -699,6 +703,60 @@ function ProfilePageInner() {
 
                   return (
                     <div className="space-y-8">
+                      {/* Activity Calendar */}
+                      <div className="profile-dark-text-box border border-gray-100 bg-white rounded-xl p-4 sm:p-6 overflow-x-auto mb-8">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            Thống kê làm bài ({new Date().getFullYear()})
+                          </h4>
+                          <span className="text-sm text-gray-500 font-medium">{attempts.length} bài thi trong năm {new Date().getFullYear()}</span>
+                        </div>
+                        <div className="min-w-[700px] flex justify-center pb-2">
+                          <ActivityCalendar 
+                            data={(() => {
+                              const today = new Date();
+                              const currentYear = today.getFullYear();
+                              const startDate = new Date(currentYear, 0, 1);
+                              const endDate = new Date(currentYear, 11, 31);
+                              const days = eachDayOfInterval({ start: startDate, end: endDate });
+                              const attemptsByDate = {};
+                              attempts.forEach(a => {
+                                if (!a.created_at) return;
+                                try {
+                                  const dateStr = format(parseISO(a.created_at), 'yyyy-MM-dd');
+                                  attemptsByDate[dateStr] = (attemptsByDate[dateStr] || 0) + 1;
+                                } catch (e) {
+                                  console.warn("Invalid date:", a.created_at);
+                                }
+                              });
+                              return days.map(day => {
+                                const dateStr = format(day, 'yyyy-MM-dd');
+                                const count = attemptsByDate[dateStr] || 0;
+                                let level = 0;
+                                if (count === 1) level = 1;
+                                else if (count === 2) level = 2;
+                                else if (count === 3) level = 3;
+                                else if (count >= 4) level = 4;
+                                return { date: dateStr, count, level };
+                              });
+                            })()}
+                            colorScheme={theme === 'dark' ? 'dark' : 'light'}
+                            theme={{
+                              light: ['#f3f4f6', '#c6d6fb', '#8baafe', '#4f7df3', '#2b4b9b'],
+                              dark: ['#1f2937', '#25355c', '#2c478a', '#4f7df3', '#799ef5']
+                            }}
+                            labels={{
+                              legend: { less: 'Ít', more: 'Nhiều' },
+                              months: ['Th.1', 'Th.2', 'Th.3', 'Th.4', 'Th.5', 'Th.6', 'Th.7', 'Th.8', 'Th.9', 'Th.10', 'Th.11', 'Th.12'],
+                              weekdays: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+                              totalCount: '{{count}} bài thi trong năm {{year}}'
+                            }}
+                            hideTotalCount={true}
+                            hideColorLegend={false}
+                          />
+                        </div>
+                      </div>
+
                       {/* Stats grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="profile-dark-text-box bg-[var(--home-brand-soft)] border border-[var(--home-brand-border)] rounded-xl p-4 text-center">
@@ -841,7 +899,7 @@ function ProfilePageInner() {
                   Báo cáo của tôi
                 </h3>
                 <p className="text-xs text-gray-400 mb-6">
-                  Danh sách câu hỏi bạn đã báo cáo và trạng thái xử lý. Khi chuyển sang trạng thái đã xử lý, bạn sẽ thấy tại đây; nếu đang mở trang đề thi, ứng dụng có thể báo ngay khi Supabase Realtime được bật cho bảng báo cáo.
+                  Danh sách câu hỏi bạn đã báo cáo và trạng thái xử lý.
                 </p>
 
                 {myReports.length > 0 ? (
