@@ -18,6 +18,7 @@ import { getAllFolders, getPublishedExams } from '@/lib/examStore';
 import { getContinueExamItems } from '@/lib/continueExamStore';
 import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
 import { formatTargetExamDate } from '@/lib/targetExamDisplay';
+import { formatScore } from '@/lib/scoreFormat';
 import { ActivityCalendar } from 'react-activity-calendar';
 import { format, parseISO, eachDayOfInterval } from 'date-fns';
 
@@ -696,8 +697,8 @@ function ProfilePageInner() {
                 <p className="text-xs text-gray-400 mb-6">Thống kê và tiến trình học tập của bạn</p>
 
                 {(() => {
-                  const highestScore = attempts.length > 0 ? Math.max(...attempts.map(a => a.score || 0)).toFixed(1) : 0;
-                  const averageScore = attempts.length > 0 ? (attempts.reduce((acc, a) => acc + (a.score || 0), 0) / attempts.length).toFixed(1) : 0;
+                  const highestScore = attempts.length > 0 ? formatScore(Math.max(...attempts.map(a => a.score || 0))) : formatScore(0);
+                  const averageScore = attempts.length > 0 ? formatScore(attempts.reduce((acc, a) => acc + (a.score || 0), 0) / attempts.length) : formatScore(0);
                   const totalExams = attempts.length;
                   const recentAttempts = attempts.slice(0, 5);
 
@@ -811,7 +812,7 @@ function ProfilePageInner() {
                                   <div className="flex items-center gap-4 text-sm flex-shrink-0">
                                     <div className="text-center">
                                       <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
-                                      <p className="font-black text-[var(--home-brand-primary)]">{attempt.score?.toFixed(1) || 0}</p>
+                                      <p className="font-black text-[var(--home-brand-primary)]">{formatScore(attempt.score)}</p>
                                     </div>
                                     <div className="w-px h-8 bg-gray-200"></div>
                                     <div className="text-center">
@@ -867,7 +868,7 @@ function ProfilePageInner() {
                         <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-4 text-sm flex-shrink-0">
                           <div className="text-center">
                             <p className="text-xs text-gray-400 mb-0.5">Số điểm</p>
-                            <p className="font-black text-[var(--home-brand-primary)]">{attempt.score?.toFixed(1) || 0}</p>
+                            <p className="font-black text-[var(--home-brand-primary)]">{formatScore(attempt.score)}</p>
                           </div>
                           <div className="w-px h-8 bg-gray-200"></div>
                           <div className="text-center">

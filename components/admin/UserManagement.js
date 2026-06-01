@@ -11,6 +11,7 @@ import {
 import QuestionCard from '@/components/QuestionCard';
 import Pagination from '@/components/Pagination';
 import { getEmptyAnswerForType } from '@/lib/questionResult';
+import { formatScore } from '@/lib/scoreFormat';
 
 const ROLE_STYLES = {
   admin: {
@@ -590,7 +591,7 @@ export default function UserManagement() {
                       <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-6">
                         <h4 className="font-bold text-white mb-2">{attemptDetails.exam.title}</h4>
                         <div className="flex items-center gap-4 text-sm text-white/60 flex-wrap">
-                          <span>Điểm: <span className="font-bold text-emerald-400">{selectedAttempt.score?.toFixed(1)}</span></span>
+                          <span>Điểm: <span className="font-bold text-emerald-400">{formatScore(selectedAttempt.score)}</span></span>
                           <span>Đúng: <span className="font-bold text-white/90">{selectedAttempt.correct_answers}/{selectedAttempt.total_questions}</span></span>
                           <span>Thời gian: {Math.floor(selectedAttempt.time_spent / 60)}p {selectedAttempt.time_spent % 60}s</span>
                           {(selectedAttempt.violation_count > 0) && (
@@ -708,7 +709,7 @@ export default function UserManagement() {
                             <div className="flex items-center gap-4 text-sm flex-shrink-0">
                               <div className="text-center">
                                 <p className="text-xs text-white/30 mb-0.5">Số điểm</p>
-                                <p className="font-black text-emerald-400">{attempt.score?.toFixed(1) || 0}</p>
+                                <p className="font-black text-emerald-400">{formatScore(attempt.score)}</p>
                               </div>
                               <div className="w-px h-8 bg-white/10"></div>
                               <div className="text-center">

@@ -2,6 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 import { calculateExamResult } from '@/lib/examScoring';
+import { formatScore } from '@/lib/scoreFormat';
 
 // Score ring component
 function ScoreRing({ score, maxScore }) {
@@ -29,7 +30,7 @@ function ScoreRing({ score, maxScore }) {
                 position: 'absolute', inset: 0,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             }}>
-                <div style={{ fontSize: maxScore > 10 ? 24 : 30, fontWeight: 800, color, lineHeight: 1 }}>{score.toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</div>
+                <div style={{ fontSize: maxScore > 10 ? 24 : 30, fontWeight: 800, color, lineHeight: 1 }}>{formatScore(score)}</div>
                 <div style={{ fontSize: 11, color: 'var(--app-muted)', fontWeight: 600, marginTop: 2 }}>/ {maxScore}</div>
             </div>
         </div>

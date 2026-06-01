@@ -10,6 +10,7 @@ import QuestionCard from '@/components/QuestionCard';
 import { getExamById } from '@/lib/examStore';
 import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
 import { supabase } from '@/lib/supabase';
+import { formatScore } from '@/lib/scoreFormat';
 
 const MODES = [
   { key: 'practice', label: 'Ôn luyện' },
@@ -451,11 +452,11 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
           </div>
           <div className="glass rounded-2xl border border-white/10 p-4">
             <p className="text-xs text-white/40 mb-1">Điểm trung bình</p>
-            <p className="text-2xl font-black text-indigo-300">{averageScore.toFixed(1)}</p>
+            <p className="text-2xl font-black text-indigo-300">{formatScore(averageScore)}</p>
           </div>
           <div className="glass rounded-2xl border border-white/10 p-4">
             <p className="text-xs text-white/40 mb-1">Điểm cao nhất</p>
-            <p className="text-2xl font-black text-emerald-400">{highestScore.toFixed(1)}</p>
+            <p className="text-2xl font-black text-emerald-400">{formatScore(highestScore)}</p>
           </div>
           <div className="glass rounded-2xl border border-white/10 p-4">
             <p className="text-xs text-white/40 mb-1">Lượt có vi phạm</p>
@@ -570,7 +571,7 @@ export default function PracticeProgressManagement({ showAlert, showConfirm }) {
                       <ExamCell row={row} />
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 min-w-0">
-                        <Metric label="Điểm" value={score.toFixed(1)} className="text-emerald-400 font-black" />
+                        <Metric label="Điểm" value={formatScore(score)} className="text-emerald-400 font-black" />
                         <Metric label="Đúng" value={`${correct}/${total}`} />
                         <Metric label="Tỉ lệ" value={`${accuracy}%`} />
                         <Metric label="Thời gian" value={formatDuration(row.time_spent)} />
@@ -907,7 +908,7 @@ const ExamAttemptDetailModal = ({ row, exam, loading, error, onClose }) => {
           ) : (
             <div className="space-y-5">
               <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-3 lg:grid-cols-6">
-                <Metric label="Điểm" value={score.toFixed(1)} className="text-emerald-300 font-black" />
+                <Metric label="Điểm" value={formatScore(score)} className="text-emerald-300 font-black" />
                 <Metric label="Đúng" value={`${correct}/${total}`} className="text-emerald-300 font-black" />
                 <Metric label="Sai" value={resultStats.wrong} className="text-red-300 font-black" />
                 <Metric label="Chưa làm" value={resultStats.unanswered} className="text-amber-300 font-black" />

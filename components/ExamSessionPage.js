@@ -45,6 +45,7 @@ import {
   TSA_SECTIONS,
   TSA_TOTAL_DURATION_MINUTES,
 } from '@/lib/examScoring';
+import { formatScore } from '@/lib/scoreFormat';
 
 const PREVIEW_BADGE_TONES = {
   subject: { bg: 'var(--et-blue-lt)', color: 'var(--et-blue)', dark: '#60a5fa' },
@@ -248,6 +249,28 @@ const formatClock = (seconds) => {
 const normalizeElapsedSeconds = (seconds) => {
   const total = Math.floor(Number(seconds) || 0);
   return Number.isFinite(total) && total > 0 ? total : 0;
+};
+
+const PRACTICE_PROGRESS_OFFLINE_MESSAGE = 'Tiến trình ôn luyện đã được lưu trên thiết bị này. Khi có mạng, hệ thống sẽ tự đồng bộ lại.';
+
+const isBrowserOffline = () => (
+  typeof navigator !== 'undefined' && navigator.onLine === false
+);
+
+const getPracticeProgressErrorMessage = (error) => (
+  error?.message || error?.details || 'Vui lòng thử lại.'
+);
+
+const isPracticeProgressNetworkError = (error) => {
+  if (isBrowserOffline()) return true;
+  const errorText = [
+    error?.name,
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.code,
+  ].filter(Boolean).join(' ');
+  return error?.status === 0 || /fetch|network|offline|load failed/i.test(errorText);
 };
 
 const hasPracticeAnswer = (answer) => {
@@ -1068,6 +1091,11 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
     if (showSpinner) setPracticeSaving(true);
     try {
+      if (isBrowserOffline()) {
+        if (notify) showAlert('Chưa đồng bộ', PRACTICE_PROGRESS_OFFLINE_MESSAGE);
+        return false;
+      }
+
       const { error } = await supabase
         .from('practice_progress')
         .upsert({
@@ -1088,16 +1116,26 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         }, { onConflict: 'user_id,exam_id' });
 
       if (error) {
+        if (isPracticeProgressNetworkError(error)) {
+          if (notify) showAlert('Chưa đồng bộ', PRACTICE_PROGRESS_OFFLINE_MESSAGE);
+          return false;
+        }
+
         console.error('Error saving practice progress:', error);
-        if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + error.message);
+        if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + getPracticeProgressErrorMessage(error));
         return false;
       }
 
       if (notify) showAlert('Đã lưu', 'Tiến trình ôn luyện đã được lưu.');
       return true;
     } catch (error) {
+      if (isPracticeProgressNetworkError(error)) {
+        if (notify) showAlert('Chưa đồng bộ', PRACTICE_PROGRESS_OFFLINE_MESSAGE);
+        return false;
+      }
+
       console.error('Error saving practice progress:', error);
-      if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + (error.message || 'Vui lòng thử lại.'));
+      if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + getPracticeProgressErrorMessage(error));
       return false;
     } finally {
       if (showSpinner) setPracticeSaving(false);
@@ -1745,6 +1783,28 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   useEffect(() => {
     if (quizPhase !== 'practice' || !activeExam?.id || !user?.id || typeof window === 'undefined') return;
 
+    const syncLocalPracticeSnapshot = () => {
+      const localSaved = localStorage.getItem(getPracticeProgressKey(activeExam.id));
+      if (!localSaved) return;
+
+      try {
+        const snapshot = JSON.parse(localSaved);
+        if (snapshot) void upsertPracticeProgressSnapshot(snapshot);
+      } catch {
+        // Ignore corrupt local progress entries; loading does the same.
+      }
+    };
+
+    window.addEventListener('online', syncLocalPracticeSnapshot);
+
+    return () => {
+      window.removeEventListener('online', syncLocalPracticeSnapshot);
+    };
+  }, [activeExam?.id, getPracticeProgressKey, quizPhase, upsertPracticeProgressSnapshot, user?.id]);
+
+  useEffect(() => {
+    if (quizPhase !== 'practice' || !activeExam?.id || !user?.id || typeof window === 'undefined') return;
+
     const flushPracticeSnapshot = () => {
       writePracticeSnapshot();
     };
@@ -2255,6 +2315,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       imageWrapperClassName="mt-3"
                       imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
                       preload
+                      showImageLoadingPlaceholder
                     />
                   </div>
                 </div>
@@ -2279,6 +2340,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                           disabled={isRev}
                           isBookmarked={bookmarks.has(gq.id)}
                           preloadImages={rqIndex === currentQ}
+                          showImageLoadingPlaceholder
                           onToggleBookmark={() => togglePracticeBookmark(gq.id)}
                           onReport={handleOpenReport}
                           onSaveErrorLog={getErrorLogSaveHandler(gq, rqIndex, { visible: isRev })}
@@ -2326,6 +2388,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     disabled={isRevealed}
                     isBookmarked={bookmarks.has(q.id)}
                     preloadImages
+                    showImageLoadingPlaceholder
                     onToggleBookmark={() => togglePracticeBookmark(q.id)}
                     onReport={handleOpenReport}
                     onSaveErrorLog={getErrorLogSaveHandler(q, currentQ, { visible: isRevealed })}
@@ -2604,7 +2667,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 <div className="ep-lb-date">{new Date(attempt.created_at).toLocaleDateString('vi-VN')}</div>
                               </div>
                               <div className="ep-lb-score">
-                                <div className="ep-lb-score-val">{attempt.score.toFixed(2)}</div>
+                                <div className="ep-lb-score-val">{formatScore(attempt.score)}</div>
                                 <div className="ep-lb-score-time">{Math.floor(attempt.time_spent / 60)}p {attempt.time_spent % 60}s</div>
                               </div>
                             </div>
@@ -2879,6 +2942,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                       onAnswerChange={(val) => handleAnswerChange(qObj.id, val)}
                                       disabled={false}
                                       preloadImages={qIndex === currentQ}
+                                      showImageLoadingPlaceholder
                                       onReport={handleOpenReport}
                                     />
                                   </div>
@@ -2891,6 +2955,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     imageClassName="max-w-full max-h-[350px] w-auto object-contain rounded-lg"
                                     sizes="(max-width: 1024px) 100vw, 60vw"
                                     preload={qIndex === currentQ}
+                                    showImageLoadingPlaceholder
                                   />
                                 )}
                              </div>
@@ -2981,6 +3046,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                  imageWrapperClassName="mt-3"
                                  imageClassName="rounded-xl max-h-[400px] w-auto max-w-full object-contain"
                                  preload
+                                 showImageLoadingPlaceholder
                                />
                              </div>
                            </div>
@@ -3389,6 +3455,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 imageWrapperClassName="mt-3"
                                 imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
                                 preload={group.children.some((childQ) => childQ._globalIndex === currentQ)}
+                                showImageLoadingPlaceholder
                               />
                             </div>
                           </div>
@@ -3406,6 +3473,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     onAnswerChange={(val) => handleAnswerChange(childQ.id, val)}
                                     isBookmarked={bookmarks.has(childQ.id)}
                                     preloadImages={currentI === currentQ}
+                                    showImageLoadingPlaceholder
                                     onToggleBookmark={() => {
                                       const next = new Set(bookmarks);
                                       if (next.has(childQ.id)) next.delete(childQ.id);
@@ -3444,6 +3512,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         onAnswerChange={(val) => handleAnswerChange(firstChild.id, val)}
                         isBookmarked={bookmarks.has(firstChild.id)}
                         preloadImages={currentI === currentQ}
+                        showImageLoadingPlaceholder
                         onToggleBookmark={() => {
                           const next = new Set(bookmarks);
                           if (next.has(firstChild.id)) next.delete(firstChild.id);
@@ -3642,8 +3711,8 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     const correctCount = detailResult.correct;
     const unansweredCount = detailResult.unanswered;
     const resultScoreText = isTSA
-      ? `${detailResult.score}/${detailResult.maxScore}`
-      : detailResult.score.toFixed(1);
+      ? `${formatScore(detailResult.score)}/${detailResult.maxScore}`
+      : formatScore(detailResult.score);
     const resultErrorLogCount = getResultErrorLogCount();
     const renderResultErrorLogButton = (className = '') => (
       resultErrorLogCount > 0 ? (

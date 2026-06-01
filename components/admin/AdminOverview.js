@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { Activity, BookOpen, CheckCircle, Clock, Users, Trophy, ChevronRight, Edit3 } from 'lucide-react';
+import { formatScore } from '@/lib/scoreFormat';
 
 export default function AdminOverview({ onNavigate }) {
   const [stats, setStats] = useState({ users: 0, exams: 0, attempts: 0 });
@@ -197,7 +198,7 @@ export default function AdminOverview({ onNavigate }) {
                           </p>
                           <div className="flex items-center gap-3 mt-1 text-xs text-white/40">
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {timeAgo(attempt.created_at)}</span>
-                            <span className="flex items-center gap-1"><Trophy className="w-3 h-3 text-amber-500/70" /> Điểm: <strong className="text-amber-500">{attempt.score.toFixed(2)}</strong></span>
+                            <span className="flex items-center gap-1"><Trophy className="w-3 h-3 text-amber-500/70" /> Điểm: <strong className="text-amber-500">{formatScore(attempt.score)}</strong></span>
                           </div>
                         </div>
                       </li>

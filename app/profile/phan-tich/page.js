@@ -19,6 +19,7 @@ import Navbar from '@/components/Navbar';
 import { supabase } from '@/lib/supabase';
 import { getEmptyAnswerForType } from '@/lib/questionResult';
 import { getQuestionScore as getSharedQuestionScore, getTsaSectionIndex, TSA_SECTIONS } from '@/lib/examScoring';
+import { formatScore } from '@/lib/scoreFormat';
 
 const SCORE_MAX = 10;
 const PERCENT_MAX = 100;
@@ -190,13 +191,13 @@ function getAttemptExamKey(attempt) {
 function normalizeThptScore(attempt) {
   const rawScore = Number(attempt?.score);
   if (Number.isFinite(rawScore)) {
-    return roundMetric(clamp(rawScore, 0, SCORE_MAX));
+    return roundMetric(clamp(rawScore, 0, SCORE_MAX), 2);
   }
 
   const correct = Number(attempt?.correct_answers);
   const total = Number(attempt?.total_questions);
   if (Number.isFinite(correct) && Number.isFinite(total) && total > 0) {
-    return roundMetric((correct / total) * SCORE_MAX);
+    return roundMetric((correct / total) * SCORE_MAX, 2);
   }
 
   return 0;
@@ -397,7 +398,7 @@ function aggregateSectionStats(attempts, examKey) {
 
   const rows = Array.from(groups.values()).map((group) => {
     const value = examKey === 'THPT'
-      ? roundMetric(group.maxScore > 0 ? (group.score / group.maxScore) * SCORE_MAX : (group.correct / Math.max(1, group.total)) * SCORE_MAX)
+      ? roundMetric(group.maxScore > 0 ? (group.score / group.maxScore) * SCORE_MAX : (group.correct / Math.max(1, group.total)) * SCORE_MAX, 2)
       : getPercent(group.correct, group.total);
 
     return {
@@ -438,7 +439,7 @@ function groupAttemptsByMetric(attempts, getName, examKey) {
     count: group.count,
     correct: group.correct,
     total: group.total,
-    value: roundMetric(average(group.values)),
+    value: roundMetric(average(group.values), examKey === 'THPT' ? 2 : 1),
     latestValue: group.latestAttempt ? getMetricValue(group.latestAttempt, examKey) : 0,
   }));
 }
@@ -479,8 +480,8 @@ function buildExamStats(attempts, examKey) {
     examKey,
     attempts: examAttempts,
     totalAttempts: examAttempts.length,
-    averageValue: roundMetric(average(values)),
-    highestValue: roundMetric(Math.max(0, ...values)),
+    averageValue: roundMetric(average(values), examKey === 'THPT' ? 2 : 1),
+    highestValue: roundMetric(Math.max(0, ...values), examKey === 'THPT' ? 2 : 1),
     totalCorrect: examAttempts.reduce((sum, attempt) => sum + attempt.correctAnswers, 0),
     totalQuestions: examAttempts.reduce((sum, attempt) => sum + attempt.totalQuestions, 0),
     averageTimeMinutes: roundMetric(average(examAttempts.map((attempt) => attempt.timeSpent)) / 60),
@@ -601,11 +602,11 @@ function formatMinutes(seconds) {
 }
 
 function formatMetricValue(value, examKey) {
-  return examKey === 'THPT' ? `${roundMetric(value)}/10` : `${roundMetric(value)}%`;
+  return examKey === 'THPT' ? `${formatScore(value)}/10` : `${roundMetric(value)}%`;
 }
 
 function formatAttemptResult(attempt, examKey) {
-  if (examKey === 'THPT') return `${attempt.score}/10`;
+  if (examKey === 'THPT') return `${formatScore(attempt.score)}/10`;
   return `${attempt.accuracy}% · ${attempt.correctAnswers}/${attempt.totalQuestions} câu`;
 }
 

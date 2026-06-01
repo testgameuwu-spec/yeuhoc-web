@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useState } from 'react';
 import MathRenderer from './MathRenderer';
 
 const IMAGE_MARKER_CAPTURE_REGEX = /\(\(\s*(\d+)\s*\)\)/g;
@@ -85,6 +86,7 @@ export default function ContentWithInlineImage({
   height = 500,
   sizes = '(max-width: 1024px) 100vw, 50vw',
   preload = false,
+  showImageLoadingPlaceholder = false,
   onImageClick = null,
 }) {
   const imageMap = parseImageMap(image);
@@ -96,7 +98,7 @@ export default function ContentWithInlineImage({
     if (!imageSrc) return null;
 
     const imageElement = (
-      <Image
+      <InlineImage
         src={imageSrc}
         alt={alt}
         width={width}
@@ -104,12 +106,13 @@ export default function ContentWithInlineImage({
         sizes={sizes}
         preload={preload}
         className={imageClassName}
+        showImageLoadingPlaceholder={showImageLoadingPlaceholder}
       />
     );
 
     if (onImageClick) {
       return (
-        <div key={key} className={imageWrapperClassName}>
+        <div key={`${key}-${imageSrc}`} className={imageWrapperClassName}>
           <button type="button" onClick={() => onImageClick(imageSrc)} className={imageButtonClassName} style={imageButtonStyle}>
             {imageElement}
           </button>
@@ -118,7 +121,7 @@ export default function ContentWithInlineImage({
     }
 
     return (
-      <div key={key} className={imageWrapperClassName}>
+      <div key={`${key}-${imageSrc}`} className={imageWrapperClassName}>
         {imageElement}
       </div>
     );
@@ -161,5 +164,44 @@ export default function ContentWithInlineImage({
       <MathRenderer text={content} />
       {renderImage('image-fallback', fallbackImageSrc)}
     </div>
+  );
+}
+
+function InlineImage({
+  src,
+  alt,
+  width,
+  height,
+  sizes,
+  preload,
+  className,
+  showImageLoadingPlaceholder,
+}) {
+  const [isLoaded, setIsLoaded] = useState(!showImageLoadingPlaceholder);
+
+  const image = (
+    <Image
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      sizes={sizes}
+      preload={preload}
+      className={showImageLoadingPlaceholder ? `${className} inline-image-loadable` : className}
+      onLoad={showImageLoadingPlaceholder ? () => setIsLoaded(true) : undefined}
+    />
+  );
+
+  if (!showImageLoadingPlaceholder) return image;
+
+  return (
+    <span className={`inline-image-loading-frame ${isLoaded ? 'is-loaded' : 'is-loading'}`}>
+      {!isLoaded && (
+        <span className="inline-image-loading-placeholder" aria-live="polite">
+          <span>Đang tải hình ảnh...</span>
+        </span>
+      )}
+      {image}
+    </span>
   );
 }

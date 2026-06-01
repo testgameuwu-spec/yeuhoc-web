@@ -19,6 +19,7 @@ import ReportModal, { REPORT_REASONS } from '@/components/QuestionReportModal';
 import { supabase } from '@/lib/supabase';
 import { getEmptyAnswerForType, getQuestionResultState } from '@/lib/questionResult';
 import { getTsaSectionIndex, isTsaExam, TSA_SECTIONS } from '@/lib/examScoring';
+import { formatScore } from '@/lib/scoreFormat';
 
 function mapExamQuestions(examData) {
   const questions = Array.isArray(examData.questions)
@@ -174,7 +175,7 @@ export default function AttemptHistoryDetailPage() {
 
   const scoreText = useMemo(() => {
     const score = Number(attempt?.score) || 0;
-    return isTsaExam(exam) ? `${Math.min(score, 100).toFixed(0)}/100` : score.toFixed(1);
+    return isTsaExam(exam) ? `${formatScore(Math.min(score, 100))}/100` : formatScore(score);
   }, [attempt?.score, exam]);
 
   const renderNavButtons = useCallback((renderBtn) => {
