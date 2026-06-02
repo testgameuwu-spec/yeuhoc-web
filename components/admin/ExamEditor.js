@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import FileUpload from '@/components/FileUpload';
 import AIExamGenerator from '@/components/admin/AIExamGenerator';
 import QuestionEditorCard from '@/components/admin/QuestionEditorCard';
@@ -80,6 +80,12 @@ const hasMissingRequiredImage = (question) => {
   return question.needsImageReview === true && !hasAnyEditorImage(question);
 };
 
+const MISSING_IMAGE_EXIT_MS = 340;
+
+const getQuestionIdentity = (question, index) => (
+  question?.id ? `id:${question.id}` : `index:${index}`
+);
+
 export default function ExamEditor({
   exam,
   folders = [],
@@ -111,12 +117,14 @@ export default function ExamEditor({
   const [imageFilterMode, setImageFilterMode] = useState('missing');
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [exitingMissingImageQuestions, setExitingMissingImageQuestions] = useState([]);
+  const missingImageExitTimersRef = useRef(new Map());
   const hasQuestions = questions.length > 0;
   const realQuestionCount = questions.filter(q => q.type !== 'TEXT').length;
   const missingImageQuestions = useMemo(() => (
     questions.reduce((items, question, index) => {
       if (hasMissingRequiredImage(question)) {
-        items.push({ question, index });
+        items.push({ question, index, key: getQuestionIdentity(question, index) });
       }
       return items;
     }, [])
@@ -128,14 +136,22 @@ export default function ExamEditor({
         || getInlineImageMarkerIds(question.content).length > 0
         || question.needsImageReview === true
       ) {
-        items.push({ question, index });
+        items.push({ question, index, key: getQuestionIdentity(question, index) });
       }
       return items;
     }, [])
   ), [questions]);
+  const displayedMissingImageQuestions = useMemo(() => {
+    const itemsByKey = new Map();
+    missingImageQuestions.forEach(item => itemsByKey.set(item.key, item));
+    exitingMissingImageQuestions.forEach(item => {
+      if (!itemsByKey.has(item.key)) itemsByKey.set(item.key, item);
+    });
+    return [...itemsByKey.values()].sort((a, b) => a.index - b.index);
+  }, [exitingMissingImageQuestions, missingImageQuestions]);
   const activeImageFilterQuestions = imageFilterMode === 'withImage'
     ? imageRelatedQuestions
-    : missingImageQuestions;
+    : displayedMissingImageQuestions;
   const activeImageFilterText = imageFilterMode === 'withImage'
     ? {
       count: imageRelatedQuestions.length,
@@ -147,6 +163,11 @@ export default function ExamEditor({
       summary: `${missingImageQuestions.length} câu cần bổ sung ảnh`,
       empty: 'Không có câu thiếu ảnh',
     };
+
+  useEffect(() => () => {
+    missingImageExitTimersRef.current.forEach(timer => clearTimeout(timer));
+    missingImageExitTimersRef.current.clear();
+  }, []);
 
   useEffect(() => {
     if (!defaultTab) return undefined;
@@ -373,10 +394,42 @@ export default function ExamEditor({
     setHasUnsavedChanges(true);
   };
 
+  const queueMissingImageExit = useCallback((item) => {
+    setExitingMissingImageQuestions(prev => {
+      const itemsByKey = new Map(prev.map(existing => [existing.key, existing]));
+      itemsByKey.set(item.key, { ...item, isExiting: true });
+      return [...itemsByKey.values()].sort((a, b) => a.index - b.index);
+    });
+
+    const existingTimer = missingImageExitTimersRef.current.get(item.key);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const timer = setTimeout(() => {
+      setExitingMissingImageQuestions(prev => prev.filter(existing => existing.key !== item.key));
+      missingImageExitTimersRef.current.delete(item.key);
+    }, MISSING_IMAGE_EXIT_MS);
+    missingImageExitTimersRef.current.set(item.key, timer);
+  }, []);
+
   const handleQuestionUpdate = useCallback((index, updatedQ) => {
+    const previousQuestion = questions[index];
+    if (
+      activeSection === 'missingImages'
+      && imageFilterMode === 'missing'
+      && previousQuestion
+      && hasMissingRequiredImage(previousQuestion)
+      && !hasMissingRequiredImage(updatedQ)
+    ) {
+      queueMissingImageExit({
+        question: updatedQ,
+        index,
+        key: getQuestionIdentity(updatedQ, index),
+      });
+    }
+
     setQuestions(prev => prev.map((q, i) => i === index ? updatedQ : q));
     setHasUnsavedChanges(true);
-  }, []);
+  }, [activeSection, imageFilterMode, queueMissingImageExit, questions]);
 
   const handleQuestionDelete = useCallback((index) => {
     setQuestions(prev => prev.filter((_, i) => i !== index));
@@ -545,6 +598,14 @@ export default function ExamEditor({
       onDragEnd={handleDragEnd}
       allQuestions={questions}
     />
+  );
+  const renderImageFilterQuestionEditorCard = ({ question, index, key, isExiting }) => (
+    <div
+      key={`image-filter-${key}`}
+      className={`missing-image-filter-item ${isExiting ? 'missing-image-filter-item-exit' : ''}`}
+    >
+      {renderQuestionEditorCard(question, index)}
+    </div>
   );
 
   return (
@@ -910,7 +971,7 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
               <div className="flex items-center justify-between">
                 <p className="text-sm text-white/40">{activeImageFilterText.summary}</p>
               </div>
-              {activeImageFilterQuestions.map(({ question, index }) => renderQuestionEditorCard(question, index))}
+              {activeImageFilterQuestions.map(renderImageFilterQuestionEditorCard)}
             </>
           ) : (
             <div className="py-16 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">

@@ -2407,6 +2407,29 @@ html[data-theme='dark'] .ep-lb-score-val {
   animation: slideUp .5s ease-out;
 }
 
+.missing-image-filter-item {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  transform: translateX(0) scale(1);
+  opacity: 1;
+  transition:
+    grid-template-rows 0.34s ease-out,
+    opacity 0.28s ease-out,
+    transform 0.34s ease-out;
+}
+
+.missing-image-filter-item > * {
+  min-height: 0;
+}
+
+.missing-image-filter-item-exit {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(24px) scale(0.985);
+}
+
 .math-display {
   overflow-x: auto;
   padding: .5rem 0;
