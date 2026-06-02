@@ -108,6 +108,7 @@ export default function ExamEditor({
   const [scoringConfig, setScoringConfig] = useState(SCORING_PRESETS['THPT Toán']);
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(exam?.antiCheatEnabled !== false);
   const [activeSection, setActiveSection] = useState(defaultTab || (exam ? 'settings' : 'upload')); // upload | settings | questions
+  const [imageFilterMode, setImageFilterMode] = useState('missing');
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasQuestions = questions.length > 0;
@@ -120,6 +121,32 @@ export default function ExamEditor({
       return items;
     }, [])
   ), [questions]);
+  const imageRelatedQuestions = useMemo(() => (
+    questions.reduce((items, question, index) => {
+      if (
+        hasAnyEditorImage(question)
+        || getInlineImageMarkerIds(question.content).length > 0
+        || question.needsImageReview === true
+      ) {
+        items.push({ question, index });
+      }
+      return items;
+    }, [])
+  ), [questions]);
+  const activeImageFilterQuestions = imageFilterMode === 'withImage'
+    ? imageRelatedQuestions
+    : missingImageQuestions;
+  const activeImageFilterText = imageFilterMode === 'withImage'
+    ? {
+      count: imageRelatedQuestions.length,
+      summary: `${imageRelatedQuestions.length} câu chứa ảnh`,
+      empty: 'Không có câu chứa ảnh',
+    }
+    : {
+      count: missingImageQuestions.length,
+      summary: `${missingImageQuestions.length} câu cần bổ sung ảnh`,
+      empty: 'Không có câu thiếu ảnh',
+    };
 
   useEffect(() => {
     if (!defaultTab) return undefined;
@@ -528,7 +555,7 @@ export default function ExamEditor({
           { key: 'upload', label: 'Tải đề lên', icon: Upload },
           { key: 'settings', label: 'Cài đặt đề', icon: Settings },
           { key: 'questions', label: `Câu hỏi (${questions.length})`, icon: FileText },
-          { key: 'missingImages', label: `Thiếu ảnh (${missingImageQuestions.length})`, icon: ImageIcon },
+          { key: 'missingImages', label: `Lọc ảnh (${activeImageFilterText.count})`, icon: ImageIcon },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveSection(tab.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeSection === tab.key
@@ -849,24 +876,46 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
         </div>
       )}
 
-      {/* ─── Missing Images Section ─── */}
+      {/* ─── Image Filter Section ─── */}
       {activeSection === 'missingImages' && (
         <div className="animate-fadeIn space-y-4">
-          {missingImageQuestions.length > 0 ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
+              {[
+                { key: 'missing', label: 'Thiếu ảnh', count: missingImageQuestions.length },
+                { key: 'withImage', label: 'Có ảnh', count: imageRelatedQuestions.length },
+              ].map(mode => (
+                <button
+                  key={mode.key}
+                  type="button"
+                  onClick={() => setImageFilterMode(mode.key)}
+                  aria-pressed={imageFilterMode === mode.key}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${imageFilterMode === mode.key
+                    ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-500/30'
+                    : 'text-white/40 hover:text-white/60 border border-transparent'
+                    }`}
+                >
+                  {mode.label} ({mode.count})
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setActiveSection('questions')}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm font-medium transition-all w-fit">
+              <FileText className="w-4 h-4" /> Xem tất cả câu hỏi
+            </button>
+          </div>
+
+          {activeImageFilterQuestions.length > 0 ? (
             <>
               <div className="flex items-center justify-between">
-                <p className="text-sm text-white/40">{missingImageQuestions.length} câu cần bổ sung ảnh</p>
-                <button onClick={() => setActiveSection('questions')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm font-medium transition-all">
-                  <FileText className="w-4 h-4" /> Xem tất cả câu hỏi
-                </button>
+                <p className="text-sm text-white/40">{activeImageFilterText.summary}</p>
               </div>
-              {missingImageQuestions.map(({ question, index }) => renderQuestionEditorCard(question, index))}
+              {activeImageFilterQuestions.map(({ question, index }) => renderQuestionEditorCard(question, index))}
             </>
           ) : (
             <div className="py-16 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
               <ImageIcon className="w-12 h-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/40 text-sm mb-2">Không có câu thiếu ảnh</p>
+              <p className="text-white/40 text-sm mb-2">{activeImageFilterText.empty}</p>
               {questions.length > 0 && (
                 <button onClick={() => setActiveSection('questions')}
                   className="mt-4 px-5 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white/60 text-sm font-semibold hover:text-white hover:bg-white/15 transition-all">
