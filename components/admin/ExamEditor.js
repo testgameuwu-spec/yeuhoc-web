@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import FileUpload from '@/components/FileUpload';
 import AIExamGenerator from '@/components/admin/AIExamGenerator';
 import QuestionEditorCard from '@/components/admin/QuestionEditorCard';
+import { getInlineImageMarkerIds, parseImageMap } from '@/components/ContentWithInlineImage';
 import {
-  Save, Eye, EyeOff, Clock, GraduationCap, Calendar,
-  BookOpen, Plus, Upload, Settings, ChevronDown, FileText, ShieldAlert, Shuffle, AlertTriangle
+  Save, Eye, EyeOff, GraduationCap,
+  BookOpen, Plus, Upload, Settings, FileText, ShieldAlert, Shuffle, AlertTriangle, Image as ImageIcon
 } from 'lucide-react';
 import { TSA_TOTAL_DURATION_MINUTES, TSA_TOTAL_QUESTIONS } from '@/lib/examScoring';
 import { shuffleExamQuestions } from '@/lib/questionShuffle';
@@ -42,6 +43,43 @@ const getDefaultDuration = (type, subj) => {
   return 90;
 };
 
+const isEditorImageSrc = (src) => {
+  if (!src || typeof src !== 'string') return false;
+  const trimmed = src.trim();
+  return trimmed.startsWith('blob:')
+    || trimmed.startsWith('data:')
+    || trimmed.startsWith('/')
+    || trimmed.startsWith('http');
+};
+
+const isPendingImageFile = (file) => Boolean(file && typeof file.name === 'string');
+
+const hasAnyEditorImage = (question) => {
+  if (isPendingImageFile(question.imageFile)) return true;
+  if (Object.values(question.imageFiles || {}).some(isPendingImageFile)) return true;
+  if (isEditorImageSrc(question.image)) return true;
+  return Object.values(parseImageMap(question.image)).some(isEditorImageSrc);
+};
+
+const hasImageForMarker = (question, markerId, markerIndex, imageMap) => {
+  if (isPendingImageFile(question.imageFiles?.[markerId])) return true;
+
+  const markerImage = imageMap[markerId] || (markerIndex === 0 ? imageMap.default : null);
+  return isEditorImageSrc(markerImage);
+};
+
+const hasMissingRequiredImage = (question) => {
+  const imageMarkers = getInlineImageMarkerIds(question.content);
+  if (imageMarkers.length > 0) {
+    const imageMap = parseImageMap(question.image);
+    return imageMarkers.some((markerId, markerIndex) => (
+      !hasImageForMarker(question, markerId, markerIndex, imageMap)
+    ));
+  }
+
+  return question.needsImageReview === true && !hasAnyEditorImage(question);
+};
+
 export default function ExamEditor({
   exam,
   folders = [],
@@ -74,6 +112,14 @@ export default function ExamEditor({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasQuestions = questions.length > 0;
   const realQuestionCount = questions.filter(q => q.type !== 'TEXT').length;
+  const missingImageQuestions = useMemo(() => (
+    questions.reduce((items, question, index) => {
+      if (hasMissingRequiredImage(question)) {
+        items.push({ question, index });
+      }
+      return items;
+    }, [])
+  ), [questions]);
 
   useEffect(() => {
     if (!defaultTab) return undefined;
@@ -456,6 +502,23 @@ export default function ExamEditor({
   const isTsaExam = examType === 'TSA';
   const showTsaCountWarning = isTsaExam && realQuestionCount !== TSA_TOTAL_QUESTIONS;
   const durationSummary = antiCheatEnabled ? `${duration} phút` : 'Không giới hạn thời gian';
+  const renderQuestionEditorCard = (q, i) => (
+    <QuestionEditorCard
+      key={`${q.id}-${i}`}
+      question={q}
+      index={i}
+      totalQuestions={questions.length}
+      onUpdate={(updated) => handleQuestionUpdate(i, updated)}
+      onDelete={() => handleQuestionDelete(i)}
+      onReorder={handleReorderQuestion}
+      isDragged={draggedIndex === i}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
+      allQuestions={questions}
+    />
+  );
 
   return (
     <div className="space-y-6 w-full">
@@ -465,6 +528,7 @@ export default function ExamEditor({
           { key: 'upload', label: 'Tải đề lên', icon: Upload },
           { key: 'settings', label: 'Cài đặt đề', icon: Settings },
           { key: 'questions', label: `Câu hỏi (${questions.length})`, icon: FileText },
+          { key: 'missingImages', label: `Thiếu ảnh (${missingImageQuestions.length})`, icon: ImageIcon },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveSection(tab.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeSection === tab.key
@@ -763,23 +827,7 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
                   </button>
                 </div>
               </div>
-              {questions.map((q, i) => (
-                <QuestionEditorCard
-                  key={`${q.id}-${i}`}
-                  question={q}
-                  index={i}
-                  totalQuestions={questions.length}
-                  onUpdate={(updated) => handleQuestionUpdate(i, updated)}
-                  onDelete={() => handleQuestionDelete(i)}
-                  onReorder={handleReorderQuestion}
-                  isDragged={draggedIndex === i}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                  allQuestions={questions}
-                />
-              ))}
+              {questions.map((q, i) => renderQuestionEditorCard(q, i))}
             </>
           ) : (
             <div className="py-16 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
@@ -796,6 +844,35 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
                   Thêm thủ công
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── Missing Images Section ─── */}
+      {activeSection === 'missingImages' && (
+        <div className="animate-fadeIn space-y-4">
+          {missingImageQuestions.length > 0 ? (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-white/40">{missingImageQuestions.length} câu cần bổ sung ảnh</p>
+                <button onClick={() => setActiveSection('questions')}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm font-medium transition-all">
+                  <FileText className="w-4 h-4" /> Xem tất cả câu hỏi
+                </button>
+              </div>
+              {missingImageQuestions.map(({ question, index }) => renderQuestionEditorCard(question, index))}
+            </>
+          ) : (
+            <div className="py-16 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
+              <ImageIcon className="w-12 h-12 text-white/20 mx-auto mb-4" />
+              <p className="text-white/40 text-sm mb-2">Không có câu thiếu ảnh</p>
+              {questions.length > 0 && (
+                <button onClick={() => setActiveSection('questions')}
+                  className="mt-4 px-5 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white/60 text-sm font-semibold hover:text-white hover:bg-white/15 transition-all">
+                  Xem tất cả câu hỏi
+                </button>
+              )}
             </div>
           )}
         </div>

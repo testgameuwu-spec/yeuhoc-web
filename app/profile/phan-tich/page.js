@@ -907,8 +907,9 @@ export default function PersonalAnalysisPage() {
 
       const attemptsResult = await supabase
         .from('exam_attempts')
-        .select('id, score, correct_answers, total_questions, time_spent, created_at, violation_count, user_answers, exams(title, subject, exam_type, year, scoring_config, questions(id, order_index, type, answer, tf_sub_questions))')
+        .select('id, score, correct_answers, total_questions, time_spent, created_at, violation_count, user_answers, exams!inner(title, subject, exam_type, year, scoring_config, anti_cheat_enabled, questions(id, order_index, type, answer, tf_sub_questions))')
         .eq('user_id', session.user.id)
+        .eq('exams.anti_cheat_enabled', true)
         .order('created_at', { ascending: false });
 
       if (!isMounted) return;
