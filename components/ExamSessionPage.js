@@ -5,7 +5,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
-import { AlertTriangle as AlertTriangleIcon, Bot, Eye, Loader2 } from 'lucide-react';
+import { AlertTriangle as AlertTriangleIcon, BookMarked, Bot, Eye, Loader2, Trash2 } from 'lucide-react';
 import ImageModal from '@/components/ImageModal';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
@@ -415,23 +415,27 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   const [globalImageModal, setGlobalImageModal] = useState({ isOpen: false, src: '', alt: '' });
 
+  const openGlobalImageModal = useCallback((src, alt = 'Zoomed Image') => {
+    setGlobalImageModal({
+      isOpen: true,
+      src,
+      alt,
+    });
+  }, []);
+
   // Zoom Images with global ImageModal
   useEffect(() => {
     const handleGlobalImgClick = (e) => {
       if (e.target.tagName === 'IMG') {
         if (e.target.closest('button')) return;
         if (e.target.closest('.markdown-content') || e.target.closest('.tsa-main-panel') || e.target.closest('.et-main')) {
-          setGlobalImageModal({
-            isOpen: true,
-            src: e.target.src,
-            alt: e.target.alt || 'Zoomed Image',
-          });
+          openGlobalImageModal(e.target.src, e.target.alt || 'Zoomed Image');
         }
       }
     };
     document.addEventListener('click', handleGlobalImgClick);
     return () => document.removeEventListener('click', handleGlobalImgClick);
-  }, []);
+  }, [openGlobalImageModal]);
 
   // Default sidebar state for Reading/Science
   useEffect(() => {
@@ -1457,6 +1461,66 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     savePracticeProgress({ notify: true, showSpinner: true });
   };
 
+  const handleSavePracticeWrongErrorLog = async () => {
+    const result = await saveResultErrorLogByMode('wrong_only');
+
+    if (!result.ok) {
+      showAlert(result.title, result.message);
+      return;
+    }
+
+    showAlert('Đã lưu vào Nhật ký lỗi', `Đã lưu ${result.count} câu sai để bạn ôn lại sau.`);
+  };
+
+  const clearPracticeProgressData = async () => {
+    if (!activeExam?.id || !user?.id) return;
+
+    setPracticeSaving(true);
+    if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
+
+    try {
+      const { error } = await supabase
+        .from('practice_progress')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('exam_id', activeExam.id);
+
+      if (error) throw error;
+
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(getPracticeProgressKey(activeExam.id));
+      }
+      setAnswers({});
+      setBookmarks(new Set());
+      setCurrentQ(0);
+      setPracticeRevealed({});
+      setQuestionTimeSpentValue({});
+      setElapsedSecondsValue(0);
+      setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: 0 });
+      setIsAIChatOpen(false);
+      setQuizPhase('preview');
+      showAlert('Đã xóa dữ liệu ôn luyện', 'Đáp án, thời gian và tiến trình ôn luyện của đề này đã được xóa.');
+    } catch (error) {
+      console.error('Clear practice progress failed:', error);
+      showAlert('Lỗi xóa dữ liệu ôn luyện', 'Không xóa được dữ liệu ôn luyện: ' + getPracticeProgressErrorMessage(error));
+    } finally {
+      setPracticeSaving(false);
+    }
+  };
+
+  const handleClearPracticeProgress = () => {
+    showConfirm(
+      'Xóa dữ liệu ôn luyện',
+      'Toàn bộ đáp án, thời gian và tiến trình ôn luyện hiện tại sẽ bị xóa. Thao tác này không thể hoàn tác.',
+      () => {
+        void clearPracticeProgressData();
+      },
+      null,
+      'Xóa dữ liệu',
+      'Hủy'
+    );
+  };
+
   const handleRetryPractice = () => {
     showConfirm('Làm lại ôn luyện', 'Toàn bộ đáp án và tiến trình ôn luyện hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => {
       const resetBookmarks = new Set();
@@ -2103,6 +2167,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   // ── PRACTICE MODE ──
   if (quizPhase === 'practice' && activeExam) {
     const q = realQuestions[currentQ];
+    const practiceRevealedCount = Object.values(practiceRevealed).filter(Boolean).length;
+    const practiceCompleted = realQuestions.length > 0 && practiceRevealedCount >= realQuestions.length;
+    const practiceResultStats = realQuestions.reduce((stats, question) => {
+      const selectedAnswer = answers[question.id] ?? getEmptyAnswerForType(question.type);
+      const resultState = getQuestionResultState(question, selectedAnswer);
+      if (resultState === 'correct') stats.correct += 1;
+      else if (resultState === 'wrong') stats.wrong += 1;
+      else if (resultState === 'unanswered') stats.unanswered += 1;
+      return stats;
+    }, { correct: 0, wrong: 0, unanswered: 0, total: realQuestions.length });
     const isRevealed = practiceRevealed[currentQ] || false;
     const currentAnswer = q ? (answers[q.id] ?? getEmptyAnswerForType(q.type)) : undefined;
     const hasAnswered = q ? hasCompletedAnswer(q, currentAnswer) : false;
@@ -2161,7 +2235,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               <div className="exam-timer-copy">
                 <span className="exam-timer-label">Thời gian đã làm</span>
                 <div className="exam-timer-value">
-                  <Timer compact countUp initialSeconds={elapsedSeconds} onTick={handleElapsedTick} isRunning />
+                  <Timer compact countUp initialSeconds={elapsedSeconds} onTick={handleElapsedTick} isRunning={!practiceCompleted} />
                 </div>
               </div>
             </div>
@@ -2192,7 +2266,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-gray-600">Câu {currentQ + 1}/{realQuestions.length}</span>
-                <span className="text-xs font-semibold text-gray-400">{Object.keys(practiceRevealed).length} đã xem</span>
+                <span className="text-xs font-semibold text-gray-400">{practiceRevealedCount} đã xem</span>
               </div>
               <div className="flex flex-wrap gap-[5px]">
                 {realQuestions.map((qItem, i) => {
@@ -2239,6 +2313,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                       imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
                       preload
                       showImageLoadingPlaceholder
+                      onImageClick={(src) => openGlobalImageModal(src, 'Ngữ cảnh câu hỏi')}
                     />
                   </div>
                 </div>
@@ -2396,14 +2471,36 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </div>
             )}
 
-            {Object.keys(practiceRevealed).length === realQuestions.length && (
+            {practiceCompleted && (
               <div className="mt-8 p-6 bg-white rounded-2xl border border-gray-200 text-center shadow-sm animate-fadeIn">
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Hoàn thành ôn luyện!</h3>
                 <p className="text-sm text-gray-500 mb-4">Bạn đã xem hết {realQuestions.length} câu hỏi.</p>
+                <div className="mb-5 inline-flex flex-col items-center rounded-2xl border border-emerald-100 bg-emerald-50 px-6 py-4">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600">Số câu đúng</span>
+                  <span className="mt-1 text-3xl font-black tabular-nums text-emerald-700">
+                    {practiceResultStats.correct}/{practiceResultStats.total}
+                  </span>
+                </div>
                 <div className="flex justify-center gap-3 flex-wrap">
+                  <button
+                    onClick={handleSavePracticeWrongErrorLog}
+                    disabled={errorLogSaving || practiceResultStats.wrong === 0}
+                    className="px-5 py-2.5 rounded-xl font-bold text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    title={practiceResultStats.wrong > 0 ? 'Lưu toàn bộ câu sai vào Nhật ký lỗi' : 'Không có câu sai để lưu'}
+                  >
+                    {errorLogSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookMarked className="w-4 h-4" />}
+                    {practiceResultStats.wrong > 0 ? `Lưu ${practiceResultStats.wrong} câu sai` : 'Không có câu sai'}
+                  </button>
                   <button onClick={handleRetryPractice} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
                     <ArrowCounterClockwise weight="bold" className="w-4 h-4" /> Ôn lại từ đầu
+                  </button>
+                  <button
+                    onClick={handleClearPracticeProgress}
+                    disabled={practiceSaving}
+                    className="px-5 py-2.5 rounded-xl font-bold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Trash2 className="w-4 h-4" /> Xóa dữ liệu ôn luyện
                   </button>
                   <button onClick={handleReset} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex items-center gap-2">
                     <ArrowLeft className="w-4 h-4" /> Chọn đề khác
@@ -2880,6 +2977,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                     sizes="(max-width: 1024px) 100vw, 60vw"
                                     preload={qIndex === currentQ}
                                     showImageLoadingPlaceholder
+                                    onImageClick={(src) => openGlobalImageModal(src, `Hình minh họa câu ${qIndex + 1}`)}
                                   />
                                 )}
                              </div>
@@ -2971,6 +3069,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                  imageClassName="rounded-xl max-h-[400px] w-auto max-w-full object-contain"
                                  preload
                                  showImageLoadingPlaceholder
+                                 onImageClick={(src) => openGlobalImageModal(src, 'Ngữ liệu')}
                                />
                              </div>
                            </div>
@@ -3372,6 +3471,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
                                 preload={group.children.some((childQ) => childQ._globalIndex === currentQ)}
                                 showImageLoadingPlaceholder
+                                onImageClick={(src) => openGlobalImageModal(src, 'Ngữ cảnh câu hỏi')}
                               />
                             </div>
                           </div>
@@ -3733,6 +3833,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                                 className="text-sm leading-relaxed text-gray-700"
                                 imageWrapperClassName="mt-3"
                                 imageClassName="rounded-xl max-h-[300px] w-auto max-w-full object-contain"
+                                onImageClick={(src) => openGlobalImageModal(src, 'Context image')}
                               />
                             </div>
                           </div>

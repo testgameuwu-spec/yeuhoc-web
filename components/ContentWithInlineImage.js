@@ -5,6 +5,15 @@ import { memo, useMemo, useState } from 'react';
 import MathRenderer from './MathRenderer';
 
 const IMAGE_MARKER_CAPTURE_REGEX = /\(\(\s*(\d+)\s*\)\)/g;
+const DEFAULT_IMAGE_BUTTON_STYLE = {
+  background: 'none',
+  border: 0,
+  cursor: 'zoom-in',
+  display: 'inline-block',
+  maxWidth: '100%',
+  padding: 0,
+  textAlign: 'left',
+};
 
 export function getRenderableImageSrc(src) {
   if (!src || typeof src !== 'string') return null;
@@ -137,7 +146,13 @@ function ContentWithInlineImage({
     if (onImageClick) {
       return (
         <div key={`${key}-${imageSrc}`} className={imageWrapperClassName}>
-          <button type="button" onClick={() => onImageClick(imageSrc)} className={imageButtonClassName} style={imageButtonStyle}>
+          <button
+            type="button"
+            onClick={() => onImageClick(imageSrc)}
+            className={imageButtonClassName}
+            style={imageButtonStyle || DEFAULT_IMAGE_BUTTON_STYLE}
+            aria-label={alt ? `Xem toàn màn hình ${alt}` : 'Xem ảnh toàn màn hình'}
+          >
             {imageElement}
           </button>
         </div>
