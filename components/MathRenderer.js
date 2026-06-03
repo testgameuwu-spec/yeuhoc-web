@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { marked } from 'marked';
@@ -23,7 +23,7 @@ const MARKDOWN_SANITIZE_CONFIG = {
  * Renders text with inline ($...$) and display ($$...$$) LaTeX math.
  * Non-math text is rendered as plain text; math is rendered via KaTeX.
  */
-export default function MathRenderer({ text, className = '', inline = false }) {
+function MathRenderer({ text, className = '', inline = false }) {
     const renderedHTML = useMemo(() => {
         if (!text) return '';
         return renderMathInText(text, { inline });
@@ -36,6 +36,8 @@ export default function MathRenderer({ text, className = '', inline = false }) {
         />
     );
 }
+
+export default memo(MathRenderer);
 
 /**
  * Process text and render LaTeX expressions.

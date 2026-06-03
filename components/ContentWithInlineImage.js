@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import MathRenderer from './MathRenderer';
 
 const IMAGE_MARKER_CAPTURE_REGEX = /\(\(\s*(\d+)\s*\)\)/g;
@@ -73,7 +73,7 @@ export function getImageForMarker(image, markerId) {
   return getRenderableImageSrc(imageMap[String(markerId)] || imageMap.default || Object.values(imageMap)[0]);
 }
 
-export default function ContentWithInlineImage({
+function ContentWithInlineImage({
   text,
   image,
   alt = '',
@@ -89,9 +89,33 @@ export default function ContentWithInlineImage({
   showImageLoadingPlaceholder = false,
   onImageClick = null,
 }) {
-  const imageMap = parseImageMap(image);
-  const fallbackImageSrc = getRenderableImageSrc(imageMap.default || Object.values(imageMap)[0]);
   const content = text || '';
+  const imageMap = useMemo(() => parseImageMap(image), [image]);
+  const fallbackImageSrc = useMemo(() => (
+    getRenderableImageSrc(imageMap.default || Object.values(imageMap)[0])
+  ), [imageMap]);
+  const inlineParts = useMemo(() => {
+    if (!hasInlineImageMarker(content)) return null;
+
+    const parts = [];
+    let lastIndex = 0;
+    const regex = new RegExp(IMAGE_MARKER_CAPTURE_REGEX);
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', value: content.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'image', value: match[1], marker: match[0] });
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push({ type: 'text', value: content.slice(lastIndex) });
+    }
+
+    return parts;
+  }, [content]);
 
   const renderImage = (key, src) => {
     const imageSrc = getRenderableImageSrc(src);
@@ -127,27 +151,10 @@ export default function ContentWithInlineImage({
     );
   };
 
-  if (hasInlineImageMarker(content)) {
-    const parts = [];
-    let lastIndex = 0;
-    const regex = new RegExp(IMAGE_MARKER_CAPTURE_REGEX);
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push({ type: 'text', value: content.slice(lastIndex, match.index) });
-      }
-      parts.push({ type: 'image', value: match[1], marker: match[0] });
-      lastIndex = regex.lastIndex;
-    }
-
-    if (lastIndex < content.length) {
-      parts.push({ type: 'text', value: content.slice(lastIndex) });
-    }
-
+  if (inlineParts) {
     return (
       <div className={className}>
-        {parts.map((part, index) => {
+        {inlineParts.map((part, index) => {
           if (part.type === 'image') {
             return renderImage(`image-${part.value}-${index}`, imageMap[part.value] || imageMap.default)
               || <MathRenderer key={`marker-${part.value}-${index}`} text={part.marker} />;
@@ -166,6 +173,8 @@ export default function ContentWithInlineImage({
     </div>
   );
 }
+
+export default memo(ContentWithInlineImage);
 
 function InlineImage({
   src,

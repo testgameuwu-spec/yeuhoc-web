@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -57,8 +57,7 @@ const PREVIEW_BADGE_TONES = {
 };
 
 const PracticeAIChatbox = dynamic(() => import('@/components/PracticeAIChatbox'), { ssr: false });
-const EXAM_IMAGE_PRELOAD_TIMEOUT_MS = 15000;
-const EXAM_IMAGE_PRELOAD_BATCH_SIZE = 3;
+const EXAM_IMAGE_WARM_AHEAD_COUNT = 2;
 
 function addQuestionImageUrls(urls, question) {
   const imageMap = parseImageMap(question?.image);
@@ -92,60 +91,6 @@ function getExamImageUrls(questions = [], startQuestionIndex = 0, limit = null) 
   return [...urls];
 }
 
-function getBrowserConnection() {
-  if (typeof navigator === 'undefined') return null;
-  return navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
-}
-
-function isLikelyMobileDevice() {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-  if (navigator.userAgentData?.mobile) return true;
-  if (window.matchMedia?.('(hover: none) and (pointer: coarse) and (max-width: 767px)').matches) return true;
-  return /Android|iPhone|iPod|IEMobile|Mobile/i.test(navigator.userAgent || '');
-}
-
-function shouldUseBatchedExamImagePreload() {
-  if (!isLikelyMobileDevice()) return false;
-
-  const connection = getBrowserConnection();
-  if (!connection) return false;
-
-  const connectionType = String(connection.type || '').toLowerCase();
-  if (connectionType === 'wifi') return false;
-  if (connectionType && connectionType !== 'unknown') return true;
-
-  return connection.saveData === true;
-}
-
-function preloadExamImage(src) {
-  if (typeof window === 'undefined') {
-    return Promise.resolve({ src, ok: false, reason: 'browser-unavailable' });
-  }
-
-  return new Promise((resolve) => {
-    const image = new window.Image();
-    let settled = false;
-
-    const finish = (ok, reason) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeoutId);
-      image.onload = null;
-      image.onerror = null;
-      resolve({ src, ok, reason });
-    };
-
-    const timeoutId = window.setTimeout(() => finish(false, 'timeout'), EXAM_IMAGE_PRELOAD_TIMEOUT_MS);
-    image.onload = () => finish(true, 'loaded');
-    image.onerror = () => finish(false, 'error');
-    image.src = src;
-
-    if (image.complete && image.naturalWidth > 0) {
-      finish(true, 'cached');
-    }
-  });
-}
-
 function getPreviewBadgeStyle(toneKey) {
   const tone = PREVIEW_BADGE_TONES[toneKey] || PREVIEW_BADGE_TONES.meta;
 
@@ -154,6 +99,27 @@ function getPreviewBadgeStyle(toneKey) {
     '--preview-badge-color': tone.color,
     '--preview-badge-dark-color': tone.dark,
   };
+}
+
+function ExamImageWarmup({ imageUrls }) {
+  if (!imageUrls?.length) return null;
+
+  return (
+    <div className="exam-image-warmup" aria-hidden="true">
+      {imageUrls.map((src) => (
+        <Image
+          key={src}
+          src={src}
+          alt=""
+          width={1}
+          height={1}
+          sizes="1px"
+          loading="eager"
+          fetchPriority="low"
+        />
+      ))}
+    </div>
+  );
 }
 
 // ── Topbar (exam-tool style) ──
@@ -279,6 +245,98 @@ const hasPracticeAnswer = (answer) => {
   return answer !== '';
 };
 
+const QuizNavButtons = memo(function QuizNavButtons({
+  questions,
+  answers,
+  bookmarks,
+  currentQ,
+  examType,
+  isTSA,
+  tsaSectionIndex,
+  tsaCurrentOnly = false,
+  onSelect,
+}) {
+  const sections = useMemo(() => {
+    if (isTSA) {
+      const sourceSections = tsaCurrentOnly
+        ? [{ section: getTsaSectionByIndex(tsaSectionIndex), sectionIndex: tsaSectionIndex }]
+        : TSA_SECTIONS.map((section, sectionIndex) => ({ section, sectionIndex }));
+
+      return sourceSections
+        .map(({ section, sectionIndex }) => ({
+          key: section.key,
+          label: section.name,
+          entries: questions
+            .map((q, i) => ({ q, i }))
+            .filter(({ i }) => getTsaSectionIndex(i) === sectionIndex),
+        }))
+        .filter(section => section.entries.length > 0);
+    }
+
+    if (examType !== 'THPT') {
+      return [{
+        key: 'all',
+        label: null,
+        entries: questions.map((q, i) => ({ q, i })),
+      }];
+    }
+
+    const thptSections = [
+      { key: 'mcq', label: 'Phần I', entries: [] },
+      { key: 'ma', label: 'Chọn nhiều đáp án', entries: [] },
+      { key: 'tf', label: 'Phần II', entries: [] },
+      { key: 'sa', label: 'Phần III', entries: [] },
+      { key: 'drag', label: 'Kéo thả', entries: [] },
+    ];
+    const sectionByType = { MCQ: thptSections[0], MA: thptSections[1], TF: thptSections[2], SA: thptSections[3], DRAG: thptSections[4] };
+
+    questions.forEach((q, i) => {
+      sectionByType[q.type]?.entries.push({ q, i });
+    });
+
+    return thptSections.filter(section => section.entries.length > 0);
+  }, [examType, isTSA, questions, tsaCurrentOnly, tsaSectionIndex]);
+
+  const renderButton = (q, i) => {
+    const isAnswered = hasPracticeAnswer(answers[q.id]);
+    const isBookmarked = bookmarks.has(q.id);
+    const className = [
+      isAnswered ? 'quiz-answered' : 'quiz-unanswered',
+      isBookmarked ? 'quiz-bookmarked' : '',
+      i === currentQ ? 'current' : '',
+    ].filter(Boolean).join(' ');
+
+    return (
+      <button key={i} className={`et-nav-btn ${className}`} onClick={() => onSelect(i)}>
+        {i + 1}
+      </button>
+    );
+  };
+
+  if (sections.length === 1 && !sections[0].label) {
+    return (
+      <div className="et-nav-grid">
+        {sections[0].entries.map(({ q, i }) => renderButton(q, i))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {sections.map(section => (
+        <div key={section.key}>
+          {section.label && (
+            <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider">{section.label}</div>
+          )}
+          <div className="et-nav-grid">
+            {section.entries.map(({ q, i }) => renderButton(q, i))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+});
+
 const createPracticeSnapshot = ({ answers, bookmarks, currentQ, practiceRevealed, questionTimeSpent = {}, realQuestions, elapsedSeconds = 0 }) => {
   const nextAnswers = answers || {};
   const nextRevealed = practiceRevealed || {};
@@ -334,7 +392,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const [startTime, setStartTime] = useState(null);
   const [loadingExam, setLoadingExam] = useState(true);
   const [examLoadError, setExamLoadError] = useState('');
-  const [imagePreloadProgress, setImagePreloadProgress] = useState({ loaded: 0, total: 0, failed: 0 });
 
   // Pause & Resume states
   const [isPaused, setIsPaused] = useState(false);
@@ -404,7 +461,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const resumeHandledRef = useRef(false);
   const practiceResumeHandledRef = useRef(false);
   const exitViolationRecordedRef = useRef(false);
-  const preloadedExamImageUrlsRef = useRef(new Set());
 
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
@@ -480,48 +536,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     setIsAIChatOpen(true);
   }, []);
 
-  const preloadExamImages = useCallback(async (loadingPhase, startQuestionIndex = 0, { showLoading = true } = {}) => {
-    const preloadLimit = shouldUseBatchedExamImagePreload() ? EXAM_IMAGE_PRELOAD_BATCH_SIZE : null;
-    const imageUrls = getExamImageUrls(activeExam?.questions || [], startQuestionIndex, preloadLimit)
-      .filter((src) => !preloadedExamImageUrlsRef.current.has(src));
-    if (imageUrls.length === 0) return;
-
-    imageUrls.forEach((src) => preloadedExamImageUrlsRef.current.add(src));
-
-    if (showLoading) {
-      setImagePreloadProgress({ loaded: 0, total: imageUrls.length, failed: 0 });
-      setQuizPhase(loadingPhase);
-    }
-
-    const results = await Promise.all(imageUrls.map(async (src) => {
-      const result = await preloadExamImage(src);
-      if (showLoading) {
-        setImagePreloadProgress(prev => ({
-          loaded: Math.min(prev.loaded + 1, prev.total),
-          total: prev.total,
-          failed: prev.failed + (result.ok ? 0 : 1),
-        }));
-      }
-      return result;
-    }));
-
-    const failedCount = results.filter(result => !result.ok).length;
-    results.forEach((result) => {
-      if (!result.ok) preloadedExamImageUrlsRef.current.delete(result.src);
-    });
-    if (failedCount > 0) {
-      console.warn(`Exam image preload completed with ${failedCount} failed image(s).`);
-    }
-  }, [activeExam?.questions]);
-
-  useEffect(() => {
-    if (quizPhase !== 'quiz' && quizPhase !== 'practice') return;
-    if (!activeExam?.questions?.length) return;
-    if (!shouldUseBatchedExamImagePreload()) return;
-
-    void preloadExamImages(null, currentQ, { showLoading: false });
-  }, [activeExam?.questions, currentQ, preloadExamImages, quizPhase]);
-
   // Fetch preview stats
   useEffect(() => {
     if (quizPhase === 'preview' && activeExam) {
@@ -572,7 +586,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     async function init() {
       resumeHandledRef.current = false;
       practiceResumeHandledRef.current = false;
-      preloadedExamImageUrlsRef.current = new Set();
       setLoadingExam(true);
       setExamLoadError('');
       const ex = await getExamById(examId);
@@ -637,7 +650,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         isAdvancingTsaSectionRef.current = false;
         exitViolationRecordedRef.current = false;
         setTimerRunning(false);
-        await preloadExamImages('quiz-loading', data.currentQ || 0);
         setQuizPhase('quiz');
         setTimerRunning(true);
         setStartTime(() => Date.now());
@@ -654,7 +666,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       }
     }, 0);
     return () => clearTimeout(resumeTimer);
-  }, [shouldResume, user, activeExam, getRestoredQuizElapsedSeconds, getRestoredQuizSecondsLeft, preloadExamImages, setElapsedSecondsValue]);
+  }, [shouldResume, user, activeExam, getRestoredQuizElapsedSeconds, getRestoredQuizSecondsLeft, setElapsedSecondsValue]);
 
   // Fetch session
   useEffect(() => {
@@ -712,16 +724,32 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   }, [user?.id]);
 
   // ── Quiz flow ──
-  const questions = activeExam?.questions || [];
-  const realQuestions = questions.filter(q => q.type !== 'TEXT');
+  const questions = useMemo(() => activeExam?.questions || [], [activeExam?.questions]);
   const isTSA = isTsaExam(activeExam);
+  const isTHPT = activeExam?.examType === 'THPT';
+  const realQuestions = useMemo(() => {
+    const items = questions.filter(q => q.type !== 'TEXT');
+    items.forEach((q, i) => {
+      q._globalIndex = i;
+      q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || items[i - 1].type !== 'MCQ');
+      q._isFirstMA = isTHPT && q.type === 'MA' && (i === 0 || items[i - 1].type !== 'MA');
+      q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || items[i - 1].type !== 'TF');
+      q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || items[i - 1].type !== 'SA');
+      q._isFirstDRAG = isTHPT && q.type === 'DRAG' && (i === 0 || items[i - 1].type !== 'DRAG');
+    });
+    return items;
+  }, [isTHPT, questions]);
   const currentTsaSection = getTsaSectionByIndex(tsaSectionIndex);
   const isLastTsaSection = tsaSectionIndex >= TSA_SECTIONS.length - 1;
   const activeQuizDuration = isTSA ? currentTsaSection.durationMinutes : (activeExam?.duration || 90);
-  const tsaSectionQuestionEntries = realQuestions
-    .map((q, i) => ({ q, i }))
-    .filter(({ i }) => getTsaSectionIndex(i) === tsaSectionIndex);
-  const tsaSectionQuestionIds = new Set(tsaSectionQuestionEntries.map(({ q }) => q.id));
+  const tsaSectionQuestionEntries = useMemo(() => (
+    realQuestions
+      .map((q, i) => ({ q, i }))
+      .filter(({ i }) => getTsaSectionIndex(i) === tsaSectionIndex)
+  ), [realQuestions, tsaSectionIndex]);
+  const tsaSectionQuestionIds = useMemo(() => (
+    new Set(tsaSectionQuestionEntries.map(({ q }) => q.id))
+  ), [tsaSectionQuestionEntries]);
 
   const getQuestionIndex = (question) => {
     if (Number.isInteger(question?._globalIndex)) return question._globalIndex;
@@ -752,37 +780,58 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   };
 
   // Logic gộp nhóm (Grouping)
-  const groupedQuestions = [];
-  let currentGroup = null;
+  const groupedQuestions = useMemo(() => {
+    const groups = [];
+    let currentGroup = null;
 
-  questions.forEach(q => {
-    if (q.type === 'TEXT') {
-      currentGroup = { context: q, children: [] };
-      groupedQuestions.push(currentGroup);
-    } else {
-      if (q.linkedTo && currentGroup && currentGroup.context.id === q.linkedTo) {
-        currentGroup.children.push(q);
+    questions.forEach(q => {
+      if (q.type === 'TEXT') {
+        currentGroup = { context: q, children: [] };
+        groups.push(currentGroup);
       } else {
-        const parentGroup = q.linkedTo ? groupedQuestions.find(g => g.context?.id === q.linkedTo) : null;
-        if (parentGroup) {
-          parentGroup.children.push(q);
+        if (q.linkedTo && currentGroup && currentGroup.context.id === q.linkedTo) {
+          currentGroup.children.push(q);
         } else {
-          groupedQuestions.push({ context: null, children: [q] });
+          const parentGroup = q.linkedTo ? groups.find(g => g.context?.id === q.linkedTo) : null;
+          if (parentGroup) {
+            parentGroup.children.push(q);
+          } else {
+            groups.push({ context: null, children: [q] });
+          }
         }
       }
-    }
-  });
+    });
 
-  const quizGroupedQuestions = isTSA
-    ? groupedQuestions
-      .map(group => ({
-        context: group.context,
-        children: group.children.filter(q => tsaSectionQuestionIds.has(q.id)),
-      }))
-      .filter(group => group.children.length > 0)
-    : groupedQuestions;
+    return groups;
+  }, [questions]);
 
-  const isTHPT = activeExam?.examType === 'THPT';
+  const quizGroupedQuestions = useMemo(() => (
+    isTSA
+      ? groupedQuestions
+        .map(group => ({
+          context: group.context,
+          children: group.children.filter(q => tsaSectionQuestionIds.has(q.id)),
+        }))
+        .filter(group => group.children.length > 0)
+      : groupedQuestions
+  ), [groupedQuestions, isTSA, tsaSectionQuestionIds]);
+  const nextQuestionWarmImageUrls = useMemo(() => {
+    if (quizPhase !== 'quiz' && quizPhase !== 'practice') return [];
+    return getExamImageUrls(questions, currentQ + 1, EXAM_IMAGE_WARM_AHEAD_COUNT);
+  }, [currentQ, questions, quizPhase]);
+  const activeQuizQuestionEntries = useMemo(() => (
+    isTSA ? tsaSectionQuestionEntries : realQuestions.map((q, i) => ({ q, i }))
+  ), [isTSA, realQuestions, tsaSectionQuestionEntries]);
+  const activeQuizAnsweredCount = useMemo(() => (
+    activeQuizQuestionEntries.filter(({ q }) => hasPracticeAnswer(answers[q.id])).length
+  ), [activeQuizQuestionEntries, answers]);
+  const activeQuizBookmarkedCount = useMemo(() => (
+    activeQuizQuestionEntries.filter(({ q }) => bookmarks.has(q.id)).length
+  ), [activeQuizQuestionEntries, bookmarks]);
+  const activeQuizTotalCount = activeQuizQuestionEntries.length;
+  const activeQuizPct = activeQuizTotalCount > 0
+    ? Math.round((activeQuizAnsweredCount / activeQuizTotalCount) * 100)
+    : 0;
   const isAntiCheatEnabled = activeExam?.antiCheatEnabled !== false;
   const isLowPressureExam = !isTSA && !isAntiCheatEnabled;
   const setAnswerTimeEventsValue = useCallback((events) => {
@@ -914,15 +963,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }
     startActiveQuestionTimer('tsa', questionId, elapsedNow);
   }, [commitActiveQuestionTimerFromRef, currentQ, getTsaQuestionElapsedSeconds, isPaused, isTSA, quizPhase, realQuestions, startActiveQuestionTimer, timerRunning]);
-
-  realQuestions.forEach((q, i) => {
-    q._globalIndex = i;
-    q._isFirstMCQ = isTHPT && q.type === 'MCQ' && (i === 0 || realQuestions[i - 1].type !== 'MCQ');
-    q._isFirstMA = isTHPT && q.type === 'MA' && (i === 0 || realQuestions[i - 1].type !== 'MA');
-    q._isFirstTF = isTHPT && q.type === 'TF' && (i === 0 || realQuestions[i - 1].type !== 'TF');
-    q._isFirstSA = isTHPT && q.type === 'SA' && (i === 0 || realQuestions[i - 1].type !== 'SA');
-    q._isFirstDRAG = isTHPT && q.type === 'DRAG' && (i === 0 || realQuestions[i - 1].type !== 'DRAG');
-  });
 
   const handleSaveSingleErrorLog = async ({ reason, note }) => {
     if (!user?.id || !activeExam?.id || !errorLogModal.question) return;
@@ -1210,7 +1250,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       questionTimeSpent: nextQuestionTimeSpent,
       elapsedSeconds: nextElapsedSeconds,
     });
-    await preloadExamImages('practice-loading', nextCurrentQ);
     setAnswers(snapshot?.answers || {});
     setBookmarks(new Set(snapshot?.bookmarks || []));
     setCurrentQ(nextCurrentQ);
@@ -1237,7 +1276,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       questionTimeSpent: {},
       elapsedSeconds: 0,
     });
-    await preloadExamImages('practice-loading', 0);
     setAnswers({});
     setBookmarks(resetBookmarks);
     setCurrentQ(0);
@@ -1362,7 +1400,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
         questionTimeSpent: nextQuestionTimeSpent,
         elapsedSeconds: nextElapsedSeconds,
       });
-      await preloadExamImages('practice-loading', nextCurrentQ);
       setAnswers(saved?.answers || {});
       setBookmarks(new Set(saved?.bookmarks || []));
       setCurrentQ(nextCurrentQ);
@@ -1380,7 +1417,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     }, 0);
 
     return () => clearTimeout(resumeTimer);
-  }, [activeExam, getPracticeProgressKey, preloadExamImages, realQuestions, realQuestions.length, setActiveQuestionTimerValue, setElapsedSecondsValue, setQuestionTimeSpentValue, shouldResumePractice, startActiveQuestionTimer, user, writePracticeSnapshot]);
+  }, [activeExam, getPracticeProgressKey, realQuestions, realQuestions.length, setActiveQuestionTimerValue, setElapsedSecondsValue, setQuestionTimeSpentValue, shouldResumePractice, startActiveQuestionTimer, user, writePracticeSnapshot]);
 
   const handleStartPractice = async () => {
     if (realQuestions.length === 0) {
@@ -1482,7 +1519,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     exitViolationRecordedRef.current = false;
     setTimerRunning(false);
     if (isAntiCheatEnabled && !isTSA) requestFullscreen();
-    await preloadExamImages('quiz-loading', 0);
     setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
     setTimerRunning(!isTSA);
     setStartTime(() => Date.now());
@@ -1525,7 +1561,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             exitViolationRecordedRef.current = false;
             setTimerRunning(false);
             if (isAntiCheatEnabled && !isTSA) requestFullscreen();
-            await preloadExamImages('quiz-loading', data.currentQ || 0);
             setQuizPhase(isTSA ? 'tsa-menu' : 'quiz');
             setTimerRunning(!isTSA);
             setStartTime(() => Date.now());
@@ -1964,6 +1999,17 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     startFreshQuiz();
   };
 
+  const scrollToRegularQuestion = useCallback((i) => {
+    setCurrentQ(i);
+    const el = document.getElementById(`q-card-${i}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const scrollToDrawerRegularQuestion = useCallback((i) => {
+    setIsDrawerOpen(false);
+    scrollToRegularQuestion(i);
+  }, [scrollToRegularQuestion]);
+
   const scrollToQ = (i) => {
     if (isTSA) setTsaCurrentQuestion(i);
     else setCurrentQ(i);
@@ -2054,127 +2100,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     );
   }
 
-  if ((quizPhase === 'practice-loading' || quizPhase === 'quiz-loading') && activeExam) {
-    const preloadPercent = imagePreloadProgress.total > 0
-      ? Math.round((imagePreloadProgress.loaded / imagePreloadProgress.total) * 100)
-      : 0;
-    const isQuizPreload = quizPhase === 'quiz-loading';
-    const isTsaPreload = isQuizPreload && isTSA;
-    const isPracticePreload = quizPhase === 'practice-loading';
-    const NormalLoadingIcon = isPracticePreload ? BookOpen : Exam;
-    const normalAccent = isPracticePreload ? '#16a34a' : 'var(--et-blue)';
-    const normalSoftBg = isPracticePreload ? 'var(--practice-answer-bg)' : 'var(--et-blue-lt)';
-    const normalBorder = isPracticePreload ? 'var(--practice-answer-border)' : 'var(--app-border)';
-
-    if (isTsaPreload) {
-      return (
-        <div className="tsa-menu-root fixed inset-0 z-50 flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
-          <TsaNavbar activeExam={activeExam} onBack={handleReset}>
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold"
-              style={{
-                background: 'var(--tsa-red-soft)',
-                border: '1px solid var(--tsa-red-border)',
-                color: 'var(--tsa-red)',
-              }}
-            >
-              <Exam weight="duotone" className="w-4 h-4" />
-              Đang vào phòng thi TSA
-            </div>
-          </TsaNavbar>
-
-          <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
-            <div
-              className="w-full max-w-md rounded-3xl border p-6 sm:p-8 text-center"
-              style={{
-                background: 'var(--tsa-surface)',
-                borderColor: 'var(--tsa-border)',
-                boxShadow: 'var(--tsa-shadow)',
-              }}
-            >
-              <div className="ep-spinner mx-auto" style={{ borderTopColor: 'var(--tsa-red)' }} />
-              <h1 className="mt-5 text-xl sm:text-2xl font-black" style={{ color: 'var(--tsa-text)' }}>
-                Đang chuẩn bị phòng thi TSA
-              </h1>
-              <p className="mt-2 text-sm font-medium" style={{ color: 'var(--tsa-muted)' }}>
-                Đang tải ảnh câu hỏi...
-              </p>
-
-              <div className="mt-6">
-                <div
-                  className="h-3 w-full overflow-hidden rounded-full"
-                  style={{ background: 'var(--tsa-red-soft)' }}
-                  aria-label={`Tiến độ tải ảnh ${preloadPercent}%`}
-                >
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${preloadPercent}%`, background: 'var(--tsa-red)' }}
-                  />
-                </div>
-                <div className="mt-3 text-3xl font-black" style={{ color: 'var(--tsa-red)' }}>
-                  {preloadPercent}%
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="fixed inset-0 z-50 theme-page flex flex-col" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif", color: 'var(--app-text)' }}>
-        <Topbar activeExam={activeExam} handleReset={handleReset}>
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold"
-            style={{
-              background: normalSoftBg,
-              border: `1px solid ${normalBorder}`,
-              color: normalAccent,
-            }}
-          >
-            <NormalLoadingIcon weight="duotone" className="w-4 h-4" />
-            {isPracticePreload ? 'Đang vào ôn luyện' : 'Đang vào phòng thi'}
-          </div>
-        </Topbar>
-
-        <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
-          <div
-            className="w-full max-w-md rounded-3xl border p-6 sm:p-8 text-center"
-            style={{
-              background: 'var(--app-surface)',
-              borderColor: 'var(--app-border)',
-              boxShadow: '0 18px 45px rgba(15, 23, 42, .10)',
-            }}
-          >
-            <div className="ep-spinner mx-auto" style={{ borderTopColor: normalAccent }} />
-            <h1 className="mt-5 text-xl sm:text-2xl font-black" style={{ color: 'var(--app-text)' }}>
-              {isPracticePreload ? 'Đang chuẩn bị phòng ôn luyện' : 'Đang chuẩn bị phòng thi'}
-            </h1>
-            <p className="mt-2 text-sm font-medium" style={{ color: 'var(--app-muted)' }}>
-              Đang tải ảnh câu hỏi...
-            </p>
-
-            <div className="mt-6">
-              <div
-                className="h-3 w-full overflow-hidden rounded-full"
-                style={{ background: normalSoftBg }}
-                aria-label={`Tiến độ tải ảnh ${preloadPercent}%`}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${preloadPercent}%`, background: normalAccent }}
-                />
-              </div>
-              <div className="mt-3 text-3xl font-black" style={{ color: normalAccent }}>
-                {preloadPercent}%
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // ── PRACTICE MODE ──
   if (quizPhase === 'practice' && activeExam) {
     const q = realQuestions[currentQ];
@@ -2241,9 +2166,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-green-700 text-xs font-bold">
-            📖 Chế độ ôn luyện
-          </div>
           <button
             className="et-btn-outline"
             style={{ fontSize: 12, padding: '5px 11px' }}
@@ -2262,6 +2184,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             <ArrowCounterClockwise weight="bold" style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">Làm lại</span>
           </button>
         </Topbar>
+        <ExamImageWarmup imageUrls={nextQuestionWarmImageUrls} />
 
         <div className="practice-scroll-container flex-1 overflow-y-auto p-4 sm:p-6 md:p-8" id="practice-scroll-container">
           <div className={`mx-auto transition-all duration-300 ${contextQ ? 'max-w-6xl' : 'w-full lg:w-[75vw]'}`}>
@@ -2329,7 +2252,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     const hasAns = hasCompletedAnswer(gq, selectedAnswer);
 
                     return (
-                      <div key={gq.id} className={`practice-card-wrap bg-white rounded-3xl shadow-sm border ${rqIndex === currentQ ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-gray-100'}`} style={{ fontSize: '1.1em' }} id={`practice-q-${rqIndex}`}>
+                      <div key={gq.id} className={`practice-card-wrap exam-question-visibility bg-white rounded-3xl shadow-sm border ${rqIndex === currentQ ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-gray-100'}`} style={{ fontSize: '1.1em' }} id={`practice-q-${rqIndex}`}>
                         <QuestionCard
                           question={gq}
                           index={rqIndex}
@@ -2377,7 +2300,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               </div>
             ) : (
               q && (
-                <div className="practice-card-wrap mt-4" style={{ fontSize: '1.1em' }}>
+                <div className="practice-card-wrap exam-question-visibility mt-4" style={{ fontSize: '1.1em' }}>
                   <QuestionCard
                     question={q}
                     index={currentQ}
@@ -2797,9 +2720,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
   // ── QUIZ (TSA UI Layout) ──
   if (quizPhase === 'quiz' && activeExam && isTSA) {
-    const quizQuestionEntries = tsaSectionQuestionEntries;
-    const quizAnsweredCount = quizQuestionEntries.filter(({ q }) => hasPracticeAnswer(answers[q.id])).length;
-    const bookmarkedCount = quizQuestionEntries.filter(({ q }) => bookmarks.has(q.id)).length;
+    const quizQuestionEntries = activeQuizQuestionEntries;
+    const quizAnsweredCount = activeQuizAnsweredCount;
+    const bookmarkedCount = activeQuizBookmarkedCount;
     const unansweredCount = quizQuestionEntries.length - quizAnsweredCount;
     const quizSecondsLeft = savedSecondsLeft ?? (activeQuizDuration * 60);
 
@@ -2817,7 +2740,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
     };
 
     const currentQuestionObj = realQuestions[currentQ];
-    const pct = quizQuestionEntries.length > 0 ? Math.round((quizAnsweredCount / quizQuestionEntries.length) * 100) : 0;
+    const pct = activeQuizPct;
 
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-white select-none tsa-exam-root" style={{ fontFamily: "var(--font-be-vietnam), system-ui, sans-serif" }}>
@@ -2871,6 +2794,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </button>
           </div>
         )}
+        <ExamImageWarmup imageUrls={nextQuestionWarmImageUrls} />
 
         {/* Main Layout */}
         <div className="tsa-body flex flex-1 overflow-hidden relative">
@@ -2926,7 +2850,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                        const maSel = qObj.type === 'MA' ? (Array.isArray(answers[qObj.id]) ? answers[qObj.id] : []) : [];
 
                        return (
-                         <div key={qObj.id} className="mb-8 last:mb-0">
+                         <div key={qObj.id} className="exam-question-visibility mb-8 last:mb-0">
                            {/* Question header */}
                            <div className="flex items-start gap-4 mb-4">
                              <div className="w-8 h-8 rounded-full bg-[#f1f5f9] flex items-center justify-center font-bold text-gray-700 shrink-0 text-sm border border-gray-200">
@@ -3206,23 +3130,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   }
 
   if (quizPhase === 'quiz' && activeExam) {
-    const quizQuestionEntries = isTSA ? tsaSectionQuestionEntries : realQuestions.map((q, i) => ({ q, i }));
-    const quizAnsweredCount = quizQuestionEntries.filter(({ q }) => hasPracticeAnswer(answers[q.id])).length;
-    const quizTotalCount = quizQuestionEntries.length;
-    const pct = quizTotalCount > 0 ? Math.round((quizAnsweredCount / quizTotalCount) * 100) : 0;
+    const quizQuestionEntries = activeQuizQuestionEntries;
+    const quizAnsweredCount = activeQuizAnsweredCount;
+    const quizTotalCount = activeQuizTotalCount;
+    const pct = activeQuizPct;
     const unansweredCount = Math.max(0, quizTotalCount - quizAnsweredCount);
     const quizSecondsLeft = savedSecondsLeft ?? (activeQuizDuration * 60);
     const quizTimeLabel = isLowPressureExam ? 'Thời gian đã làm' : 'Thời gian còn lại';
     const quizTimeSeconds = isLowPressureExam ? elapsedSeconds : quizSecondsLeft;
-    const getQuizNavClass = (q, i) => {
-      const isAnswered = hasPracticeAnswer(answers[q.id]);
-      const isBookmarked = bookmarks.has(q.id);
-      return [
-        isAnswered ? 'quiz-answered' : 'quiz-unanswered',
-        isBookmarked ? 'quiz-bookmarked' : '',
-        i === currentQ ? 'current' : '',
-      ].filter(Boolean).join(' ');
-    };
     const confirmSubmit = () => {
       const msg = unansweredCount > 0
         ? `⚠️ CẢNH BÁO: Bạn còn ${unansweredCount} câu chưa làm!\n\nBạn đã trả lời ${quizAnsweredCount}/${quizTotalCount} câu. Bạn có chắc chắn muốn nộp ${isTSA && !isLastTsaSection ? 'phần này' : 'bài'}?`
@@ -3284,6 +3199,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </div>
           )}
         </Topbar>
+        <ExamImageWarmup imageUrls={nextQuestionWarmImageUrls} />
         <div className={`et-screen ${isSidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ position: 'relative' }}>
 
           <button className="et-fab mobile-only" onClick={() => setIsDrawerOpen(true)}>
@@ -3465,7 +3381,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                             {group.children.map(childQ => {
                               const currentI = Number.isInteger(childQ._globalIndex) ? childQ._globalIndex : realQIndex++;
                               return (
-                                <div key={childQ.id} id={`q-card-${currentI}`} onClick={() => setCurrentQ(currentI)}>
+                                <div key={childQ.id} id={`q-card-${currentI}`} className="exam-question-visibility" onClick={() => setCurrentQ(currentI)}>
                                   <QuestionCard
                                     question={childQ}
                                     index={currentI}
@@ -3495,7 +3411,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                   if (!firstChild) return null;
                   const currentI = Number.isInteger(firstChild._globalIndex) ? firstChild._globalIndex : realQIndex++;
                   return (
-                    <div key={firstChild.id} id={`q-card-${currentI}`} onClick={() => setCurrentQ(currentI)}>
+                    <div key={firstChild.id} id={`q-card-${currentI}`} className="exam-question-visibility" onClick={() => setCurrentQ(currentI)}>
                       {sectionHeader}
 
                       {firstChild.contextHint && (
@@ -3572,13 +3488,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             </div>
 
             <div className="mb-4">
-              {renderNavButtons((q, i) => {
-                return (
-                  <button key={i} className={`et-nav-btn ${getQuizNavClass(q, i)}`} onClick={() => { setIsDrawerOpen(false); scrollToQ(i); }}>
-                    {i + 1}
-                  </button>
-                );
-              }, { tsaCurrentOnly: true })}
+              <QuizNavButtons
+                questions={realQuestions}
+                answers={answers}
+                bookmarks={bookmarks}
+                currentQ={currentQ}
+                examType={activeExam?.examType}
+                isTSA={false}
+                tsaSectionIndex={tsaSectionIndex}
+                onSelect={scrollToDrawerRegularQuestion}
+              />
             </div>
 
             <div className="et-nav-legend flex-row justify-center gap-5 mt-0 mb-4">
@@ -3642,13 +3561,16 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
             <div className="et-nav-block">
               <div className="et-nav-title">Danh sách câu hỏi</div>
-              {renderNavButtons((q, i) => {
-                return (
-                  <button key={i} className={`et-nav-btn ${getQuizNavClass(q, i)}`} onClick={() => scrollToQ(i)}>
-                    {i + 1}
-                  </button>
-                );
-              }, { tsaCurrentOnly: true })}
+              <QuizNavButtons
+                questions={realQuestions}
+                answers={answers}
+                bookmarks={bookmarks}
+                currentQ={currentQ}
+                examType={activeExam?.examType}
+                isTSA={false}
+                tsaSectionIndex={tsaSectionIndex}
+                onSelect={scrollToRegularQuestion}
+              />
               <div className="et-nav-legend mt-4">
                 <div className="et-legend-item"><div className="et-legend-dot is-answered" />Đã trả lời</div>
                 <div className="et-legend-item"><div className="et-legend-dot is-bookmarked" />Đánh dấu</div>

@@ -218,9 +218,11 @@ export default function PracticeAIChatbox({
             </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-bold text-gray-900">Trợ lý gợi ý</div>
-              <div className="truncate text-xs font-semibold text-gray-400">
-                {questionNumber ? `Câu ${questionNumber}` : 'Chế độ ôn luyện'}
-              </div>
+              {questionNumber && (
+                <div className="truncate text-xs font-semibold text-gray-400">
+                  Câu {questionNumber}
+                </div>
+              )}
             </div>
           </div>
           <button

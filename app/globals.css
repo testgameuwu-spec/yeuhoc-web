@@ -1403,6 +1403,29 @@ html[data-theme='dark'] .ep-lb-score-val {
   padding: 15px 17px;
 }
 
+.exam-question-visibility {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 520px;
+  scroll-margin-top: 76px;
+}
+
+.exam-image-warmup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.exam-image-warmup img {
+  width: 1px !important;
+  height: 1px !important;
+}
+
 .inline-image-loading-frame {
   position: relative;
   display: inline-block;

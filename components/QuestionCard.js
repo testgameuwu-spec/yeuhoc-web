@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
 import ContentWithInlineImage, { parseImageMap } from './ContentWithInlineImage';
@@ -10,7 +10,7 @@ import { formatQuestionTimeSpent } from '@/lib/questionTimeSpent';
 
 const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', MA: 'Chọn nhiều đáp án', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', DRAG: 'Kéo thả', TEXT: 'Ngữ liệu' };
 
-export default function QuestionCard({
+function QuestionCard({
     question,
     index,
     selectedAnswer,
@@ -382,6 +382,8 @@ export default function QuestionCard({
         </div>
     );
 }
+
+export default memo(QuestionCard);
 
 function DragQuestion({
     content,
