@@ -331,6 +331,10 @@ export default function ExamList({
           </button>
           {!isEditingOrder && (
             <div className="ml-auto flex items-center gap-1 relative">
+               <button onClick={() => window.open(`/de-thi/${exam.id}`, '_blank')}
+                  className="p-2 rounded-lg hover:bg-white/10 text-indigo-400 hover:text-indigo-300 transition-colors" title="Xem trước">
+                  <Eye className="w-4 h-4" />
+                </button>
                <button onClick={() => setOpenMenu(openMenu === exam.id ? null : exam.id)}
                   className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
                   <MoreVertical className="w-4 h-4" />
