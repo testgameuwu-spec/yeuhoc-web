@@ -1,18 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { BookMarked, CheckCircle2, Loader2, X } from 'lucide-react';
+import { CheckCircle2, Loader2, X } from 'lucide-react';
+import ErrorLogIcon from '@/components/ErrorLogIcon';
 import { ERROR_LOG_BATCH_OPTIONS, ERROR_LOG_REASONS } from '@/lib/errorLogStore';
 
 export function ErrorLogSaveModal({
   isOpen,
   question,
+  initialReason = '',
+  initialNote = '',
+  title = 'Lưu vào Nhật ký lỗi',
+  submitLabel = 'Lưu câu hỏi',
   saving = false,
   onClose,
   onSave,
 }) {
-  const [reason, setReason] = useState('');
-  const [note, setNote] = useState('');
+  const [reason, setReason] = useState(initialReason || '');
+  const [note, setNote] = useState(initialNote || '');
 
   if (!isOpen) return null;
 
@@ -24,8 +29,6 @@ export function ErrorLogSaveModal({
 
   const handleSave = () => {
     onSave({ reason, note });
-    setReason('');
-    setNote('');
   };
 
   return (
@@ -34,10 +37,10 @@ export function ErrorLogSaveModal({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--home-brand-soft)] text-[var(--home-brand-primary)]">
-              <BookMarked className="h-5 w-5" />
+              <ErrorLogIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-extrabold text-gray-950 [html[data-theme=dark]_&]:text-white">Lưu vào Nhật ký lỗi</h3>
+              <h3 className="text-lg font-extrabold text-gray-950 [html[data-theme=dark]_&]:text-white">{title}</h3>
               <p className="truncate text-xs font-medium text-gray-500 [html[data-theme=dark]_&]:text-white/60">
                 Câu {question?.content?.replace(/\s+/g, ' ').slice(0, 64) || ''}
               </p>
@@ -104,7 +107,7 @@ export function ErrorLogSaveModal({
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--home-brand-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--home-brand-hover)] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            {saving ? 'Đang lưu...' : 'Lưu câu hỏi'}
+            {saving ? 'Đang lưu...' : submitLabel}
           </button>
         </div>
       </div>

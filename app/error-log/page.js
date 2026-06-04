@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   Bot,
-  BookMarked,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -14,10 +13,13 @@ import {
   Eye,
   Filter,
   Loader2,
+  PencilLine,
   RotateCcw,
   Trash2,
   X,
 } from 'lucide-react';
+import ErrorLogIcon from '@/components/ErrorLogIcon';
+import { ErrorLogSaveModal } from '@/components/ErrorLogSaveModal';
 import Navbar from '@/components/Navbar';
 import QuestionCard from '@/components/QuestionCard';
 import ContentWithInlineImage from '@/components/ContentWithInlineImage';
@@ -225,6 +227,8 @@ export default function ErrorLogPage() {
   const [retryEntry, setRetryEntry] = useState(null);
   const [deletingEntryId, setDeletingEntryId] = useState(null);
   const [deletingExamId, setDeletingExamId] = useState(null);
+  const [editingReasonEntry, setEditingReasonEntry] = useState(null);
+  const [savingReasonEntryId, setSavingReasonEntryId] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -398,6 +402,56 @@ export default function ErrorLogPage() {
     }
   }, [activeSourceExam, router]);
 
+  const handleUpdateEntryReason = useCallback(async ({ reason, note }) => {
+    if (!editingReasonEntry?.id) return;
+
+    const updatedAt = new Date().toISOString();
+    const payload = {
+      reason: reason || null,
+      note: note?.trim() || null,
+      updated_at: updatedAt,
+    };
+
+    setSavingReasonEntryId(editingReasonEntry.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push('/login');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('error_log_entries')
+        .update(payload)
+        .eq('id', editingReasonEntry.id)
+        .eq('user_id', session.user.id)
+        .select('id, reason, note, updated_at')
+        .single();
+
+      if (error) throw error;
+
+      const updatedEntry = data || payload;
+      setEntries((current) => current
+        .map((entry) => (
+          entry.id === editingReasonEntry.id
+            ? {
+              ...entry,
+              reason: updatedEntry.reason,
+              note: updatedEntry.note,
+              updated_at: updatedEntry.updated_at || updatedAt,
+            }
+            : entry
+        ))
+        .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0)));
+      setEditingReasonEntry(null);
+    } catch (error) {
+      console.error('Update error log reason failed:', error);
+      window.alert('Không lưu được nguyên nhân sai. Vui lòng thử lại.');
+    } finally {
+      setSavingReasonEntryId(null);
+    }
+  }, [editingReasonEntry, router]);
+
   return (
     <div className="home-page min-h-screen bg-slate-50 text-slate-950" style={{ fontFamily: 'var(--font-be-vietnam), system-ui, sans-serif' }}>
       <Navbar />
@@ -513,7 +567,7 @@ export default function ErrorLogPage() {
           </div>
         ) : filteredEntries.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center">
-            <BookMarked className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+            <ErrorLogIcon className="mx-auto mb-3 h-12 w-12 text-gray-300" />
             <h2 className="text-lg font-extrabold text-slate-900">Chưa có câu nào trong tab này</h2>
             <p className="mt-2 text-sm font-medium text-slate-500">
               Khi làm bài hoặc ôn luyện, bấm nút lưu cạnh nút báo cáo để đưa câu vào nhật ký lỗi.
@@ -602,7 +656,18 @@ export default function ErrorLogPage() {
                   </div>
 
                   <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-                    <p className="mb-1 text-xs font-black uppercase tracking-wider text-amber-700 [html[data-theme=dark]_&]:text-amber-200">Nguyên nhân sai</p>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-black uppercase tracking-wider text-amber-700 [html[data-theme=dark]_&]:text-amber-200">Nguyên nhân sai</p>
+                      <button
+                        type="button"
+                        onClick={() => setEditingReasonEntry(entry)}
+                        disabled={isDeletingEntry || savingReasonEntryId === entry.id}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs font-extrabold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 [html[data-theme=dark]_&]:border-amber-300/30 [html[data-theme=dark]_&]:bg-amber-950/30 [html[data-theme=dark]_&]:text-amber-100"
+                      >
+                        {savingReasonEntryId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PencilLine className="h-3.5 w-3.5" />}
+                        {entry.reason || entry.note ? 'Đổi nguyên nhân' : 'Nhập nguyên nhân'}
+                      </button>
+                    </div>
                     <p className="text-sm font-bold text-amber-900 [html[data-theme=dark]_&]:text-amber-50">
                       {getReasonLabel(entry.reason)}
                       {entry.note ? <span className="font-semibold"> · {entry.note}</span> : null}
@@ -619,6 +684,20 @@ export default function ErrorLogPage() {
         <RetryQuestionOverlay
           entry={retryEntry}
           onClose={() => setRetryEntry(null)}
+        />
+      )}
+
+      {editingReasonEntry && (
+        <ErrorLogSaveModal
+          isOpen={Boolean(editingReasonEntry)}
+          question={normalizeSnapshotQuestion(editingReasonEntry.question_snapshot, editingReasonEntry.correct_answer)}
+          initialReason={editingReasonEntry.reason || ''}
+          initialNote={editingReasonEntry.note || ''}
+          title={editingReasonEntry.reason || editingReasonEntry.note ? 'Đổi nguyên nhân sai' : 'Nhập nguyên nhân sai'}
+          submitLabel="Lưu nguyên nhân"
+          saving={savingReasonEntryId === editingReasonEntry.id}
+          onClose={() => setEditingReasonEntry(null)}
+          onSave={handleUpdateEntryReason}
         />
       )}
     </div>

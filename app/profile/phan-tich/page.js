@@ -12,9 +12,9 @@ import {
   History,
   Lightbulb,
   Loader2,
-  NotebookText,
   Sparkles,
 } from 'lucide-react';
+import ErrorLogIcon from '@/components/ErrorLogIcon';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/lib/supabase';
 import { getEmptyAnswerForType } from '@/lib/questionResult';
@@ -1039,7 +1039,7 @@ export default function PersonalAnalysisPage() {
                 href="/error-log/"
                 className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-[var(--home-brand-border)] bg-white px-4 py-2.5 text-sm font-extrabold text-[var(--home-brand-primary)] shadow-sm no-underline transition-colors hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-hover)]"
               >
-                <NotebookText className="h-4 w-4" />
+                <ErrorLogIcon className="h-4 w-4" />
                 Nhật ký lỗi
               </Link>
             </div>

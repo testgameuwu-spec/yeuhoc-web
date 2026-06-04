@@ -5,7 +5,8 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
-import { AlertTriangle as AlertTriangleIcon, BookMarked, Bot, Eye, Loader2, Trash2 } from 'lucide-react';
+import { AlertTriangle as AlertTriangleIcon, Bot, Eye, Loader2, Trash2 } from 'lucide-react';
+import ErrorLogIcon from '@/components/ErrorLogIcon';
 import ImageModal from '@/components/ImageModal';
 import UserProfile from '@/components/UserProfile';
 import { getExamById } from '@/lib/examStore';
@@ -2489,7 +2490,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                     className="px-5 py-2.5 rounded-xl font-bold text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                     title={practiceResultStats.wrong > 0 ? 'Lưu toàn bộ câu sai vào Nhật ký lỗi' : 'Không có câu sai để lưu'}
                   >
-                    {errorLogSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookMarked className="w-4 h-4" />}
+                    {errorLogSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ErrorLogIcon className="w-4 h-4" />}
                     {practiceResultStats.wrong > 0 ? `Lưu ${practiceResultStats.wrong} câu sai` : 'Không có câu sai'}
                   </button>
                   <button onClick={handleRetryPractice} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2">
@@ -3744,7 +3745,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
           disabled={errorLogSaving}
           className={`${className} w-full justify-center px-4 py-2.5 rounded-xl font-bold text-[var(--home-brand-primary)] bg-[var(--home-brand-soft)] hover:bg-[var(--home-brand-border)] border border-[var(--home-brand-border)] transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70`}
         >
-          {errorLogSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FloppyDisk weight="duotone" className="w-4 h-4" />}
+          {errorLogSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ErrorLogIcon className="w-4 h-4" />}
           {errorLogSaving ? 'Đang lưu...' : 'Lưu vào Nhật ký lỗi'}
         </button>
       ) : null

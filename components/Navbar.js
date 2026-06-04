@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { BookX, ChartBar, House, User as UserIcon } from 'lucide-react';
+import { ChartBar, House, User as UserIcon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { countUnseenResolvedReports } from '@/lib/reportSeenStorage';
+import ErrorLogIcon from './ErrorLogIcon';
 import LogoIcon from './LogoIcon';
 import ThemeToggle from './ThemeToggle';
 
@@ -196,7 +197,7 @@ export default function Navbar() {
             prefetch={false}
             className={linkClass(normalizedPath === '/error-log')}
           >
-            <BookX className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
+            <ErrorLogIcon className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
             <span className="hidden min-[900px]:inline">Nhật ký lỗi</span>
           </Link>
           <Link

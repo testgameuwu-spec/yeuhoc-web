@@ -4,7 +4,8 @@ import { memo, useRef, useState } from 'react';
 import MathRenderer from './MathRenderer';
 import ImageModal from './ImageModal';
 import ContentWithInlineImage, { parseImageMap } from './ContentWithInlineImage';
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle, BookMarked } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } from 'lucide-react';
+import ErrorLogIcon from './ErrorLogIcon';
 import { getDragBlankIds, getQuestionResultState, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
 import { formatQuestionTimeSpent } from '@/lib/questionTimeSpent';
 
@@ -124,7 +125,7 @@ function QuestionCard({
                             onMouseOver={e => e.currentTarget.style.color = 'var(--home-brand-primary)'}
                             onMouseOut={e => e.currentTarget.style.color = '#9ca3af'}
                         >
-                            <BookMarked width={17} height={17} />
+                            <ErrorLogIcon width={17} height={17} />
                         </button>
                     )}
                     {onToggleBookmark && (
