@@ -129,6 +129,8 @@ function ContentWithInlineImage({
   const renderImage = (key, src) => {
     const imageSrc = getRenderableImageSrc(src);
     if (!imageSrc) return null;
+    const hostClassName = ['inline-image-host', imageWrapperClassName].filter(Boolean).join(' ');
+    const buttonClassName = ['inline-image-button', imageButtonClassName].filter(Boolean).join(' ');
 
     const imageElement = (
       <InlineImage
@@ -145,11 +147,11 @@ function ContentWithInlineImage({
 
     if (onImageClick) {
       return (
-        <div key={`${key}-${imageSrc}`} className={imageWrapperClassName}>
+        <div key={`${key}-${imageSrc}`} className={hostClassName}>
           <button
             type="button"
             onClick={() => onImageClick(imageSrc)}
-            className={imageButtonClassName}
+            className={buttonClassName}
             style={imageButtonStyle || DEFAULT_IMAGE_BUTTON_STYLE}
             aria-label={alt ? `Xem toàn màn hình ${alt}` : 'Xem ảnh toàn màn hình'}
           >
@@ -160,7 +162,7 @@ function ContentWithInlineImage({
     }
 
     return (
-      <div key={`${key}-${imageSrc}`} className={imageWrapperClassName}>
+      <div key={`${key}-${imageSrc}`} className={hostClassName}>
         {imageElement}
       </div>
     );
@@ -202,6 +204,7 @@ function InlineImage({
   showImageLoadingPlaceholder,
 }) {
   const [isLoaded, setIsLoaded] = useState(!showImageLoadingPlaceholder);
+  const placeholderRatio = Number(width) > 0 && Number(height) > 0 ? `${width} / ${height}` : undefined;
 
   const image = (
     <Image
@@ -219,7 +222,10 @@ function InlineImage({
   if (!showImageLoadingPlaceholder) return image;
 
   return (
-    <span className={`inline-image-loading-frame ${isLoaded ? 'is-loaded' : 'is-loading'}`}>
+    <span
+      className={`inline-image-loading-frame ${isLoaded ? 'is-loaded' : 'is-loading'}`}
+      style={placeholderRatio ? { '--inline-image-loading-aspect-ratio': placeholderRatio } : undefined}
+    >
       {!isLoaded && (
         <span className="inline-image-loading-placeholder" aria-live="polite">
           <span>Đang tải hình ảnh...</span>

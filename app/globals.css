@@ -1426,6 +1426,13 @@ html[data-theme='dark'] .ep-lb-score-val {
   height: 1px !important;
 }
 
+.inline-image-host:has(.inline-image-loading-frame.is-loading),
+.inline-image-button:has(.inline-image-loading-frame.is-loading) {
+  display: block !important;
+  width: 100%;
+  max-width: 100%;
+}
+
 .inline-image-loading-frame {
   position: relative;
   display: inline-block;
@@ -1434,9 +1441,27 @@ html[data-theme='dark'] .ep-lb-score-val {
   vertical-align: top;
 }
 
+.inline-image-loading-frame.is-loading {
+  display: block;
+  width: 100%;
+  min-height: clamp(140px, 28vw, 220px);
+  max-height: 320px;
+  aspect-ratio: var(--inline-image-loading-aspect-ratio, 16 / 9);
+  overflow: hidden;
+  border-radius: 12px;
+}
+
 .inline-image-loadable {
   opacity: 0;
   transition: opacity .22s ease, filter .22s ease;
+}
+
+.inline-image-loading-frame.is-loading .inline-image-loadable {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
 }
 
 .inline-image-loading-frame.is-loaded .inline-image-loadable {
@@ -1450,7 +1475,8 @@ html[data-theme='dark'] .ep-lb-score-val {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: clamp(120px, 26vw, 220px);
+  width: 100%;
+  height: 100%;
   padding: 16px;
   border: 1px solid rgba(148, 163, 184, .28);
   border-radius: 12px;
