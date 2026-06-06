@@ -777,10 +777,6 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
   const getErrorLogSaveHandler = (question, questionIndex, { visible = true, source = 'manual' } = {}) => {
     if (!visible || !question || question.type === 'TEXT') return null;
 
-    const selectedAnswer = answers[question.id] ?? getEmptyAnswerForType(question.type);
-    const resultState = getQuestionResultState(question, selectedAnswer);
-    if (resultState !== 'wrong' && resultState !== 'unanswered') return null;
-
     return (questionToSave) => handleOpenErrorLog(questionToSave, questionIndex, source);
   };
 
@@ -2329,7 +2325,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
 
                     return (
                       <div key={gq.id} className={`practice-card-wrap exam-question-visibility bg-white rounded-3xl shadow-sm border ${rqIndex === currentQ ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-gray-100'}`} style={{ fontSize: '1.1em' }} id={`practice-q-${rqIndex}`}>
-                        <QuestionCard
+                        <QuestionCard hideLevel={activeExam?.showQuestionLevel === false} allowReview={activeExam?.allowReview !== false}
                           question={gq}
                           index={rqIndex}
                           selectedAnswer={answers[gq.id] ?? getEmptyAnswerForType(gq.type)}
@@ -2377,7 +2373,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
             ) : (
               q && (
                 <div className="practice-card-wrap exam-question-visibility mt-4" style={{ fontSize: '1.1em' }}>
-                  <QuestionCard
+                  <QuestionCard hideLevel={activeExam?.showQuestionLevel === false} allowReview={activeExam?.allowReview !== false}
                     question={q}
                     index={currentQ}
                     selectedAnswer={answers[q.id] ?? getEmptyAnswerForType(q.type)}
@@ -2957,7 +2953,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                               <div className="flex-1 text-[16px] text-gray-900 leading-[1.7]">
                                 {qObj.type === 'DRAG' ? (
                                   <div className="tsa-drag-wrap">
-                                    <QuestionCard
+                                    <QuestionCard hideLevel={activeExam?.showQuestionLevel === false} allowReview={activeExam?.allowReview !== false}
                                       question={qObj}
                                       index={qIndex}
                                       selectedAnswer={answers[qObj.id] ?? getEmptyAnswerForType(qObj.type)}
@@ -3483,7 +3479,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                               const currentI = Number.isInteger(childQ._globalIndex) ? childQ._globalIndex : realQIndex++;
                               return (
                                 <div key={childQ.id} id={`q-card-${currentI}`} className="exam-question-visibility" onClick={() => setCurrentQ(currentI)}>
-                                  <QuestionCard
+                                  <QuestionCard hideLevel={activeExam?.showQuestionLevel === false} allowReview={activeExam?.allowReview !== false}
                                     question={childQ}
                                     index={currentI}
                                     selectedAnswer={answers[childQ.id] ?? getEmptyAnswerForType(childQ.type)}
@@ -3522,7 +3518,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         </div>
                       )}
 
-                      <QuestionCard
+                      <QuestionCard hideLevel={activeExam?.showQuestionLevel === false} allowReview={activeExam?.allowReview !== false}
                         question={firstChild}
                         index={currentI}
                         selectedAnswer={answers[firstChild.id] ?? getEmptyAnswerForType(firstChild.type)}
@@ -3704,12 +3700,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
               subject={activeExam.subject}
             />
             <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
-              <button
-                onClick={() => setQuizPhase('results-detail')}
-                className="px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md flex items-center gap-2"
-              >
-                Xem chi tiết bài thi <CaretRight weight="bold" className="w-4 h-4" />
-              </button>
+              {activeExam?.allowReview !== false && (
+                <button
+                  onClick={() => setQuizPhase('results-detail')}
+                  className="px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-md flex items-center gap-2"
+                >
+                  Xem chi tiết bài thi <CaretRight weight="bold" className="w-4 h-4" />
+                </button>
+              )}
               <button className="px-6 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-2" onClick={handleReset}>
                 <ArrowLeft className="w-4 h-4" /> Chọn đề khác
               </button>
@@ -3845,7 +3843,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                               const currentI = realQIndex++;
                               return (
                                 <div key={childQ.id} id={`q-card-${currentI}`}>
-                                  <QuestionCard
+                                  <QuestionCard hideLevel={activeExam?.showQuestionLevel === false} allowReview={activeExam?.allowReview !== false}
                                     question={childQ}
                                     index={currentI}
                                     selectedAnswer={answers[childQ.id] ?? getEmptyAnswerForType(childQ.type)}
@@ -3879,7 +3877,7 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
                         </div>
                       )}
 
-                      <QuestionCard
+                      <QuestionCard hideLevel={activeExam?.showQuestionLevel === false} allowReview={activeExam?.allowReview !== false}
                         question={firstChild}
                         index={currentI}
                         selectedAnswer={answers[firstChild.id] ?? getEmptyAnswerForType(firstChild.type)}
