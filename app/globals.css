@@ -1399,6 +1399,35 @@ html[data-theme='dark'] .ep-lb-score-val {
   letter-spacing: .4px;
 }
 
+.et-q-level-badge {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.et-q-level-badge.is-recognition {
+  color: #34d399;
+}
+
+.et-q-level-badge.is-understanding {
+  color: #60a5fa;
+}
+
+.et-q-level-badge.is-application {
+  color: #fbbf24;
+}
+
+.et-q-level-badge.is-advanced {
+  color: #f87171;
+}
+
+.et-q-level-badge.is-default {
+  color: var(--et-gray-400);
+}
+
 .et-q-card-body {
   padding: 15px 17px;
 }
@@ -3065,12 +3094,18 @@ html[data-theme='dark'] .ep-lb-score-val {
   }
 
   .et-q-badge {
+    flex-wrap: wrap;
     min-width: 0;
   }
 
   .et-q-type-badge {
     white-space: normal;
     line-height: 1.2;
+  }
+
+  .et-q-level-badge {
+    line-height: 1.15;
+    white-space: normal;
   }
 
   .et-q-card-body {

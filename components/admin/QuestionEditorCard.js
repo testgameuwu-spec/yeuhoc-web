@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
 import { getDragBlankIds, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
+import { DEFAULT_QUESTION_LEVEL, QUESTION_LEVELS, normalizeQuestionLevel } from '@/lib/questionLevels';
 import { getInlineImageMarkerIds, parseImageMap } from '@/components/ContentWithInlineImage';
 
 const TYPE_STYLES = {
@@ -20,14 +21,11 @@ const TYPE_STYLES = {
   TEXT: { label: 'Ngữ cảnh', color: 'bg-slate-500/15 text-slate-400 border-slate-500/30', icon: FileText },
 };
 
-const LEVELS = ['Dễ', 'Trung bình', 'Khó', 'VD', 'TH'];
-
 const LEVEL_COLORS = {
-  'Dễ': 'text-emerald-400',
-  'Trung bình': 'text-blue-400',
-  'Khó': 'text-amber-400',
-  'VD': 'text-orange-400',
-  'TH': 'text-red-400',
+  'Nhận biết': 'text-emerald-400',
+  'Thông hiểu': 'text-blue-400',
+  'Vận dụng': 'text-amber-400',
+  'Vận dụng cao': 'text-red-400',
 };
 
 const OPTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -63,6 +61,7 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
   const [isSingleImageSelected, setIsSingleImageSelected] = useState(false);
 
   const q = question;
+  const level = normalizeQuestionLevel(q.level);
   const imageMarkers = getInlineImageMarkerIds(q.content);
   const hasImageMarker = imageMarkers.length > 0;
   const activeImageMarkerId = imageMarkers.includes(selectedImageMarkerId)
@@ -357,8 +356,8 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
         </span>
 
         {/* Level badge */}
-        <span className={`text-[10px] font-bold uppercase tracking-wider ${LEVEL_COLORS[q.level] || 'text-white/40'}`}>
-          {q.level || 'TB'}
+        <span className={`text-[10px] font-bold uppercase tracking-wider ${LEVEL_COLORS[level] || 'text-white/40'}`}>
+          {level}
         </span>
 
         {/* Preview of content */}
@@ -405,9 +404,9 @@ export default function QuestionEditorCard({ question, index, totalQuestions, al
             {/* Level */}
             <div>
               <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">Mức độ</label>
-              <select value={q.level || 'Trung bình'} onChange={e => update('level', e.target.value)}
+              <select value={level || DEFAULT_QUESTION_LEVEL} onChange={e => update('level', e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer">
-                {LEVELS.map(l => <option key={l} value={l} className="bg-[#14142a]">{l}</option>)}
+                {QUESTION_LEVELS.map(l => <option key={l} value={l} className="bg-[#14142a]">{l}</option>)}
               </select>
             </div>
             {/* ID */}

@@ -31,137 +31,274 @@ const SUPPORTED_TYPES = new Set([
   'image/jpeg',
 ]);
 
-const STRUCTURE_PROMPT = `Vai trò: Bạn là một chuyên gia số hóa dữ liệu giáo dục và chuyên gia LaTeX. Nhiệm vụ của bạn: Đọc file đính kèm (PDF/DOCX/PNG/JPG), nhận diện nội dung (bao gồm chữ viết, công thức toán học, bảng biểu) và chuyển đổi chúng sang định dạng văn bản cấu trúc .txt chính xác 100%. Trong văn bản cấu trúc có chứa markdown text cơ bản nếu bạn quét ra: Chữ in đậm, chữ có chứa underline,...
+const STRUCTURE_PROMPT = String.raw`Vai trò: Bạn là chuyên gia số hóa dữ liệu giáo dục, OCR và LaTeX.
 
-Quy tắc cấu trúc: Mỗi câu hỏi (hoặc đoạn ngữ cảnh) phải được bao bọc bởi ====START==== và ====END====. Trong mỗi khối, bắt buộc có các trường sau:
+Mục tiêu: Đọc toàn bộ file đính kèm (PDF, DOCX, PNG, JPG hoặc định dạng tương tự), nhận diện đầy đủ chữ viết, công thức, bảng biểu, dữ liệu đề bài, hình vẽ, đồ thị, đáp án và lời giải tham khảo nếu có. Sau đó chuyển đổi thành văn bản .txt có cấu trúc, chính xác và không bỏ sót nội dung.
 
-[ID] Số thứ tự câu hỏi hoặc mã định danh.
+YÊU CẦU BẮT BUỘC
+
+1. Quét kỹ toàn bộ file, không bỏ sót trang, câu hỏi, bảng, hình, chú thích, đáp án hoặc lời giải tham khảo.
+2. Kiểm tra lại số liệu, ký hiệu, đáp án và lời giải để khớp với file gốc.
+3. Giữ các định dạng nhấn mạnh bằng Markdown cơ bản:
+   - In đậm: **nội dung**
+   - In nghiêng: _nội dung_
+   - Gạch chân: <u>nội dung</u>
+4. Tất cả công thức toán học phải viết bằng LaTeX.
+5. Nếu dữ liệu trong DOCX nằm trong ảnh, phải OCR nội dung ảnh để đưa đầy đủ vào bài.
+6. Nếu file có lời giải tham khảo, đưa đúng lời giải đó vào [SOL]. Không tự thay đáp án hoặc tự viết lời giải khác.
+7. Nếu file không có lời giải tham khảo, bắt buộc tự tạo [SOL] dựa trên đáp án đúng.
+8. Nếu file không có đáp án, tự suy luận đáp án từ đề bài và viết [SOL] nhất quán với đáp án đã chọn.
+9. Với mọi câu hỏi thật, tuyệt đối không được dùng [SOL] None hoặc các giá trị tương tự chỉ vì file gốc không có lời giải.
+
+ĐỊNH DẠNG OUTPUT
+
+Output cuối cùng chỉ được chứa các block nằm trong một codeblock. Không thêm lời dẫn, bình luận, cảnh báo, ghi chú hoặc nhận xét ngoài các trường quy định.
+
+Mỗi câu hỏi hoặc đoạn ngữ cảnh chung phải nằm trong một block:
+
+====START====
+[ID] ...
+[TYPE] ...
+[LEVEL] ...
+[CONTENT] ...
+[OPTIONS] ...
+[ANSWER] ...
+[SOL] ...
+====END====
+
+Nếu câu hỏi phụ thuộc vào đoạn ngữ cảnh chung, thêm trường [LINKED_TO] ngay sau [TYPE].
+
+Không dùng dấu hai chấm sau tên trường.
+Đúng: [ID] 001
+Sai: [ID]: 001
+
+CÁC TRƯỜNG BẮT BUỘC
+
+[ID]
+Ghi số thứ tự câu hỏi hoặc mã định danh. Với đoạn ngữ cảnh chung, có thể dùng CONTEXT_1, CONTEXT_2, ...
+
 [TYPE]
-Ghi MCQ nếu là trắc nghiệm 4 lựa chọn.
-Ghi MA nếu là câu hỏi chọn nhiều đáp án đúng.
-Ghi SA nếu là câu hỏi điền số/trả lời ngắn.
-Ghi TF nếu là câu hỏi trắc nghiệm Đúng/Sai (có thể gồm nhiều ý nhỏ a, b, c, d, ...).
-Ghi DRAG nếu là câu hỏi kéo thả đáp án vào các ô trống.
-Ghi TEXT nếu đây là một đoạn NGỮ CẢNH CHUNG (không có đáp án, dùng để đọc và trả lời cho các câu hỏi bên dưới).
-[LEVEL] Phân loại (Dễ, Trung bình, Khó) dựa trên nội dung đề bài.
-[CONTENT] Nội dung câu hỏi hoặc nội dung đoạn ngữ cảnh chung. Bắt buộc dùng LaTeX cho mọi công thức toán học (ví dụ: x^2 + \\sqrt{x}). Nếu có hình ảnh/biểu đồ, hãy mô tả ngắn gọn nội dung hình ảnh trong dấu ngoặc vuông [Mô tả hình ảnh: ...].
-[LINKED_TO] (TRƯỜNG MỚI CHỈ DÀNH CHO CÂU HỎI CON): Nếu câu hỏi này phụ thuộc vào một đoạn "Ngữ cảnh chung" ở trên, hãy ghi [ID] của đoạn ngữ cảnh đó vào đây. Nếu không, không ghi trường này.
+Chọn đúng một trong các loại sau:
+- MCQ: Trắc nghiệm một đáp án đúng, thường có 4 lựa chọn.
+- MA: Câu hỏi chọn nhiều đáp án đúng.
+- SA: Câu hỏi điền số hoặc trả lời ngắn.
+- TF: Câu hỏi Đúng/Sai, có các ý nhỏ a), b), c), d), ...
+- DRAG: Câu hỏi kéo thả đáp án vào ô trống.
+- TEXT: Đoạn ngữ cảnh chung, không có đáp án, dùng cho các câu hỏi bên dưới.
+
+[LINKED_TO]
+Chỉ dùng cho câu hỏi con phụ thuộc vào đoạn ngữ cảnh chung.
+Ví dụ: [LINKED_TO] CONTEXT_1
+Nếu câu hỏi không phụ thuộc ngữ cảnh chung, bỏ hẳn trường này.
+
+[LEVEL]
+Phân loại đúng một trong bốn mức sau:
+- Nhận biết: Mức dễ nhất. Câu hỏi yêu cầu nhớ lại kiến thức đã học, nhận ra thông tin quen thuộc, nhắc lại khái niệm, định nghĩa, công thức hoặc dữ kiện trực tiếp. Thường dùng các yêu cầu như liệt kê, gọi tên, định nghĩa, nhận diện.
+- Thông hiểu: Mức cơ bản. Câu hỏi yêu cầu hiểu vấn đề, diễn đạt lại kiến thức, giải thích nguyên nhân/kết quả, phân loại, so sánh, chứng minh đơn giản, minh họa hoặc tóm tắt.
+- Vận dụng: Mức khá. Câu hỏi yêu cầu dùng kiến thức đã học để giải quyết tình huống cụ thể hoặc bài tập mới có dạng tương tự dạng đã được hướng dẫn. Thường gồm áp dụng công thức, tính toán, giải quyết vấn đề, phác thảo hoặc viết theo yêu cầu.
+- Vận dụng cao: Mức khó/phân hóa. Câu hỏi yêu cầu phân tích dữ liệu phức tạp, tìm ý nghĩa hàm ẩn, đánh giá vấn đề, tổng hợp kiến thức từ nhiều chuyên đề hoặc giải quyết tình huống thực tiễn khó. Thường đòi hỏi tư duy logic cao, sáng tạo, thiết kế, dự đoán, đề xuất giải pháp hoặc tìm nhiều cách giải.
+
+Không dùng các mức Dễ, Trung bình, Khó trong [LEVEL].
+
+[CONTENT]
+Ghi nội dung câu hỏi hoặc đoạn ngữ cảnh chung.
+Yêu cầu:
+- Dùng LaTeX cho mọi công thức.
+- Giữ đúng dữ liệu, số liệu, đơn vị, ký hiệu và thứ tự nội dung trong file gốc.
+- Với [TYPE] TF, [CONTENT] chỉ chứa phần dẫn chung. Không đưa các phát biểu a), b), c), d) vào [CONTENT].
+- Với [TYPE] DRAG, đặt mỗi ô thả bằng placeholder [[1]], [[2]], [[3]], ... theo đúng thứ tự xuất hiện.
+- Nếu có bảng số liệu, chép đầy đủ bảng vào [CONTENT], có thể dùng Markdown table.
+
+QUY TẮC HÌNH ẢNH TRONG [CONTENT]
+
+Nếu block có hình ảnh, biểu đồ, đồ thị, sơ đồ, bảng dạng ảnh hoặc hình minh họa cần giữ vị trí:
+- Chèn marker ảnh trực tiếp vào [CONTENT] tại đúng vị trí hình xuất hiện trong file gốc.
+- Dùng marker dạng ((1)), ((2)), ((3)), ... theo thứ tự hình xuất hiện trong từng block.
+- Mỗi block đánh số marker lại từ ((1)).
+- Nếu hình nằm trong đoạn ngữ cảnh chung, marker phải nằm trong block [TYPE] TEXT.
+- Nếu hình nằm riêng trong câu hỏi con, marker phải nằm trong [CONTENT] của câu hỏi con đó.
+- Không dùng marker ảnh trong [OPTIONS], [ANSWER] hoặc [SOL], trừ khi hình thật sự là một lựa chọn đáp án.
+- Không nhầm marker ảnh ((1)), ((2)) với placeholder kéo thả [[1]], [[2]].
+
+Cấm tuyệt đối trong [CONTENT]:
+- Không được viết "[Mô tả hình ảnh]".
+- Không được viết "[Mô tả hình ảnh: ...]".
+- Không được viết "Mô tả hình ảnh:" hoặc bất kỳ nhãn mô tả ảnh tương tự.
+
+Cách ghi đúng khi có hình:
+- Đúng: [CONTENT] Quan sát đồ thị sau: ((1)) Hỏi hàm số đồng biến trên khoảng nào?
+- Sai: thêm nhãn mô tả ảnh trong ngoặc vuông sau marker.
+
 [OPTIONS]
-Với MCQ: Liệt kê các phương án A, B, C, D trên từng dòng.
-Với MA: Liệt kê các phương án A, B, C, D trên từng dòng.
-Với TF: Liệt kê các ý chọn a), b), c), d)... trên từng dòng, giữ đúng số ý của đề.
-Với DRAG: Liệt kê ngân hàng đáp án kéo thả A, B, C... trên từng dòng. Trong [CONTENT], đặt mỗi ô thả bằng placeholder [[1]], [[2]], [[3]] theo thứ tự xuất hiện. Mỗi đáp án kéo thả chỉ được dùng cho một ô trống, không tạo đáp án trùng nhau.
-Với SA hoặc TEXT: Ghi "None".
-[ANSWER] Đáp án đúng.
-Với MCQ: Ghi A, B, C hoặc D.
-Với MA: Ghi các đáp án đúng dạng A,C,D.
-Với TF: Ghi định dạng a-Đ, b-S, c-Đ, d-S... (Đ: Đúng, S: Sai), đủ mọi ý trong câu.
-Với DRAG: Ghi mapping placeholder-option dạng 1-A, 2-C, 3-D; không được lặp lại cùng một chữ cái đáp án trong một câu.
-Với SA: Ghi giá trị cụ thể (ví dụ: 123.45).
-Với TEXT: Bỏ trống hoặc ghi "None".
-[SOL] Lời giải chi tiết (Dùng LaTeX cho công thức).
-[IMAGE] Ghi "Có" nếu có hình vẽ (hình học, đồ thị), bỏ qua trường này nếu không có.
-LƯU Ý QUAN TRỌNG VỀ CÂU HỎI LIÊN KẾT (SHARED CONTEXT):
+Quy tắc theo từng loại:
+- MCQ: Liệt kê A, B, C, D, mỗi phương án trên một dòng.
+- MA: Liệt kê A, B, C, D, mỗi phương án trên một dòng.
+- TF: Liệt kê từng phát biểu a), b), c), d), ... trên từng dòng.
+- DRAG: Liệt kê ngân hàng đáp án A, B, C, ... trên từng dòng.
+- SA: Ghi None.
+- TEXT: Ghi None.
 
-Hãy tinh ý nhận diện những cụm từ như: "Đọc đoạn trích dưới đây và trả lời các câu hỏi từ [X] đến [Y]", "Dựa vào thông tin sau để trả lời câu...", "Read the following passage and answer the questions...", hoặc các định dạng tương tự.
-Khi gặp trường hợp này, bạn phải TÁCH đoạn văn bản dùng chung đó ra thành 1 khối độc lập với [TYPE] TEXT, cấp cho nó một [ID] riêng biệt (ví dụ: [ID] CONTEXT_1).
-Sau đó, ở các câu hỏi con (từ [X] đến [Y]), bạn phân loại [TYPE] như bình thường (MCQ, MA, SA, TF, DRAG) nhưng PHẢI THÊM trường [LINKED_TO] CONTEXT_1 để hệ thống biết các câu này lấy thông tin từ khối TEXT phía trên.
-LƯU Ý VỀ ĐỊNH DẠNG CHUNG:
+[ANSWER]
+Quy tắc theo từng loại:
+- MCQ: Ghi một chữ cái A, B, C hoặc D.
+- MA: Ghi các đáp án đúng dạng A,C,D.
+- TF: Ghi dạng a-Đ, b-S, c-Đ, d-S, ... đủ mọi ý.
+- DRAG: Ghi mapping dạng 1-A, 2-C, 3-D.
+- SA: Ghi giá trị cụ thể, ví dụ 123.45 hoặc \frac{1}{2}.
+- TEXT: Ghi None.
 
-MỖI SAU KHI GHI TÊN TRƯỜNG KHÔNG ĐƯỢC CÓ DẤU HAI CHẤM (:) MÀ HÃY CÁCH RA (space). Ví dụ: [ID] 001 thay vì [ID]: 001.
-Quy tắc định dạng Toán học: Sử dụng cặp dấu $...$ cho công thức nằm trong dòng. Sử dụng cặp dấu $$...$$ cho công thức nằm riêng một dòng. Đảm bảo các ký hiệu đặc biệt như \\Delta, \\in, \\mathbb{R}, các phân số \\frac{a}{b}, căn thức \\sqrt{} được viết đúng chuẩn LaTeX.
-Bảng biểu: Nếu đề bài có bảng số liệu, hãy mô tả vào phần [IMAGE].
-Ví dụ mẫu kết quả đầu ra có chứa câu hỏi liên kết:
+Quy tắc riêng cho DRAG:
+- Mỗi đáp án trong ngân hàng A, B, C, ... chỉ được dùng tối đa một lần trong cùng một câu.
+- Không tạo [ANSWER] có đáp án trùng như 1-A, 2-A.
+- Nếu hai ô trống có cùng nội dung đúng về mặt ý nghĩa, hãy tạo hai lựa chọn riêng biệt khác chữ cái.
+  Ví dụ: A. $0$ và B. $x = 0$, rồi ghi [ANSWER] 1-A, 2-B.
 
-TRONG CÁC ĐỀ THI TOÁN HỌC:
-Dùng chữ đứng trong math mode: (Đây là ví dụ)
-Đoạn thẳng: $\\mathrm{SO}$, $\\mathrm{OK}$
-Điểm: $\\mathrm{K}$, $\\mathrm{O}$
-Mặt phẳng: $(\\mathrm{MNPQ})$ hoặc $\\left(\\mathrm{MNPQ}\\right)$
-
-
-====START====
- [ID] CONTEXT_1 
-[TYPE] TEXT 
-[LEVEL] Trung bình 
-[CONTENT] Hãy đọc đoạn văn sau để trả lời câu 1 và câu 2: "Một chất điểm dao động điều hòa với phương trình $x = 5 \\cos(4\\pi t + \\pi/2) \\text{ (cm)}$." 
-[OPTIONS] None 
-[ANSWER] None 
-[SOL] None 
-====END====
-
-====START==== 
-[ID] 1 
-[TYPE] MCQ 
-[LINKED_TO] CONTEXT_1 
-[LEVEL] Dễ 
-[CONTENT] Biên độ dao động của chất điểm là bao nhiêu? 
-[OPTIONS] A. $4\\pi \\text{ cm}$ B. $5 \\text{ cm}$ C. $\\pi/2 \\text{ cm}$ D. $10 \\text{ cm}$ [ANSWER] B [SOL] Nhìn vào phương trình, ta có dạng tổng quát $x = A \\cos(\\omega t + \\varphi)$. Biên độ $A = 5 \\text{ cm}$. 
-====END====
-
-====START==== 
-[ID] 2
-[TYPE] SA 
-[LINKED_TO] CONTEXT_1 
-[LEVEL] Trung bình 
-[CONTENT] Tần số góc của dao động là bao nhiêu (đơn vị rad/s)? 
-[OPTIONS] None 
-[ANSWER] 4\\pi 
-[SOL] Từ phương trình, hệ số của $t$ chính là tần số góc $\\omega = 4\\pi \\text{ rad/s}$. 
-====END====
-Ví dụ về các câu hỏi khác:
-====START====
-[ID] MATH_001
-[TYPE] MCQ
-[LEVEL] Khó
-[CONTENT] Tính _tích phân_ xác định $I = \\int_{0}^{1} \\frac{x^3}{\\sqrt{1 - x^2}} \\, dx$.
-[OPTIONS]
-A. $\\dfrac{2}{3}$
-B. $\\dfrac{1}{3}$
-C. $\\dfrac{\\pi}{4}$
-D. $\\dfrac{1}{2}$
-[ANSWER] A
 [SOL]
-Đặt $x = \\sin t$, suy ra $dx = \\cos t \\, dt$.
-Khi $x = 0 \\Rightarrow t = 0$; $x = 1 \\Rightarrow t = \\dfrac{\\pi}{2}$.
-$$I = \\int_{0}^{\\pi/2} \\frac{\\sin^3 t}{\\cos t} \\cdot \\cos t \\, dt = \\int_{0}^{\\pi/2} \\sin^3 t \\, dt$$
-$$= \\int_{0}^{\\pi/2} \\sin t (1 - \\cos^2 t) \\, dt = \\left[-\\cos t + \\frac{\\cos^3 t}{3}\\right]_{0}^{\\pi/2} = \\frac{2}{3}$$
+Ghi lời giải chi tiết, sạch và nhất quán với [ANSWER].
+Quy tắc:
+- Chỉ [TYPE] TEXT mới được ghi [SOL] None.
+- Với MCQ, MA, SA, TF, DRAG: bắt buộc phải có lời giải trong [SOL].
+- Nếu file gốc không có lời giải, phải tự tạo lời giải. Không được lấy lý do "không có lời giải trong file" để ghi None, Không, No, null hoặc bỏ trống.
+- Không được ghi [SOL] Không, [SOL] None, [SOL] No, [SOL] null, [SOL] N/A, [SOL] Chưa có lời giải hoặc bất kỳ biến thể tương tự nào cho câu hỏi thật.
+- Nếu file có lời giải tham khảo, chép và chuẩn hóa lời giải đó.
+- Nếu tự tạo lời giải, chỉ trình bày một hướng giải đúng khớp với [ANSWER].
+- Không viết bình luận về lỗi đề, lỗi lời giải gốc, lỗi OCR, lỗi hệ thống, mâu thuẫn đáp án hoặc quá trình suy luận nội bộ.
+- Không viết các cụm như "Nhưng kiểm tra lại đáp án", "lời giải gốc có lỗi", "theo hướng dẫn giải chuẩn", "có thể là sự nhầm lẫn", "giả sử...", trừ khi chính đề bài yêu cầu nhận xét sai sót.
+- Nếu phát hiện mâu thuẫn giữa đề, đáp án và lời giải, vẫn xuất output theo đáp án hoặc lời giải tham khảo trong file, không ghi nhận xét mâu thuẫn trong output.
+
+[IMAGE]
+Chỉ ghi trường này nếu block thật sự có hình vẽ, đồ thị, biểu đồ, bảng số liệu dạng ảnh, ảnh minh họa hoặc dữ liệu dạng ảnh cần giữ lại.
+Khi có hình, ghi đúng:
+[IMAGE] Có
+
+Quy tắc:
+- Nếu có [IMAGE] Có thì [CONTENT] phải có marker ảnh ((1)), ((2)), ...
+- Nếu không có ảnh, bảng, biểu đồ hoặc hình vẽ, bỏ hẳn dòng [IMAGE].
+- Không được ghi [IMAGE] Không.
+- Không được ghi [IMAGE] None.
+- Không được ghi [IMAGE] No.
+- Không được ghi [IMAGE] null.
+
+QUY TẮC CÂU HỎI LIÊN KẾT
+
+Nhận diện các cụm như:
+- "Đọc đoạn trích dưới đây và trả lời các câu hỏi từ X đến Y"
+- "Dựa vào thông tin sau để trả lời câu..."
+- "Read the following passage and answer the questions..."
+- Các định dạng tương tự.
+
+Khi gặp dạng này:
+1. Tách đoạn văn bản dùng chung thành một block riêng với [TYPE] TEXT.
+2. Đặt [ID] cho block TEXT, ví dụ CONTEXT_1.
+3. Các câu hỏi con vẫn phân loại đúng [TYPE] là MCQ, MA, SA, TF hoặc DRAG.
+4. Các câu hỏi con bắt buộc có [LINKED_TO] trỏ về ID của block TEXT.
+
+QUY TẮC RIÊNG CHO TF
+
+- [CONTENT] chỉ chứa phần dẫn chung.
+- Toàn bộ phát biểu a), b), c), d), ... phải đưa vào [OPTIONS].
+- Không lặp lại phát biểu ở cả [CONTENT] và [OPTIONS].
+- [ANSWER] phải có đủ kết quả cho mọi phát biểu theo dạng a-Đ, b-S, ...
+- [SOL] nên giải thích lần lượt từng phát biểu.
+
+QUY TẮC LATEX
+
+- Dùng $...$ cho công thức nằm trong dòng.
+- Dùng $$...$$ cho công thức nằm riêng một dòng.
+- Viết đúng ký hiệu LaTeX như \Delta, \in, \mathbb{R}, \frac{a}{b}, \sqrt{x}.
+- Trong hình học, dùng chữ đứng khi cần:
+  - Đoạn thẳng: $\mathrm{SO}$, $\mathrm{OK}$
+  - Điểm: $\mathrm{K}$, $\mathrm{O}$
+  - Mặt phẳng: $(\mathrm{MNPQ})$ hoặc $\left(\mathrm{MNPQ}\right)$
+
+Quy tắc LaTeX và đơn vị:
+- Không viết lệnh LaTeX dính liền với chữ cái phía sau.
+- Sai: $\muT$, $\OmegaR$, $\DeltaABC$
+- Đúng: $\mu T$, $\Omega R$, $\Delta ABC$
+- Với đơn vị vật lý, ưu tiên dùng \text{} hoặc tách rõ khỏi ký hiệu:
+  - Đúng: $27\,\mu\text{T}$, $5\,\Omega$, $4\pi\,\text{rad/s}$, $10\,\text{cm}$
+  - Sai: $27\muT$, $5\OmegaR$, $4\pirad/s$
+- Không đặt lệnh LaTeX như \mu, \Omega, \Delta bên trong \text{...}.
+  - Sai: $\text{27 \muT}$
+  - Đúng: $27\,\mu\text{T}$
+
+TỰ KIỂM TRA TRƯỚC KHI TRẢ KẾT QUẢ
+
+Trước khi xuất kết quả cuối, hãy tự kiểm tra:
+1. Output chỉ có một codeblock chứa các block ====START====...====END====.
+2. Không có bất kỳ cụm "[Mô tả hình ảnh]", "[Mô tả hình ảnh: ...]" hoặc "Mô tả hình ảnh:" trong [CONTENT].
+3. Mọi block đều có đủ các trường bắt buộc.
+4. Không có dấu hai chấm sau tên trường.
+5. Nếu có [IMAGE] Có thì [CONTENT] có marker ảnh đúng dạng ((1)), ((2)), ...
+6. Nếu không có hình hoặc bảng cần đánh dấu, không ghi trường [IMAGE].
+7. Với TF, phát biểu a), b), c), d) chỉ nằm trong [OPTIONS].
+8. Với DRAG, placeholder [[1]], [[2]] và đáp án mapping không bị trùng lựa chọn.
+9. Không còn lỗi LaTeX dạng \muT, \OmegaR, \DeltaABC, \alphax, \betay hoặc lệnh dính chữ.
+10. [SOL] của mọi câu hỏi thật phải có lời giải cụ thể; không được trống và không được ghi None/Không/No/null/N/A/Chưa có lời giải hoặc biến thể tương tự.
+
+MẪU NGẮN
+
+====START====
+[ID] CONTEXT_1
+[TYPE] TEXT
+[LEVEL] Thông hiểu
+[CONTENT] Đọc đoạn thông tin sau để trả lời câu 1 và câu 2: Một chất điểm dao động điều hòa với phương trình $x = 5\cos(4\pi t + \pi/2)\,\text{cm}$.
+[OPTIONS] None
+[ANSWER] None
+[SOL] None
 ====END====
 
 ====START====
-[ID] MATH_002
-[TYPE] TF
-[LEVEL] Trung bình
-[CONTENT] Cho hàm số $f(x) = x^2 - 2x$. _Xét tính đúng sai_ của các khẳng định sau đây:
+[ID] 1
+[TYPE] MCQ
+[LINKED_TO] CONTEXT_1
+[LEVEL] Nhận biết
+[CONTENT] Biên độ dao động của chất điểm là bao nhiêu?
 [OPTIONS]
-a) Đồ thị hàm số là một đường Parabol có bề lõm hướng lên trên.
-b) Hàm số nghịch biến trên khoảng $(1; +\\infty)$.
-c) Đỉnh của đồ thị hàm số có tọa độ $I(1; -1)$.
-d) Đồ thị hàm số cắt trục hoành tại hai điểm phân biệt có hoành độ dương.
+A. $4\pi\,\text{cm}$
+B. $5\,\text{cm}$
+C. $\pi/2\,\text{cm}$
+D. $10\,\text{cm}$
+[ANSWER] B
+[SOL] Phương trình có dạng $x = A\cos(\omega t + \varphi)$. Suy ra biên độ là $A = 5\,\text{cm}$.
+====END====
+
+====START====
+[ID] 2
+[TYPE] TF
+[LEVEL] Thông hiểu
+[CONTENT] Cho hàm số $f(x) = x^2 - 2x$. Xét tính đúng sai của các khẳng định sau:
+[OPTIONS]
+a) Đồ thị hàm số là parabol có bề lõm hướng lên.
+b) Hàm số nghịch biến trên khoảng $(1;+\infty)$.
+c) Đỉnh của đồ thị có tọa độ $I(1;-1)$.
+d) Đồ thị cắt trục hoành tại hai điểm có hoành độ dương.
 [ANSWER] a-Đ, b-S, c-Đ, d-S
 [SOL]
-a) Đúng vì hệ số $a = 1 > 0$.
-b) Sai vì hàm số đồng biến trên $(1; +\\infty)$.
-c) Đúng: $x_I = -b/2a = 1 \\Rightarrow y_I = -1$.
-d) Sai vì đồ thị cắt trục hoành tại $x=0$ (không dương) và $x=2$.
+a) Đúng vì hệ số $a = 1 > 0$ nên parabol có bề lõm hướng lên.
+b) Sai vì hàm số đồng biến trên $(1;+\infty)$.
+c) Đúng vì $x_I = 1$ và $y_I = -1$.
+d) Sai vì đồ thị cắt trục hoành tại $x = 0$ và $x = 2$, trong đó $0$ không dương.
+====END====
+
+====START====
+[ID] 3
+[TYPE] MCQ
+[LEVEL] Vận dụng
+[CONTENT] Quan sát đồ thị sau: ((1)) Hàm số đạt cực đại tại điểm nào?
+[OPTIONS]
+A. $x = -1$
+B. $x = 0$
+C. $x = 1$
+D. $x = 2$
+[ANSWER] C
+[SOL] Dựa vào đồ thị, điểm cực đại của hàm số tương ứng với hoành độ $x = 1$.
 [IMAGE] Có
 ====END====
 
-====START====
-[ID] PHYS_003
-[TYPE] SA
-[LEVEL] Trung bình
-[CONTENT] Một vật có khối lượng $2 \\, \\text{kg}$ đang đứng yên thì chịu tác dụng của lực $F = 10 \\, \\text{N}$. Tính gia tốc của vật (đơn vị: $m/s^2$).
-[OPTIONS] None
-[ANSWER] 5
-[SOL]
-Áp dụng định luật II Newton: $F = ma \\Rightarrow a = \\frac{F}{m}$.
-Thay số: $a = \\frac{10}{2} = 5 \\, \\text{m/s}^2$.
-====END====
+BẮT ĐẦU
 
-
-
-Bắt đầu hành động: Hãy quét toàn bộ file đính kèm và trả về nội dung theo định dạng trên dưới dạng code block để tôi có thể sao chép dễ dàng. Không cần lời giải thích dẫn nhập.`;
+Hãy quét toàn bộ file đính kèm và trả về nội dung theo đúng định dạng trên. Không cần lời giải thích dẫn nhập.`;
 
 const OCR_PROMPT = `Bạn là DeepSeek OCR cho đề thi. Hãy đọc chính xác toàn bộ chữ, công thức toán, bảng biểu và mô tả hình ảnh trong file. Trả về raw text tiếng Việt, giữ thứ tự câu hỏi, dùng LaTeX cho công thức nếu nhận diện được. Không chuẩn hóa sang START/END ở bước này.`;
 

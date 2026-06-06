@@ -8,8 +8,15 @@ import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Flag, AlertTriangle } fr
 import ErrorLogIcon from './ErrorLogIcon';
 import { getDragBlankIds, getQuestionResultState, normalizeMAAnswer, parseDragAnswer } from '@/lib/questionResult';
 import { formatQuestionTimeSpent } from '@/lib/questionTimeSpent';
+import { normalizeQuestionLevel } from '@/lib/questionLevels';
 
 const TYPE_LABEL = { MCQ: 'Trắc Nghiệm', MA: 'Chọn nhiều đáp án', TF: 'Đúng/Sai', SA: 'Trả lời ngắn', DRAG: 'Kéo thả', TEXT: 'Ngữ liệu' };
+const LEVEL_CLASS = {
+    'Nhận biết': 'is-recognition',
+    'Thông hiểu': 'is-understanding',
+    'Vận dụng': 'is-application',
+    'Vận dụng cao': 'is-advanced',
+};
 
 function QuestionCard({
     question,
@@ -31,6 +38,8 @@ function QuestionCard({
     const [showSolution, setShowSolution] = useState(false);
     const [activeDragLetter, setActiveDragLetter] = useState(null);
     const { id, type, content, options, answer, solution, image: rawImage } = question;
+    const level = normalizeQuestionLevel(question?.level);
+    const levelClass = LEVEL_CLASS[level] || 'is-default';
     const image = rawImage;
     const hasImage = Object.keys(parseImageMap(rawImage)).length > 0;
     const isTextBlock = type === 'TEXT';
@@ -96,6 +105,7 @@ function QuestionCard({
                     {!isTextBlock && <span className="et-q-num-badge">{index + 1}</span>}
                     {timeSpentLabel && <span className="et-q-time-badge">{timeSpentLabel}</span>}
                     <span className="et-q-type-badge">{TYPE_LABEL[type] || type}</span>
+                    <span className={`et-q-level-badge ${levelClass}`}>{level}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {onReport && (

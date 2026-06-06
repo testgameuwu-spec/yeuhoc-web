@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { TSA_TOTAL_DURATION_MINUTES, TSA_TOTAL_QUESTIONS } from '@/lib/examScoring';
 import { shuffleExamQuestions } from '@/lib/questionShuffle';
+import { DEFAULT_QUESTION_LEVEL } from '@/lib/questionLevels';
 
 const SUBJECTS = ['Toán', 'Vật Lý', 'Hoá Học', 'Tiếng Anh', 'Tư duy định lượng', 'Tư duy định tính', 'Khác'];
 const EXAM_TYPES = ['THPT', 'HSA', 'TSA', 'Other'];
@@ -440,7 +441,7 @@ export default function ExamEditor({
     const newQ = {
       id: `NEW_${Date.now()}`,
       type: 'MCQ',
-      level: 'Trung bình',
+      level: DEFAULT_QUESTION_LEVEL,
       content: '',
       options: ['', '', '', ''],
       answer: 'A',
@@ -664,7 +665,7 @@ export default function ExamEditor({
               <pre className="text-xs text-white/40 leading-relaxed font-mono whitespace-pre-wrap">{`====START====
 [ID] MATH_001
 [TYPE] MCQ
-[LEVEL] Khó
+[LEVEL] Vận dụng
 [CONTENT] Nội dung câu hỏi, hỗ trợ LaTeX $...$
 [OPTIONS]
 A. Đáp án A
@@ -679,7 +680,7 @@ D. Đáp án D
 ====START====
 [ID] MA_001
 [TYPE] MA
-[LEVEL] Trung bình
+[LEVEL] Thông hiểu
 [CONTENT] Chọn tất cả đáp án đúng.
 [OPTIONS]
 A. Đáp án A
@@ -693,7 +694,7 @@ D. Đáp án D
 ====START====
 [ID] DRAG_001
 [TYPE] DRAG
-[LEVEL] Trung bình
+[LEVEL] Thông hiểu
 [CONTENT] Nội dung có ô kéo thả dạng [[1]], [[2]]
 [OPTIONS]
 A. Đáp án kéo thả A
