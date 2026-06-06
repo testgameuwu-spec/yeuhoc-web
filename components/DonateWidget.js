@@ -8,6 +8,7 @@ export default function DonateWidget({ user, profile }) {
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedMemo, setCopiedMemo] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [donationAmount, setDonationAmount] = useState('20000');
 
   const BANK_INFO = {
     bankId: 'TPBank',
@@ -35,9 +36,12 @@ export default function DonateWidget({ user, profile }) {
   };
 
   const memo = getMemo();
+  const qrAmount = donationAmount.replace(/^0+/, '');
+  const amountParam = qrAmount ? `&amount=${qrAmount}` : '';
+  const formattedAmount = qrAmount.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
   // Tạo mã QR bằng SePay API (QR động nhúng web/app)
-  const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}&amount=20000&des=${encodeURIComponent(memo)}`;
+  const qrUrl = `https://qr.sepay.vn/img?acc=${BANK_INFO.accountNumber}&bank=${BANK_INFO.bankId}${amountParam}&des=${encodeURIComponent(memo)}`;
 
   const handleCopyAccount = () => {
     navigator.clipboard.writeText(BANK_INFO.accountNumber);
@@ -50,6 +54,30 @@ export default function DonateWidget({ user, profile }) {
     setCopiedMemo(true);
     setTimeout(() => setCopiedMemo(false), 2000);
   };
+
+  const handleAmountChange = (event) => {
+    setDonationAmount(event.target.value.replace(/\D/g, ''));
+  };
+
+  const amountField = (
+    <div className="home-box home-box-muted bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-rose-100/50">
+      <label htmlFor="donate-amount" className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+        Số tiền ủng hộ
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          id="donate-amount"
+          type="text"
+          inputMode="numeric"
+          value={donationAmount}
+          onChange={handleAmountChange}
+          placeholder="Nhập số tiền"
+          className="min-w-0 flex-1 bg-transparent text-sm font-bold text-gray-900 outline-none placeholder:text-gray-300"
+        />
+        <span className="shrink-0 text-xs font-bold text-gray-400">VND</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="home-box home-donate bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden group">
@@ -74,6 +102,9 @@ export default function DonateWidget({ user, profile }) {
 
         {showQR ? (
           <div className="home-box home-box-muted bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 animate-fadeIn flex flex-col items-center text-center">
+            <div className="w-full mb-3 text-left">
+              {amountField}
+            </div>
             <Image src={qrUrl} alt="QR Code thanh toán SePay" width={192} height={192} sizes="192px" className="w-48 h-48 object-contain mb-3 rounded-lg" />
             <p className="text-xs text-gray-500 mb-1">Quét mã qua ứng dụng ngân hàng</p>
             <div className="flex items-center justify-center gap-2 mb-3">
@@ -88,6 +119,12 @@ export default function DonateWidget({ user, profile }) {
                 {copiedMemo ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
+
+            {qrAmount && (
+              <p className="text-xs font-semibold text-gray-500 mb-3">
+                Số tiền: <strong className="text-gray-900">{formattedAmount}đ</strong>
+              </p>
+            )}
             <button
               onClick={() => setShowQR(false)}
               className="text-xs font-semibold text-rose-600 hover:text-rose-700 transition-colors"
@@ -115,6 +152,8 @@ export default function DonateWidget({ user, profile }) {
                 </button>
               </div>
             </div>
+
+            {amountField}
 
             <div className="home-box home-box-muted bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-rose-100/50">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
