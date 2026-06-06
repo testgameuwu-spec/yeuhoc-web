@@ -34,7 +34,17 @@ export async function POST(req) {
         const identifier = match[1].toLowerCase().trim();
 
         // Tìm theo email prefix
-        const { data: profiles } = await auth.supabaseAdmin
+        const { data: usernameProfiles } = await auth.supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .ilike('username', identifier);
+
+        if (usernameProfiles && usernameProfiles.length === 1) {
+          userId = usernameProfiles[0].id;
+        }
+
+        if (!userId) {
+          const { data: profiles } = await auth.supabaseAdmin
           .from('profiles')
           .select('id, email')
           .ilike('email', `${identifier}@%`);
@@ -45,6 +55,7 @@ export async function POST(req) {
           const exact = profiles.find(p => p.email.split('@')[0].toLowerCase() === identifier);
           if (exact) userId = exact.id;
         }
+      }
 
         if (!userId) {
           // Tìm theo UUID prefix
@@ -63,6 +74,14 @@ export async function POST(req) {
         const words = upperContent.split(/[\s.,-]+/).filter(w => w.length >= 4 && /^[A-Z0-9_]+$/i.test(w));
         for (const word of words) {
           if (['YEUHOC', 'TKPYH1', 'UNGHO', 'TPBANK', 'MBBANK', 'VIETCOMBANK', 'TECHCOMBANK'].includes(word)) continue;
+          const { data: up } = await auth.supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .ilike('username', word);
+          if (up && up.length === 1) {
+            userId = up[0].id;
+            break;
+          }
           const { data: fp } = await auth.supabaseAdmin
             .from('profiles')
             .select('id, email')

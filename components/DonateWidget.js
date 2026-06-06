@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Heart, Copy, CheckCircle2, QrCode } from 'lucide-react';
 
-export default function DonateWidget({ user }) {
+export default function DonateWidget({ user, profile }) {
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedMemo, setCopiedMemo] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -21,6 +21,10 @@ export default function DonateWidget({ user }) {
     if (!user) return `${prefix} UNGHO`;
 
     // Ưu tiên dùng email prefix (phần trước @) — webhook sẽ dùng cái này để tra cứu user
+    if (profile?.username) {
+      return `${prefix} ${profile.username.toUpperCase().substring(0, 30)}`;
+    }
+
     if (user.email) {
       const emailPrefix = user.email.split('@')[0].toUpperCase().substring(0, 30);
       return `${prefix} ${emailPrefix}`;

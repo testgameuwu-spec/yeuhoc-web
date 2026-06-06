@@ -61,7 +61,17 @@ export async function POST(request) {
         identifier = identifier.replace(/\s+ft\d+.*$/i, '').trim();
         
         // 1. Tìm theo phần đầu của email (vd: identifier = 'buiki1777' -> email 'buiki1777@gmail.com')
-        const { data: profiles } = await supabaseAdmin
+        const { data: usernameProfiles } = await supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .ilike('username', identifier);
+          
+        if (usernameProfiles && usernameProfiles.length === 1) {
+          userId = usernameProfiles[0].id;
+        }
+
+        if (!userId) {
+          const { data: profiles } = await supabaseAdmin
           .from('profiles')
           .select('id, email')
           .ilike('email', `${identifier}@%`);
@@ -73,6 +83,7 @@ export async function POST(request) {
           const exact = profiles.find(p => p.email.split('@')[0].toLowerCase() === identifier);
           if (exact) userId = exact.id;
         }
+      }
         
         if (!userId) {
           // 2. Thử tìm theo UUID prefix (6 ký tự đầu)
@@ -93,6 +104,14 @@ export async function POST(request) {
         const words = upperContent.split(/[\s.,-]+/).filter(w => w.length >= 4 && /^[A-Z0-9_]+$/i.test(w));
         for (const word of words) {
           if (['YEUHOC', 'TKPYH1', 'UNGHO', 'TPBANK', 'MBBANK', 'VIETCOMBANK', 'TECHCOMBANK'].includes(word)) continue;
+          const { data: up } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .ilike('username', word);
+          if (up && up.length === 1) {
+            userId = up[0].id;
+            break;
+          }
           const { data: fallbackProfiles } = await supabaseAdmin
             .from('profiles')
             .select('id, email')

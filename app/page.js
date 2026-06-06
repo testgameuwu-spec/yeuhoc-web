@@ -474,7 +474,7 @@ export default function HomePage() {
           <div className="hidden xl:block">
             <ContinueExamsPanel items={continueItems} loading={continueLoading} />
           </div>
-          <DonateWidget user={user} />
+          <DonateWidget user={user} profile={profile} />
         </div>
       </div>
 
