@@ -114,6 +114,8 @@ export default function ExamEditor({
   const [scoringPreset, setScoringPreset] = useState('THPT Toán');
   const [scoringConfig, setScoringConfig] = useState(SCORING_PRESETS['THPT Toán']);
   const [antiCheatEnabled, setAntiCheatEnabled] = useState(exam?.antiCheatEnabled !== false);
+  const [allowReview, setAllowReview] = useState(exam?.allowReview !== false);
+  const [showQuestionLevel, setShowQuestionLevel] = useState(exam?.showQuestionLevel !== false);
   const [activeSection, setActiveSection] = useState(defaultTab || (exam ? 'settings' : 'upload')); // upload | settings | questions
   const [imageFilterMode, setImageFilterMode] = useState('missing');
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -250,6 +252,8 @@ export default function ExamEditor({
         setNote(exam.note || '');
         setFolderId(exam.folderId || 'root');
         setAntiCheatEnabled(exam.antiCheatEnabled !== false);
+        setAllowReview(exam.allowReview !== false);
+        setShowQuestionLevel(exam.showQuestionLevel !== false);
         if (exam.questions && exam.questions.length > 0) {
           setQuestions(exam.questions);
         }
@@ -320,9 +324,13 @@ export default function ExamEditor({
       scoringConfig,
       totalQ: realQuestionCount,
       antiCheatEnabled,
+      allowReview,
+      showQuestionLevel,
     });
   }, [
     antiCheatEnabled,
+    allowReview,
+    showQuestionLevel,
     duration,
     exam?.id,
     exam?.orderIndex,
@@ -566,7 +574,7 @@ export default function ExamEditor({
       orderIndex: exam?.orderIndex,
       title, subject, examType, year, duration, published, note, folderId: folderId === 'root' ? null : folderId,
       questions, scoringConfig, totalQ: realQuestionCount,
-      antiCheatEnabled,
+      antiCheatEnabled, allowReview, showQuestionLevel,
     });
     setHasUnsavedChanges(false);
   };
@@ -893,6 +901,47 @@ Lưu ý: Với DRAG, mỗi chữ cái đáp án chỉ được dùng một lần
                 <span>Chế độ Anti-cheat đã <strong>tắt</strong>. Học sinh sẽ không bị cảnh báo khi chuyển tab hoặc thoát toàn màn hình trong khi làm bài thi này.</span>
               </div>
             )}
+          </div>
+
+          {/* Exam display options */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Eye className="w-5 h-5 text-emerald-400" /> Tùy chọn hiển thị
+            </h3>
+            
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/8">
+              <div className="flex-1 mr-4">
+                <div className="text-sm font-semibold text-white/80 mb-1">Cho phép xem đáp án</div>
+                <p className="text-xs text-white/35 leading-relaxed">
+                  Khi bật, học sinh có thể xem lại chi tiết đúng/sai và lời giải sau khi làm xong.
+                </p>
+              </div>
+              <button
+                onClick={() => { setAllowReview(!allowReview); setHasUnsavedChanges(true); }}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${
+                  allowReview ? 'bg-emerald-500 shadow-md shadow-emerald-500/30' : 'bg-white/15'
+                }`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${allowReview ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/8">
+              <div className="flex-1 mr-4">
+                <div className="text-sm font-semibold text-white/80 mb-1">Hiển thị phân loại câu hỏi</div>
+                <p className="text-xs text-white/35 leading-relaxed">
+                  Khi bật, nhãn phân loại (Nhận biết, Thông hiểu...) sẽ hiển thị ở góc câu hỏi.
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowQuestionLevel(!showQuestionLevel); setHasUnsavedChanges(true); }}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${
+                  showQuestionLevel ? 'bg-emerald-500 shadow-md shadow-emerald-500/30' : 'bg-white/15'
+                }`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${showQuestionLevel ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
           </div>
         </div>
       )}

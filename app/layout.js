@@ -38,12 +38,16 @@ export const metadata = {
   },
 };
 
+import GlobalSiteWrapper from "@/components/GlobalSiteWrapper";
+
 export default function RootLayout({ children }) {
   return (
     <html lang="vi" className={plusJakartaSans.variable} suppressHydrationWarning>
       <body className="antialiased bg-gray-100 text-gray-900 min-h-screen font-sans" suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <GlobalSiteWrapper>{children}</GlobalSiteWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );

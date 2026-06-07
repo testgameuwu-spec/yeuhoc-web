@@ -16,6 +16,7 @@ import PracticeProgressManagement from '@/components/admin/PracticeProgressManag
 import AdminOverview from '@/components/admin/AdminOverview';
 import NotificationManagement from '@/components/admin/NotificationManagement';
 import TargetExamManagement from '@/components/admin/TargetExamManagement';
+import SystemSettings from '@/components/admin/SystemSettings';
 
 import { parseImageMap } from '@/components/ContentWithInlineImage';
 import { TSA_TOTAL_DURATION_MINUTES } from '@/lib/examScoring';
@@ -190,6 +191,8 @@ export default function AdminDashboard() {
       questions: draft.questions || [],
       scoringConfig: null,
       antiCheatEnabled: firstSource.antiCheatEnabled !== false,
+      allowReview: firstSource.allowReview !== false,
+      showQuestionLevel: firstSource.showQuestionLevel !== false,
     }));
 
     setParsedQuestions([]);
@@ -568,6 +571,9 @@ export default function AdminDashboard() {
     if (activeTab === 'transactions') {
       return <TransactionManagement />;
     }
+    if (activeTab === 'settings') {
+      return <SystemSettings showAlert={showAlert} />;
+    }
     return null;
   };
 
@@ -611,6 +617,7 @@ export default function AdminDashboard() {
                  activeTab === 'aiLogs' ? 'AI Logs' :
                  activeTab === 'practice' ? 'Lịch sử ôn luyện' :
                  activeTab === 'transactions' ? 'Lịch sử giao dịch' :
+                 activeTab === 'settings' ? 'Cấu hình hệ thống' :
                  'Quản lý người dùng'}
               </h1>
             </div>

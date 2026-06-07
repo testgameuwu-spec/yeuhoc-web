@@ -32,6 +32,8 @@ function QuestionCard({
     preloadImages = false,
     showImageLoadingPlaceholder = false,
     timeSpentSeconds = null,
+    hideLevel = false,
+    allowReview = true,
 }) {
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [modalImageSrc, setModalImageSrc] = useState(null);
@@ -105,7 +107,7 @@ function QuestionCard({
                     {!isTextBlock && <span className="et-q-num-badge">{index + 1}</span>}
                     {timeSpentLabel && <span className="et-q-time-badge">{timeSpentLabel}</span>}
                     <span className="et-q-type-badge">{TYPE_LABEL[type] || type}</span>
-                    <span className={`et-q-level-badge ${levelClass}`}>{level}</span>
+                    {!hideLevel && <span className={`et-q-level-badge ${levelClass}`}>{level}</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {onReport && (
@@ -358,7 +360,7 @@ function QuestionCard({
                 )}
 
                 {/* ── Solution ── */}
-                {showResult && solution && !isTextBlock && (
+                {showResult && solution && !isTextBlock && allowReview && (
                     <div style={{ marginTop: 14 }}>
                         <button
                             onClick={() => setShowSolution(!showSolution)}

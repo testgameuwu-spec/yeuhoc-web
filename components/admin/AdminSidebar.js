@@ -2,7 +2,7 @@
 
 import {
   BookOpen, FileText, Users,
-  LayoutDashboard, Trophy, AlertTriangle, Bot, CreditCard, X, CalendarDays, Bell
+  LayoutDashboard, Trophy, AlertTriangle, Bot, CreditCard, X, CalendarDays, Bell, Settings
 } from 'lucide-react';
 import LogoIcon from '../LogoIcon';
 
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { key: 'practice', label: 'Ôn luyện', icon: BookOpen },
   { key: 'users', label: 'Người dùng', icon: Users },
   { key: 'transactions', label: 'Giao dịch', icon: CreditCard },
+  { key: 'settings', label: 'Cài đặt chung', icon: Settings },
 ];
 
 export default function AdminSidebar({ activeTab, onTabChange, onClose }) {
