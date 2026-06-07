@@ -6,6 +6,78 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import ExamSessionPage from '@/components/ExamSessionPage';
 
+function shuffleArray(items) {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function getEntryGroupKey(entry, index) {
+  const question = entry.question_snapshot || {};
+  const linkedTo = question.linkedTo || entry.context_snapshot?.id;
+
+  if (linkedTo) {
+    return `linked:${entry.exam_id || ''}:${linkedTo}`;
+  }
+
+  return `single:${entry.exam_id || ''}:${question.id || index}`;
+}
+
+function compareEntryOrder(a, b) {
+  const numberA = Number(a.entry.question_number);
+  const numberB = Number(b.entry.question_number);
+  const hasNumberA = Number.isFinite(numberA);
+  const hasNumberB = Number.isFinite(numberB);
+
+  if (hasNumberA && hasNumberB && numberA !== numberB) return numberA - numberB;
+  if (hasNumberA !== hasNumberB) return hasNumberA ? -1 : 1;
+  return a.index - b.index;
+}
+
+function countRealEntries(group) {
+  return group.filter(({ entry }) => entry.question_snapshot?.type !== 'TEXT').length;
+}
+
+function selectEntriesKeepingLinkedGroups(entries, limit) {
+  const normalizedLimit = Number(limit);
+  const maxRealQuestions = Number.isFinite(normalizedLimit) && normalizedLimit > 0 ? normalizedLimit : null;
+  const groupsByKey = new Map();
+
+  entries.forEach((entry, index) => {
+    const key = getEntryGroupKey(entry, index);
+    if (!groupsByKey.has(key)) groupsByKey.set(key, []);
+    groupsByKey.get(key).push({ entry, index });
+  });
+
+  const groups = Array.from(groupsByKey.values())
+    .map(group => group.sort(compareEntryOrder));
+  const shuffledGroups = shuffleArray(groups);
+
+  if (!maxRealQuestions) {
+    return shuffledGroups.flatMap(group => group.map(({ entry }) => entry));
+  }
+
+  const selected = [];
+  let selectedRealCount = 0;
+
+  for (const group of shuffledGroups) {
+    if (selectedRealCount >= maxRealQuestions) break;
+
+    selected.push(...group);
+    selectedRealCount += countRealEntries(group);
+  }
+
+  return selected.map(({ entry }) => entry);
+}
+
+function appendQuestionSnapshot(questionsMap, snapshot) {
+  if (!snapshot?.id || questionsMap.has(snapshot.id)) return;
+  questionsMap.set(snapshot.id, snapshot);
+}
+
 function VirtualExamContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,7 +100,7 @@ function VirtualExamContent() {
       try {
         let query = supabase
           .from('error_log_entries')
-          .select('question_snapshot, context_snapshot')
+          .select('exam_id, question_number, question_snapshot, context_snapshot')
           .eq('user_id', session.user.id)
           .eq('exam_key', examKey);
           
@@ -42,24 +114,13 @@ function VirtualExamContent() {
         const { data, error } = await query;
         if (error) throw error;
 
-        let results = data || [];
-        // Shuffle ngẫu nhiên
-        results.sort(() => 0.5 - Math.random());
-        // Giới hạn số lượng
-        if (limit) results = results.slice(0, limit);
+        const results = selectEntriesKeepingLinkedGroups(data || [], limit);
 
         const questionsMap = new Map();
 
         results.forEach(entry => {
-          const q = entry.question_snapshot;
-          if (q) questionsMap.set(q.id, q);
-          
-          if (entry.context_snapshot) {
-            const ctx = entry.context_snapshot;
-            if (!questionsMap.has(ctx.id)) {
-              questionsMap.set(ctx.id, ctx);
-            }
-          }
+          appendQuestionSnapshot(questionsMap, entry.context_snapshot);
+          appendQuestionSnapshot(questionsMap, entry.question_snapshot);
         });
 
         const questions = Array.from(questionsMap.values()).map(snapshot => ({
