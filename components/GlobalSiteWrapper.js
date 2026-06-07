@@ -63,7 +63,12 @@ export default function GlobalSiteWrapper({ children }) {
   }
 
   // If maintenance mode is ON and user is NOT admin -> Block access
-  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === '/reset-password' || pathname?.startsWith('/auth');
+  const normalizedPath = pathname?.replace(/\/$/, '') || '';
+  const isAuthPage = normalizedPath === '/login' || 
+                     normalizedPath === '/register' || 
+                     normalizedPath === '/forgot-password' || 
+                     normalizedPath === '/reset-password' || 
+                     normalizedPath.startsWith('/auth');
 
   if (settings?.maintenanceMode && !isAdmin && !isAuthPage) {
     return (
