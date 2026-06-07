@@ -375,7 +375,7 @@ const createQuizProgressSnapshot = ({ answers, bookmarks, secondsLeft, currentQ,
   savedAt: new Date().toISOString(),
 });
 
-export default function ExamSessionPage({ examId, shouldResume = false, shouldResumePractice = false }) {
+export default function ExamSessionPage({ examId, virtualExam, shouldResume = false, shouldResumePractice = false }) {
 
   const router = useRouter();
 
@@ -593,7 +593,14 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       practiceResumeHandledRef.current = false;
       setLoadingExam(true);
       setExamLoadError('');
-      const ex = await getExamById(examId);
+      
+      let ex = null;
+      if (virtualExam) {
+        ex = virtualExam;
+      } else if (examId) {
+        ex = await getExamById(examId);
+      }
+      
       if (cancelled) return;
       if (!ex) {
         setActiveExam(null);
@@ -618,9 +625,9 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       }
       setLoadingExam(false);
     }
-    if (examId) init();
+    if (examId || virtualExam) init();
     return () => { cancelled = true; };
-  }, [examId, setElapsedSecondsValue]);
+  }, [examId, virtualExam, setElapsedSecondsValue]);
 
   // Auto-resume from profile
   useEffect(() => {
@@ -1683,23 +1690,31 @@ export default function ExamSessionPage({ examId, shouldResume = false, shouldRe
       setQuestionTimeSpentValue(finalQuestionTimeSpent);
       setActiveQuestionTimerValue({ mode: null, questionId: null, startedAt: timeSpentSecs });
 
-      const { data, error } = await supabase.from('exam_attempts').insert({
-        user_id: user.id,
-        exam_id: activeExam.id,
-        score: result.score,
-        correct_answers: result.correct,
-        total_questions: realQs.length,
-        time_spent: timeSpentSecs,
-        user_answers: answers,
-        question_time_spent: finalQuestionTimeSpent,
-        violation_count: finalViolationCount,
-      }).select('id').single();
+      let savedAttemptId = null;
+      let insertError = null;
 
-      if (error) {
-        console.error("Error saving exam attempt:", error);
-        showAlert("Lỗi lưu kết quả", "Không lưu được kết quả bài thi: " + error.message + "\n(Hãy kiểm tra RLS Policy)");
+      if (!activeExam.isVirtual) {
+        const { data, error } = await supabase.from('exam_attempts').insert({
+          user_id: user.id,
+          exam_id: activeExam.id,
+          score: result.score,
+          correct_answers: result.correct,
+          total_questions: realQs.length,
+          time_spent: timeSpentSecs,
+          user_answers: answers,
+          question_time_spent: finalQuestionTimeSpent,
+          violation_count: finalViolationCount,
+        }).select('id').single();
+        
+        insertError = error;
+        savedAttemptId = data?.id || null;
+      }
+
+      if (insertError) {
+        console.error("Error saving exam attempt:", insertError);
+        showAlert("Lỗi lưu kết quả", "Không lưu được kết quả bài thi: " + insertError.message + "\n(Hãy kiểm tra RLS Policy)");
       } else {
-        setSavedAttemptId(data?.id || null);
+        setSavedAttemptId(savedAttemptId);
       }
     }
   }, [activeExam, answerTimeEvents, answers, elapsedSeconds, exitFullscreen, getProgressKey, getQuestionTimeLimitSeconds, getQuestionTimeSpentWithStateDelta, savedSecondsLeft, setActiveQuestionTimerValue, setQuestionTimeSpentValue, showAlert, startTime, tsaElapsedSeconds, tsaSectionIndex, user, violationCount]);

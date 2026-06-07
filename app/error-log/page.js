@@ -14,6 +14,7 @@ import {
   Filter,
   Loader2,
   PencilLine,
+  Play,
   RotateCcw,
   Trash2,
   X,
@@ -229,6 +230,7 @@ export default function ErrorLogPage() {
   const [deletingExamId, setDeletingExamId] = useState(null);
   const [editingReasonEntry, setEditingReasonEntry] = useState(null);
   const [savingReasonEntryId, setSavingReasonEntryId] = useState(null);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -464,14 +466,25 @@ export default function ErrorLogPage() {
               Lưu lại câu sai hoặc chưa làm để ôn đúng điểm yếu, xem đáp án đã chọn, đáp án đúng và làm lại với gợi ý AI.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => router.push('/phan-tich/')}
-            className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-[var(--home-brand-border)] bg-white px-4 py-2.5 text-sm font-extrabold text-[var(--home-brand-primary)] shadow-sm transition-colors hover:bg-[var(--home-brand-soft)]"
-          >
-            Về phân tích
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setIsConfigModalOpen(true)}
+              disabled={filteredEntries.length === 0}
+              className="inline-flex w-fit items-center justify-center gap-2 rounded-xl bg-[var(--home-brand-primary)] px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition-colors hover:bg-[var(--home-brand-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Play className="h-4 w-4" fill="currentColor" />
+              Tạo đề ôn tập
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/phan-tich/')}
+              className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-[var(--home-brand-border)] bg-white px-4 py-2.5 text-sm font-extrabold text-[var(--home-brand-primary)] shadow-sm transition-colors hover:bg-[var(--home-brand-soft)]"
+            >
+              Về phân tích
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
@@ -700,6 +713,93 @@ export default function ErrorLogPage() {
           onSave={handleUpdateEntryReason}
         />
       )}
+
+      {isConfigModalOpen && (
+        <MistakesConfigModal
+          maxQuestions={filteredEntries.length}
+          onClose={() => setIsConfigModalOpen(false)}
+          onStart={(limit) => {
+            setIsConfigModalOpen(false);
+            const params = new URLSearchParams();
+            params.set('examKey', activeExamKey);
+            if (activeExamKey === 'THPT') params.set('subject', activeSubject);
+            if (activeSourceExamId !== 'all') params.set('sourceExamId', activeSourceExamId);
+            params.set('limit', limit);
+            router.push(`/on-tap-loi-sai?${params.toString()}`);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function MistakesConfigModal({ maxQuestions, onClose, onStart }) {
+  const [limit, setLimit] = useState(20);
+  const validLimit = Math.min(limit, maxQuestions, 50);
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-black text-gray-900">Cấu hình đề ôn tập</h2>
+            <p className="text-sm text-gray-500 mt-1">Hệ thống sẽ chọn ngẫu nhiên {maxQuestions} câu hỏi trong danh sách này.</p>
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6 space-y-6">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Số lượng câu hỏi</label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[10, 20, 30, 40, 50].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setLimit(num)}
+                  disabled={num > maxQuestions}
+                  className={`flex-1 min-w-[3rem] py-2 rounded-lg text-sm font-bold transition-colors ${
+                    limit === num
+                      ? 'bg-[var(--home-brand-primary)] text-white'
+                      : num > maxQuestions
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                max={Math.min(maxQuestions, 50)}
+                value={limit}
+                onChange={(e) => setLimit(Number(e.target.value) || 1)}
+                className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold text-center outline-none focus:border-[var(--home-brand-primary)]"
+              />
+              <span className="text-sm text-gray-500">Tối đa 50 câu / đề</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+          >
+            Hủy bỏ
+          </button>
+          <button
+            onClick={() => onStart(validLimit)}
+            disabled={validLimit <= 0}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--home-brand-primary)] text-white text-sm font-bold hover:bg-[var(--home-brand-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="w-4 h-4" fill="currentColor" />
+            Bắt đầu làm bài ({validLimit})
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
