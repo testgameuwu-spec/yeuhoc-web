@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { AlertCircle, Wrench, X } from 'lucide-react';
 
@@ -9,6 +10,7 @@ export default function GlobalSiteWrapper({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dismissedNotice, setDismissedNotice] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     let isMounted = true;
@@ -61,7 +63,9 @@ export default function GlobalSiteWrapper({ children }) {
   }
 
   // If maintenance mode is ON and user is NOT admin -> Block access
-  if (settings?.maintenanceMode && !isAdmin) {
+  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === '/reset-password' || pathname?.startsWith('/auth');
+
+  if (settings?.maintenanceMode && !isAdmin && !isAuthPage) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
         <div className="w-24 h-24 bg-amber-500/20 rounded-full flex items-center justify-center mb-6">
