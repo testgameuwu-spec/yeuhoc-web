@@ -4,7 +4,7 @@ import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, FloppyDisk, Lock, Users, Exam } from '@phosphor-icons/react';
+import { BookOpen, ArrowLeft, CaretRight, CaretLeft, CaretUp, CaretDown, ArrowCounterClockwise, Clock, X, ChartBar, Medal, Lock, Users, Exam } from '@phosphor-icons/react';
 import { AlertTriangle as AlertTriangleIcon, Bot, Eye, Loader2, Trash2 } from 'lucide-react';
 import ErrorLogIcon from '@/components/ErrorLogIcon';
 import ImageModal from '@/components/ImageModal';
@@ -222,8 +222,6 @@ const normalizeElapsedSeconds = (seconds) => {
   const total = Math.floor(Number(seconds) || 0);
   return Number.isFinite(total) && total > 0 ? total : 0;
 };
-
-const PRACTICE_PROGRESS_OFFLINE_MESSAGE = 'Tiến trình ôn luyện đã được lưu trên thiết bị này. Khi có mạng, hệ thống sẽ tự đồng bộ lại.';
 
 const isBrowserOffline = () => (
   typeof navigator !== 'undefined' && navigator.onLine === false
@@ -1138,7 +1136,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
 
   // ── Practice mode (ôn luyện) ──
   const [practiceRevealed, setPracticeRevealed] = useState({});
-  const [practiceSaving, setPracticeSaving] = useState(false);
+  const [practiceClearing, setPracticeClearing] = useState(false);
   const practiceSaveTimerRef = useRef(null);
 
   const writePracticeSnapshot = useCallback((overrides = {}, { skipIfLocalExists = false } = {}) => {
@@ -1158,13 +1156,11 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
     return snapshot;
   }, [activeExam, answers, bookmarks, currentQ, elapsedSeconds, getPracticeProgressKey, practiceRevealed, questionTimeSpent, user]);
 
-  const upsertPracticeProgressSnapshot = useCallback(async (snapshot, { notify = false, showSpinner = false } = {}) => {
+  const upsertPracticeProgressSnapshot = useCallback(async (snapshot) => {
     if (!activeExam?.id || !user?.id || !snapshot) return false;
 
-    if (showSpinner) setPracticeSaving(true);
     try {
       if (isBrowserOffline()) {
-        if (notify) showAlert('Chưa đồng bộ', PRACTICE_PROGRESS_OFFLINE_MESSAGE);
         return false;
       }
 
@@ -1189,35 +1185,28 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
 
       if (error) {
         if (isPracticeProgressNetworkError(error)) {
-          if (notify) showAlert('Chưa đồng bộ', PRACTICE_PROGRESS_OFFLINE_MESSAGE);
           return false;
         }
 
         console.error('Error saving practice progress:', error);
-        if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + getPracticeProgressErrorMessage(error));
         return false;
       }
 
-      if (notify) showAlert('Đã lưu', 'Tiến trình ôn luyện đã được lưu.');
       return true;
     } catch (error) {
       if (isPracticeProgressNetworkError(error)) {
-        if (notify) showAlert('Chưa đồng bộ', PRACTICE_PROGRESS_OFFLINE_MESSAGE);
         return false;
       }
 
       console.error('Error saving practice progress:', error);
-      if (notify) showAlert('Lỗi lưu ôn luyện', 'Không lưu được tiến trình ôn luyện: ' + getPracticeProgressErrorMessage(error));
       return false;
-    } finally {
-      if (showSpinner) setPracticeSaving(false);
     }
-  }, [activeExam, getDisplayedQuestionTimeSpent, showAlert, user]);
+  }, [activeExam, getDisplayedQuestionTimeSpent, user]);
 
-  const savePracticeProgress = async ({ notify = false, showSpinner = false, overrides = {}, snapshot = null } = {}) => {
+  const savePracticeProgress = async ({ overrides = {}, snapshot = null } = {}) => {
     const nextSnapshot = snapshot || writePracticeSnapshot(overrides);
     if (!nextSnapshot) return false;
-    return upsertPracticeProgressSnapshot(nextSnapshot, { notify, showSpinner });
+    return upsertPracticeProgressSnapshot(nextSnapshot);
   };
 
   const getBoundedPracticeQuestionIndex = (index) => (
@@ -1487,10 +1476,6 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
     revealPracticeQuestion(currentQ);
   };
 
-  const handleSavePracticeProgress = () => {
-    savePracticeProgress({ notify: true, showSpinner: true });
-  };
-
   const handleSavePracticeWrongErrorLog = async () => {
     const result = await saveResultErrorLogByMode('wrong_only');
 
@@ -1505,7 +1490,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
   const clearPracticeProgressData = async () => {
     if (!activeExam?.id || !user?.id) return;
 
-    setPracticeSaving(true);
+    setPracticeClearing(true);
     if (practiceSaveTimerRef.current) clearTimeout(practiceSaveTimerRef.current);
 
     try {
@@ -1534,7 +1519,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
       console.error('Clear practice progress failed:', error);
       showAlert('Lỗi xóa dữ liệu ôn luyện', 'Không xóa được dữ liệu ôn luyện: ' + getPracticeProgressErrorMessage(error));
     } finally {
-      setPracticeSaving(false);
+      setPracticeClearing(false);
     }
   };
 
@@ -2284,15 +2269,6 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
           <button
             className="et-btn-outline"
             style={{ fontSize: 12, padding: '5px 11px' }}
-            onClick={handleSavePracticeProgress}
-            disabled={practiceSaving}
-            title="Lưu tiến trình ôn luyện"
-          >
-            <FloppyDisk weight="duotone" style={{ width: 13, height: 13 }} /> <span className="hidden sm:inline">{practiceSaving ? 'Đang lưu...' : 'Lưu'}</span>
-          </button>
-          <button
-            className="et-btn-outline"
-            style={{ fontSize: 12, padding: '5px 11px' }}
             onClick={handleRetryPractice}
             title="Làm lại toàn bộ đề"
           >
@@ -2538,7 +2514,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
                   </button>
                   <button
                     onClick={handleClearPracticeProgress}
-                    disabled={practiceSaving}
+                    disabled={practiceClearing}
                     className="px-5 py-2.5 rounded-xl font-bold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Trash2 className="w-4 h-4" /> Xóa dữ liệu ôn luyện
