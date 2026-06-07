@@ -34,6 +34,7 @@ import {
   buildErrorLogEntriesForMode,
   buildErrorLogEntry,
   getErrorLogQuestionEntriesForMode,
+  incrementErrorLogRetryCounts,
   upsertErrorLogEntries,
   upsertErrorLogEntry,
 } from '@/lib/errorLogStore';
@@ -100,6 +101,10 @@ function getPreviewBadgeStyle(toneKey) {
     '--preview-badge-color': tone.color,
     '--preview-badge-dark-color': tone.dark,
   };
+}
+
+function getQuestionErrorLogEntryId(question) {
+  return question?.errorLogEntryId || null;
 }
 
 function ExamImageWarmup({ imageUrls }) {
@@ -466,6 +471,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
   const resumeHandledRef = useRef(false);
   const practiceResumeHandledRef = useRef(false);
   const exitViolationRecordedRef = useRef(false);
+  const countedRetryEntryIdsRef = useRef(new Set());
 
   const [modal, setModal] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null, onCancel: null, confirmText: 'Xác nhận', cancelText: 'Hủy', extraBtn: null });
 
@@ -544,6 +550,8 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
   // Fetch preview stats
   useEffect(() => {
     if (quizPhase === 'preview' && activeExam) {
+      if (activeExam.isVirtual) return;
+
       async function fetchStats() {
         setLoadingPreviewStats(true);
         const { data, error } = await supabase
@@ -591,6 +599,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
     async function init() {
       resumeHandledRef.current = false;
       practiceResumeHandledRef.current = false;
+      countedRetryEntryIdsRef.current = new Set();
       setLoadingExam(true);
       setExamLoadError('');
       
@@ -751,6 +760,21 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
     });
     return items;
   }, [isTHPT, questions]);
+  const incrementMistakesRetryCounts = useCallback(async (entryIds = []) => {
+    if (!activeExam?.isVirtualMistakesReview) return;
+
+    const ids = [...new Set(entryIds.filter(Boolean).map(String))]
+      .filter((id) => !countedRetryEntryIdsRef.current.has(id));
+    if (!ids.length) return;
+
+    ids.forEach((id) => countedRetryEntryIdsRef.current.add(id));
+
+    try {
+      await incrementErrorLogRetryCounts(ids);
+    } catch (error) {
+      console.error('Increment error log retry counts failed:', error);
+    }
+  }, [activeExam?.isVirtualMistakesReview]);
   const currentTsaSection = getTsaSectionByIndex(tsaSectionIndex);
   const isLastTsaSection = tsaSectionIndex >= TSA_SECTIONS.length - 1;
   const activeQuizDuration = isTSA ? currentTsaSection.durationMinutes : (activeExam?.duration || 90);
@@ -1227,6 +1251,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
     const wasRevealed = Boolean(practiceRevealed[nextQ]);
     let nextQuestionTimeSpent = questionTimeSpent;
     if (question && !wasRevealed) {
+      void incrementMistakesRetryCounts([getQuestionErrorLogEntryId(question)]);
       const active = activeQuestionTimer;
       nextQuestionTimeSpent = active.mode === 'practice' && active.questionId === String(question.id)
         ? commitActiveQuestionTimer('practice', elapsedSeconds)
@@ -1275,6 +1300,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
 
   const startFreshPractice = async () => {
     const resetBookmarks = new Set();
+    countedRetryEntryIdsRef.current = new Set();
     setElapsedSecondsValue(0);
     writePracticeSnapshot({
       answers: {},
@@ -1528,6 +1554,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
   const handleRetryPractice = () => {
     showConfirm('Làm lại ôn luyện', 'Toàn bộ đáp án và tiến trình ôn luyện hiện tại sẽ bị xóa. Bạn có chắc chắn?', () => {
       const resetBookmarks = new Set();
+      countedRetryEntryIdsRef.current = new Set();
       setAnswers({});
       setBookmarks(resetBookmarks);
       setCurrentQ(0);
@@ -1569,6 +1596,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
   }, [canFullscreen]);
 
   const startFreshQuiz = async () => {
+    countedRetryEntryIdsRef.current = new Set();
     setAnswers({});
     resetQuestionTimeTracking();
     setBookmarks(new Set());
@@ -1666,6 +1694,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
       localStorage.removeItem(getProgressKey(activeExam.id));
 
       const realQs = activeExam.questions.filter(q => q.type !== 'TEXT');
+      void incrementMistakesRetryCounts(realQs.map(getQuestionErrorLogEntryId));
       const result = calculateExamResult(realQs, answers, {
         scoringConfig: activeExam.scoringConfig,
         examType: activeExam.examType,
@@ -1717,7 +1746,7 @@ export default function ExamSessionPage({ examId, virtualExam, shouldResume = fa
         setSavedAttemptId(savedAttemptId);
       }
     }
-  }, [activeExam, answerTimeEvents, answers, elapsedSeconds, exitFullscreen, getProgressKey, getQuestionTimeLimitSeconds, getQuestionTimeSpentWithStateDelta, savedSecondsLeft, setActiveQuestionTimerValue, setQuestionTimeSpentValue, showAlert, startTime, tsaElapsedSeconds, tsaSectionIndex, user, violationCount]);
+  }, [activeExam, answerTimeEvents, answers, elapsedSeconds, exitFullscreen, getProgressKey, getQuestionTimeLimitSeconds, getQuestionTimeSpentWithStateDelta, incrementMistakesRetryCounts, savedSecondsLeft, setActiveQuestionTimerValue, setQuestionTimeSpentValue, showAlert, startTime, tsaElapsedSeconds, tsaSectionIndex, user, violationCount]);
 
   const handleSubmitTsaSection = () => {
     if (!isTSA) return;

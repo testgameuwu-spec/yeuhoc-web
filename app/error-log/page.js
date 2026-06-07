@@ -25,7 +25,7 @@ import Navbar from '@/components/Navbar';
 import QuestionCard from '@/components/QuestionCard';
 import ContentWithInlineImage from '@/components/ContentWithInlineImage';
 import { supabase } from '@/lib/supabase';
-import { ERROR_LOG_REASONS, formatAnswerForDisplay } from '@/lib/errorLogStore';
+import { ERROR_LOG_REASONS, formatAnswerForDisplay, incrementErrorLogRetryCounts } from '@/lib/errorLogStore';
 import { getEmptyAnswerForType, hasCompletedAnswer } from '@/lib/questionResult';
 
 const PracticeAIChatbox = dynamic(() => import('@/components/PracticeAIChatbox'), { ssr: false });
@@ -73,11 +73,22 @@ function getExamTitle(entry) {
   return entry.exams?.title || entry.exam_title || 'Đề thi';
 }
 
-function RetryQuestionOverlay({ entry, onClose }) {
+function getRetryCount(entry) {
+  const count = Number(entry?.retry_count);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function getRetryBadgeText(entry) {
+  const count = getRetryCount(entry);
+  return count > 0 ? `${count} lượt` : 'Chưa làm lại';
+}
+
+function RetryQuestionOverlay({ entry, onClose, onRetryCounted }) {
   const question = useMemo(() => normalizeSnapshotQuestion(entry.question_snapshot, entry.correct_answer), [entry]);
   const context = entry.context_snapshot || null;
   const [answer, setAnswer] = useState(getEmptyAnswerForType(question.type));
   const [revealed, setRevealed] = useState(false);
+  const [retryCounted, setRetryCounted] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [aiChatMounted, setAiChatMounted] = useState(false);
   const canReveal = hasCompletedAnswer(question, answer);
@@ -109,6 +120,20 @@ function RetryQuestionOverlay({ entry, onClose }) {
   const openAIChat = () => {
     setAiChatMounted(true);
     setIsAIChatOpen(true);
+  };
+
+  const handleReveal = () => {
+    setRevealed(true);
+    if (retryCounted || !entry?.id) return;
+
+    setRetryCounted(true);
+    incrementErrorLogRetryCounts([entry.id])
+      .then((rows) => {
+        onRetryCounted?.(rows);
+      })
+      .catch((error) => {
+        console.error('Increment error log retry count failed:', error);
+      });
   };
 
   return (
@@ -181,7 +206,7 @@ function RetryQuestionOverlay({ entry, onClose }) {
                   {canReveal && !revealed && (
                     <button
                       type="button"
-                      onClick={() => setRevealed(true)}
+                      onClick={handleReveal}
                       className="practice-action-btn is-answer"
                     >
                       <Eye className="h-4 w-4" />
@@ -223,6 +248,7 @@ export default function ErrorLogPage() {
   const [activeExamKey, setActiveExamKey] = useState('THPT');
   const [activeSubject, setActiveSubject] = useState('Toán');
   const [activeSourceExamId, setActiveSourceExamId] = useState('all');
+  const [unretriedOnly, setUnretriedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [retryEntry, setRetryEntry] = useState(null);
@@ -314,10 +340,20 @@ export default function ErrorLogPage() {
     return Array.from(exams.values());
   }, [scopedEntries]);
 
-  const filteredEntries = useMemo(() => {
+  const sourceFilteredEntries = useMemo(() => {
     if (activeSourceExamId === 'all') return scopedEntries;
     return scopedEntries.filter((entry) => String(entry.exam_id) === activeSourceExamId);
   }, [activeSourceExamId, scopedEntries]);
+
+  const filteredEntries = useMemo(() => (
+    unretriedOnly
+      ? sourceFilteredEntries.filter((entry) => getRetryCount(entry) === 0)
+      : sourceFilteredEntries
+  ), [sourceFilteredEntries, unretriedOnly]);
+
+  const unretriedEntryCount = useMemo(() => (
+    sourceFilteredEntries.filter((entry) => getRetryCount(entry) === 0).length
+  ), [sourceFilteredEntries]);
 
   const activeSourceExam = useMemo(() => (
     sourceExamOptions.find((exam) => exam.id === activeSourceExamId) || null
@@ -454,6 +490,26 @@ export default function ErrorLogPage() {
     }
   }, [editingReasonEntry, router]);
 
+  const applyRetryCountUpdates = useCallback((rows = []) => {
+    if (!rows.length) return;
+
+    const updatesById = new Map(rows.map((row) => [row.id, row]));
+    const applyUpdate = (entry) => {
+      const update = updatesById.get(entry?.id);
+      if (!update) return entry;
+
+      return {
+        ...entry,
+        retry_count: update.retry_count,
+        last_retried_at: update.last_retried_at,
+        updated_at: update.updated_at || entry.updated_at,
+      };
+    };
+
+    setEntries((current) => current.map(applyUpdate));
+    setRetryEntry((current) => (current ? applyUpdate(current) : current));
+  }, []);
+
   return (
     <div className="home-page min-h-screen bg-slate-50 text-slate-950" style={{ fontFamily: 'var(--font-be-vietnam), system-ui, sans-serif' }}>
       <Navbar />
@@ -552,6 +608,19 @@ export default function ErrorLogPage() {
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </div>
+            <label className="inline-flex h-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-slate-50 px-4 text-sm font-extrabold text-slate-700 transition-colors hover:border-[var(--home-brand-border)] [html[data-theme=dark]_&]:border-white/10 [html[data-theme=dark]_&]:bg-slate-800 [html[data-theme=dark]_&]:text-white">
+              <input
+                type="checkbox"
+                checked={unretriedOnly}
+                onChange={(event) => setUnretriedOnly(event.target.checked)}
+                disabled={sourceFilteredEntries.length === 0}
+                className="h-4 w-4 accent-[var(--home-brand-primary)] disabled:cursor-not-allowed"
+              />
+              <span>Chưa từng làm lại</span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-xs font-black text-slate-500 [html[data-theme=dark]_&]:bg-slate-900 [html[data-theme=dark]_&]:text-white/70">
+                {unretriedEntryCount}
+              </span>
+            </label>
             {activeSourceExam && (
               <button
                 type="button"
@@ -611,8 +680,8 @@ export default function ErrorLogPage() {
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
                           {entry.subject || 'Chưa phân loại'}
                         </span>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                          Câu {entry.question_number || '--'}
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 [html[data-theme=dark]_&]:bg-slate-800 [html[data-theme=dark]_&]:text-white/70">
+                          Câu {entry.question_number || '--'} · {getRetryBadgeText(entry)}
                         </span>
                       </div>
                       <h2 className="line-clamp-2 text-base font-extrabold leading-relaxed text-slate-950">{preview}</h2>
@@ -697,6 +766,7 @@ export default function ErrorLogPage() {
         <RetryQuestionOverlay
           entry={retryEntry}
           onClose={() => setRetryEntry(null)}
+          onRetryCounted={applyRetryCountUpdates}
         />
       )}
 
@@ -718,13 +788,15 @@ export default function ErrorLogPage() {
         <MistakesConfigModal
           maxQuestions={filteredEntries.length}
           onClose={() => setIsConfigModalOpen(false)}
-          onStart={(limit) => {
+          onStart={({ mode, limit }) => {
             setIsConfigModalOpen(false);
             const params = new URLSearchParams();
             params.set('examKey', activeExamKey);
             if (activeExamKey === 'THPT') params.set('subject', activeSubject);
             if (activeSourceExamId !== 'all') params.set('sourceExamId', activeSourceExamId);
-            params.set('limit', limit);
+            params.set('mode', mode);
+            if (mode !== 'all') params.set('limit', limit);
+            if (unretriedOnly) params.set('retryFilter', 'unretried');
             router.push(`/on-tap-loi-sai?${params.toString()}`);
           }}
         />
@@ -733,23 +805,53 @@ export default function ErrorLogPage() {
   );
 }
 
+const REVIEW_MODE_OPTIONS = [
+  { value: 'random', label: 'Ngẫu nhiên' },
+  { value: 'oldest_due', label: 'Cũ nhất' },
+  { value: 'all', label: 'Tất cả' },
+];
+
 function MistakesConfigModal({ maxQuestions, onClose, onStart }) {
+  const [mode, setMode] = useState('random');
   const [limit, setLimit] = useState(20);
-  const validLimit = Math.min(limit, maxQuestions, 50);
+  const isAllMode = mode === 'all';
+  const validLimit = isAllMode ? maxQuestions : Math.min(limit, maxQuestions, 50);
+  const canStart = isAllMode ? maxQuestions > 0 : validLimit > 0;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden [html[data-theme=dark]_&]:bg-slate-900">
         <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center">
           <div>
-            <h2 className="text-lg font-black text-gray-900">Cấu hình đề ôn tập</h2>
-            <p className="text-sm text-gray-500 mt-1">Hệ thống sẽ chọn ngẫu nhiên {maxQuestions} câu hỏi trong danh sách này.</p>
+            <h2 className="text-lg font-black text-gray-900 [html[data-theme=dark]_&]:text-white">Cấu hình đề ôn tập</h2>
+            <p className="text-sm text-gray-500 mt-1 [html[data-theme=dark]_&]:text-white/60">{maxQuestions} câu trong phạm vi đang lọc.</p>
           </div>
         </div>
 
         <div className="p-5 sm:p-6 space-y-6">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Số lượng câu hỏi</label>
+            <label className="block text-sm font-bold text-gray-700 mb-2 [html[data-theme=dark]_&]:text-white/80">Chế độ</label>
+            <div className="grid grid-cols-3 rounded-xl bg-gray-100 p-1 [html[data-theme=dark]_&]:bg-slate-800">
+              {REVIEW_MODE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setMode(option.value)}
+                  className={`rounded-lg px-3 py-2 text-sm font-extrabold transition-colors ${
+                    mode === option.value
+                      ? 'bg-white text-[var(--home-brand-primary)] shadow-sm [html[data-theme=dark]_&]:bg-slate-950'
+                      : 'text-gray-500 hover:text-gray-800 [html[data-theme=dark]_&]:text-white/60 [html[data-theme=dark]_&]:hover:text-white'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {!isAllMode && (
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2 [html[data-theme=dark]_&]:text-white/80">Số lượng câu hỏi</label>
             <div className="flex flex-wrap gap-2 mb-3">
               {[10, 20, 30, 40, 50].map((num) => (
                 <button
@@ -780,7 +882,8 @@ function MistakesConfigModal({ maxQuestions, onClose, onStart }) {
               />
               <span className="text-sm text-gray-500">Tối đa 50 câu / đề</span>
             </div>
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="p-5 sm:p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
@@ -791,8 +894,8 @@ function MistakesConfigModal({ maxQuestions, onClose, onStart }) {
             Hủy bỏ
           </button>
           <button
-            onClick={() => onStart(validLimit)}
-            disabled={validLimit <= 0}
+            onClick={() => onStart({ mode, limit: validLimit })}
+            disabled={!canStart}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--home-brand-primary)] text-white text-sm font-bold hover:bg-[var(--home-brand-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Play className="w-4 h-4" fill="currentColor" />

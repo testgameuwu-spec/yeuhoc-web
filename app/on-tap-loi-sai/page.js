@@ -6,6 +6,12 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import ExamSessionPage from '@/components/ExamSessionPage';
 
+const REVIEW_MODES = new Set(['random', 'oldest_due', 'all']);
+
+function normalizeReviewMode(value) {
+  return REVIEW_MODES.has(value) ? value : 'random';
+}
+
 function shuffleArray(items) {
   const shuffled = [...items];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -38,12 +44,15 @@ function compareEntryOrder(a, b) {
 }
 
 function countRealEntries(group) {
-  return group.filter(({ entry }) => entry.question_snapshot?.type !== 'TEXT').length;
+  return group.items.filter(({ entry }) => entry.question_snapshot?.type !== 'TEXT').length;
 }
 
-function selectEntriesKeepingLinkedGroups(entries, limit) {
-  const normalizedLimit = Number(limit);
-  const maxRealQuestions = Number.isFinite(normalizedLimit) && normalizedLimit > 0 ? normalizedLimit : null;
+function getEntryDueTime(entry) {
+  const time = Date.parse(entry.last_retried_at || entry.created_at || entry.updated_at || '');
+  return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER;
+}
+
+function getGroupedEntries(entries) {
   const groupsByKey = new Map();
 
   entries.forEach((entry, index) => {
@@ -52,30 +61,59 @@ function selectEntriesKeepingLinkedGroups(entries, limit) {
     groupsByKey.get(key).push({ entry, index });
   });
 
-  const groups = Array.from(groupsByKey.values())
-    .map(group => group.sort(compareEntryOrder));
-  const shuffledGroups = shuffleArray(groups);
+  return Array.from(groupsByKey.values()).map((items) => {
+    const sortedItems = items.sort(compareEntryOrder);
+    return {
+      items: sortedItems,
+      index: Math.min(...sortedItems.map(({ index }) => index)),
+      dueTime: Math.min(...sortedItems.map(({ entry }) => getEntryDueTime(entry))),
+    };
+  });
+}
 
-  if (!maxRealQuestions) {
-    return shuffledGroups.flatMap(group => group.map(({ entry }) => entry));
+function flattenGroups(groups) {
+  return groups.flatMap((group) => group.items.map(({ entry }) => entry));
+}
+
+function selectEntriesKeepingLinkedGroups(entries, limit, mode = 'random') {
+  const normalizedLimit = Number(limit);
+  const maxRealQuestions = Number.isFinite(normalizedLimit) && normalizedLimit > 0 ? normalizedLimit : null;
+  const groups = getGroupedEntries(entries);
+  const orderedGroups = mode === 'oldest_due'
+    ? [...groups].sort((a, b) => a.dueTime - b.dueTime || a.index - b.index)
+    : mode === 'all'
+      ? [...groups].sort((a, b) => a.index - b.index)
+      : shuffleArray(groups);
+
+  if (mode === 'all' || !maxRealQuestions) {
+    return flattenGroups(orderedGroups);
   }
 
   const selected = [];
   let selectedRealCount = 0;
 
-  for (const group of shuffledGroups) {
+  for (const group of orderedGroups) {
     if (selectedRealCount >= maxRealQuestions) break;
 
-    selected.push(...group);
+    selected.push(...group.items);
     selectedRealCount += countRealEntries(group);
   }
 
   return selected.map(({ entry }) => entry);
 }
 
-function appendQuestionSnapshot(questionsMap, snapshot) {
+function appendQuestionSnapshot(questionsMap, snapshot, extra = {}) {
   if (!snapshot?.id || questionsMap.has(snapshot.id)) return;
-  questionsMap.set(snapshot.id, snapshot);
+  questionsMap.set(snapshot.id, { ...snapshot, ...extra });
+}
+
+function getSelectionKey(entries) {
+  const source = entries.map((entry) => entry.id).join('|');
+  let hash = 0;
+  for (let i = 0; i < source.length; i++) {
+    hash = ((hash << 5) - hash + source.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36) || 'empty';
 }
 
 function VirtualExamContent() {
@@ -84,6 +122,8 @@ function VirtualExamContent() {
   const examKey = searchParams.get('examKey') || 'THPT';
   const subject = searchParams.get('subject') || 'Toán';
   const sourceExamId = searchParams.get('sourceExamId') || 'all';
+  const mode = normalizeReviewMode(searchParams.get('mode'));
+  const retryFilter = searchParams.get('retryFilter') || '';
   const limit = parseInt(searchParams.get('limit') || '20', 10);
   
   const [loading, setLoading] = useState(true);
@@ -100,9 +140,10 @@ function VirtualExamContent() {
       try {
         let query = supabase
           .from('error_log_entries')
-          .select('exam_id, question_number, question_snapshot, context_snapshot')
+          .select('id, exam_id, question_number, question_snapshot, context_snapshot, retry_count, last_retried_at, created_at, updated_at')
           .eq('user_id', session.user.id)
-          .eq('exam_key', examKey);
+          .eq('exam_key', examKey)
+          .order('updated_at', { ascending: false });
           
         if (examKey === 'THPT' && subject) {
           query = query.eq('subject', subject);
@@ -110,17 +151,22 @@ function VirtualExamContent() {
         if (sourceExamId && sourceExamId !== 'all') {
           query = query.eq('exam_id', sourceExamId);
         }
+        if (retryFilter === 'unretried') {
+          query = query.eq('retry_count', 0);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
 
-        const results = selectEntriesKeepingLinkedGroups(data || [], limit);
+        const results = selectEntriesKeepingLinkedGroups(data || [], limit, mode);
 
         const questionsMap = new Map();
 
         results.forEach(entry => {
           appendQuestionSnapshot(questionsMap, entry.context_snapshot);
-          appendQuestionSnapshot(questionsMap, entry.question_snapshot);
+          appendQuestionSnapshot(questionsMap, entry.question_snapshot, {
+            errorLogEntryId: entry.id,
+          });
         });
 
         const questions = Array.from(questionsMap.values()).map(snapshot => ({
@@ -134,6 +180,7 @@ function VirtualExamContent() {
           linkedTo: snapshot.linkedTo || null,
           statements: snapshot.statements || [],
           tfSubQuestions: snapshot.tfSubQuestions || null,
+          errorLogEntryId: snapshot.errorLogEntryId || null,
         }));
 
         const realQuestionsCount = questions.filter(q => q.type !== 'TEXT').length;
@@ -150,7 +197,7 @@ function VirtualExamContent() {
 
         // Tạo virtual exam
         setVirtualExam({
-          id: 'virtual-mistakes',
+          id: `virtual-mistakes-${getSelectionKey(results)}`,
           title: examTitle,
           subject: examKey === 'THPT' ? subject : 'Tổng hợp',
           examType: 'MISTAKES_REVIEW',
@@ -160,6 +207,7 @@ function VirtualExamContent() {
           showQuestionLevel: false,
           antiCheatEnabled: false,
           isVirtual: true, // Cờ để bỏ qua insert attempt
+          isVirtualMistakesReview: true,
         });
       } catch (err) {
         console.error(err);
@@ -171,7 +219,7 @@ function VirtualExamContent() {
     }
     
     init();
-  }, [examKey, subject, sourceExamId, limit, router]);
+  }, [examKey, subject, sourceExamId, mode, retryFilter, limit, router]);
 
   if (loading) {
     return (
