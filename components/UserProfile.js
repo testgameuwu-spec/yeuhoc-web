@@ -11,6 +11,7 @@ import {
   ClockCounterClockwise as History,
 } from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
+import { resolveAvatarUrl } from '@/lib/avatar';
 import ThemeToggle from './ThemeToggle';
 
 export default function UserProfile() {
@@ -158,7 +159,7 @@ export default function UserProfile() {
   }
 
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
-  const avatarUrl = profile?.avatar_url;
+  const avatarUrl = resolveAvatarUrl(profile?.avatar_url, user);
   const isAdmin = profile?.role === 'admin';
 
   return (

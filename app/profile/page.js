@@ -19,6 +19,7 @@ import { getContinueExamItems } from '@/lib/continueExamStore';
 import { getTargetExams, getUserTargetExams, syncUserTargetExams } from '@/lib/targetExamStore';
 import { formatTargetExamDate } from '@/lib/targetExamDisplay';
 import { formatScore } from '@/lib/scoreFormat';
+import { resolveAvatarUrl } from '@/lib/avatar';
 import { ActivityCalendar } from 'react-activity-calendar';
 import { format, parseISO, eachDayOfInterval } from 'date-fns';
 
@@ -184,7 +185,7 @@ function ProfilePageInner() {
             setFullName(profileData.full_name || '');
             setUsername(profileData.username || '');
             setBio(profileData.bio || '');
-            setAvatarUrl(profileData.avatar_url || '');
+            setAvatarUrl(resolveAvatarUrl(profileData.avatar_url, sessionUser));
             setCoverGradient(profileData.cover_gradient || '');
           }
 
