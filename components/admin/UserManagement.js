@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import {
   Users, Search, MoreVertical, Trash2, Shield, ShieldCheck,
   Mail, Calendar, Activity, UserPlus, ChevronDown, Ban,
-  TrendingUp, Award, Clock, History, X, BookOpen, ChevronRight
+  TrendingUp, Award, Clock, History, X, BookOpen, ChevronRight, GraduationCap
 } from 'lucide-react';
 import QuestionCard from '@/components/QuestionCard';
 import Pagination from '@/components/Pagination';
@@ -18,6 +18,11 @@ const ROLE_STYLES = {
     label: 'Admin',
     classes: 'bg-red-500/15 text-red-400 border-red-500/30',
     icon: ShieldCheck,
+  },
+  teacher: {
+    label: 'Giáo viên',
+    classes: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    icon: GraduationCap,
   },
   user: {
     label: 'Học sinh',
@@ -54,13 +59,19 @@ const fetchWithTimeout = (promise, ms = 8000) => {
   return Promise.race([promise, timeout]);
 };
 
+const normalizeRole = (role) => {
+  const value = String(role || 'user').trim().toLowerCase();
+  if (value === 'admin' || value === 'teacher' || value === 'user') return value;
+  return 'user';
+};
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name'); // name | attempts | createdAt
   const [openMenu, setOpenMenu] = useState(null);
-  const [filterRole, setFilterRole] = useState('all'); // all | admin | user
+  const [filterRole, setFilterRole] = useState('all'); // all | user | teacher | admin
   const [historyUser, setHistoryUser] = useState(null); // Trạng thái cho modal lịch sử
   const [userAttempts, setUserAttempts] = useState([]);
   const [practiceProgress, setPracticeProgress] = useState([]);
@@ -103,9 +114,10 @@ export default function UserManagement() {
         setUsers(profiles.map(u => ({
           id: u.id,
           name: u.full_name || 'Người dùng ẩn danh',
-          email: u.email,
-          role: u.role,
+          email: u.email || '',
+          role: normalizeRole(u.role),
           createdAt: new Date(u.created_at).toLocaleDateString('vi-VN'),
+          createdAtTs: new Date(u.created_at).getTime(),
           attempts: attemptCounts[u.id] || 0,
           avatar: u.avatar_url,
           is_banned: u.is_banned || false
@@ -143,21 +155,50 @@ export default function UserManagement() {
     };
   }, [fetchUsers]);
 
-  const handleToggleRole = async (userId, currentRole) => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+  const roleLabels = { user: 'Học sinh', teacher: 'Giáo viên', admin: 'Admin' };
+
+  const handleSetRole = async (userId, nextRole) => {
+    const currentRole = users.find(u => u.id === userId)?.role || 'user';
+    if (currentRole === nextRole) {
+      setOpenMenu(null);
+      return;
+    }
+
     const { error } = await supabase
       .from('profiles')
-      .update({ role: newRole })
+      .update({ role: nextRole })
       .eq('id', userId);
 
     if (error) {
-      showAlert("Lỗi", "Không thể đổi vai trò: " + error.message);
+      const needsMigration = /user_role|profiles_role_check/i.test(error.message || '');
+      const hint = needsMigration
+        ? '\n\nChạy lại migration supabase/migrations/20260612_add_teacher_role.sql trên Supabase SQL Editor.'
+        : '';
+      showAlert('Lỗi', `Không thể đổi vai trò: ${error.message}${hint}`);
     } else {
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-      showAlert('Thành công', `Đã đổi vai trò thành ${newRole === 'admin' ? 'Admin' : 'Học sinh'}!`);
+      setUsers(users.map(u => u.id === userId ? { ...u, role: nextRole } : u));
+      showAlert('Thành công', `Đã đổi vai trò thành ${roleLabels[nextRole]}!`);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id === userId) {
+        window.dispatchEvent(new Event('yeuhoc-profile-updated'));
+      }
     }
     setOpenMenu(null);
   };
+
+  const renderRoleMenuItems = (user) => (
+    ['user', 'teacher', 'admin']
+      .filter((role) => role !== normalizeRole(user.role))
+      .map((role) => (
+        <button
+          key={role}
+          onClick={() => handleSetRole(user.id, role)}
+          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <ShieldCheck className="w-3.5 h-3.5" /> Đặt {roleLabels[role]}
+        </button>
+      ))
+  );
 
   const handleToggleBan = async (userId, currentStatus) => {
     const { error } = await supabase
@@ -303,19 +344,28 @@ export default function UserManagement() {
     });
   };
 
-  const enrichedUsers = users;
+  const roleCounts = users.reduce((counts, user) => {
+    counts.all += 1;
+    counts[normalizeRole(user.role)] += 1;
+    return counts;
+  }, { all: 0, user: 0, teacher: 0, admin: 0 });
 
-  const filtered = enrichedUsers
+  const searchTerm = search.trim().toLowerCase();
+
+  const filtered = users
     .filter(u => {
-      if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false;
-      const effectiveRole = u.role === 'admin' ? 'admin' : 'user';
-      if (filterRole !== 'all' && effectiveRole !== filterRole) return false;
+      if (searchTerm) {
+        const name = (u.name || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        if (!name.includes(searchTerm) && !email.includes(searchTerm)) return false;
+      }
+      if (filterRole !== 'all' && normalizeRole(u.role) !== filterRole) return false;
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'name') return a.name.localeCompare(b.name, 'vi');
       if (sortBy === 'attempts') return b.attempts - a.attempts;
-      if (sortBy === 'createdAt') return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sortBy === 'createdAt') return (b.createdAtTs || 0) - (a.createdAtTs || 0);
       return 0;
     });
 
@@ -356,10 +406,10 @@ export default function UserManagement() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 flex-1 w-full">
           {/* Search */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative w-full sm:flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -368,17 +418,25 @@ export default function UserManagement() {
             />
           </div>
           {/* Role filter */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
-            {[
-              { key: 'all', label: 'Tất cả' },
-              { key: 'user', label: 'Học sinh' },
-              { key: 'admin', label: 'Admin' },
-            ].map(f => (
-              <button key={f.key} onClick={() => setFilterRole(f.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterRole === f.key ? 'bg-indigo-500/30 text-indigo-300' : 'text-white/40 hover:text-white/60'}`}>
-                {f.label}
-              </button>
-            ))}
+          <div className="w-full sm:w-auto">
+            <label className="sr-only" htmlFor="user-role-filter">Lọc vai trò</label>
+            <select
+              id="user-role-filter"
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              className="w-full sm:w-auto px-3 py-2.5 rounded-xl text-xs sm:text-sm bg-white/5 border border-white/10 text-white/80 focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
+            >
+              {[
+                { key: 'all', label: 'Tất cả' },
+                { key: 'user', label: 'Học sinh' },
+                { key: 'teacher', label: 'Giáo viên' },
+                { key: 'admin', label: 'Admin' },
+              ].map((f) => (
+                <option key={f.key} value={f.key} className="bg-[#14142a]">
+                  {f.label} ({roleCounts[f.key] ?? 0})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         {/* Sort */}
@@ -450,10 +508,7 @@ export default function UserManagement() {
                           className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
                           <History className="w-3.5 h-3.5" /> Lịch sử làm bài
                         </button>
-                        <button onClick={() => handleToggleRole(user.id, user.role)}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                          <ShieldCheck className="w-3.5 h-3.5" /> Đổi vai trò
-                        </button>
+                        {renderRoleMenuItems(user)}
                         <button onClick={() => handleToggleBan(user.id, user.is_banned)}
                           className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${user.is_banned ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}>
                           <Ban className="w-3.5 h-3.5" /> {user.is_banned ? 'Mở khóa' : 'Khoá TK'}
@@ -507,10 +562,7 @@ export default function UserManagement() {
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
                         <History className="w-3.5 h-3.5" /> Lịch sử làm bài
                       </button>
-                      <button onClick={() => handleToggleRole(user.id, user.role)}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
-                        <ShieldCheck className="w-3.5 h-3.5" /> Đổi vai trò ({user.role === 'admin' ? 'Hạ quyền' : 'Lên Admin'})
-                      </button>
+                      {renderRoleMenuItems(user)}
                       <button onClick={() => handleToggleBan(user.id, user.is_banned)}
                         className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${user.is_banned ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10' : 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'}`}>
                         <Ban className="w-3.5 h-3.5" /> {user.is_banned ? 'Mở khóa tài khoản' : 'Khoá tài khoản'}

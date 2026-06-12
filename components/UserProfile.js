@@ -161,6 +161,7 @@ export default function UserProfile() {
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
   const avatarUrl = resolveAvatarUrl(profile?.avatar_url, user);
   const isAdmin = profile?.role === 'admin';
+  const isTeacher = profile?.role === 'teacher' || isAdmin;
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
@@ -193,6 +194,11 @@ export default function UserProfile() {
                 <Shield weight="fill" className="w-3 h-3" /> Admin
               </span>
             )}
+            {profile?.role === 'teacher' && (
+              <span className="profile-theme-badge inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700" style={{ '--profile-badge-dark-color': '#6ee7b7' }}>
+                Giáo viên
+              </span>
+            )}
           </div>
 
           <div className="py-1">
@@ -202,6 +208,11 @@ export default function UserProfile() {
             <a href="/profile/?tab=history" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)] transition-colors no-underline cursor-pointer">
               <History weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Lịch sử làm bài
             </a>
+            {isTeacher && (
+              <a href="/teacher" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)] transition-colors no-underline cursor-pointer">
+                <UserCircle weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Bảng điều khiển Giáo viên
+              </a>
+            )}
             {isAdmin && (
               <a href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[var(--home-brand-soft)] hover:text-[var(--home-brand-primary)] transition-colors no-underline cursor-pointer">
                 <Shield weight="duotone" className="w-[18px] h-[18px] text-gray-400" /> Bảng điều khiển Admin

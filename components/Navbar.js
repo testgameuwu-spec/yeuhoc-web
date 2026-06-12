@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ChartBar, House, User as UserIcon } from 'lucide-react';
+import { ChartBar, House, User as UserIcon, Users, GraduationCap } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -22,8 +22,28 @@ const HomeNotifications = dynamic(() => import('./HomeNotifications'), {
 export default function Navbar() {
   const pathname = usePathname();
   const normalizedPath = pathname === '/' ? '/' : pathname?.replace(/\/$/, '');
-  const showNotifications = ['/', '/profile', '/phan-tich', '/error-log'].includes(normalizedPath);
+  const showNotifications = ['/', '/profile', '/phan-tich', '/error-log', '/classrooms', '/teacher'].includes(normalizedPath);
   const [unseenResolvedReports, setUnseenResolvedReports] = useState(0);
+  const [userRole, setUserRole] = useState(null);
+
+  const refreshUserRole = useCallback(async () => {
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setUserRole(null);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      setUserRole(profile?.role || 'user');
+    } catch {
+      setUserRole(null);
+    }
+  }, []);
 
   const refreshReportBadge = useCallback(async () => {
     try {
@@ -46,7 +66,10 @@ export default function Navbar() {
   useEffect(() => {
     const refreshTimer = setTimeout(() => {
       refreshReportBadge();
+      refreshUserRole();
     }, 2500);
+    const onProfileUpdated = () => refreshUserRole();
+    window.addEventListener('yeuhoc-profile-updated', onProfileUpdated);
     const onSeen = () => refreshReportBadge();
     const onFocus = () => refreshReportBadge();
     window.addEventListener('yeuhoc-reports-seen', onSeen);
@@ -55,8 +78,9 @@ export default function Navbar() {
       clearTimeout(refreshTimer);
       window.removeEventListener('yeuhoc-reports-seen', onSeen);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('yeuhoc-profile-updated', onProfileUpdated);
     };
-  }, [refreshReportBadge]);
+  }, [refreshReportBadge, refreshUserRole]);
 
   useEffect(() => {
     let reportChannel = null;
@@ -136,6 +160,7 @@ export default function Navbar() {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         await subscribeForUser(session?.user?.id || null);
         refreshReportBadge();
+        refreshUserRole();
       });
       authSubscription = subscription;
     };
@@ -200,6 +225,24 @@ export default function Navbar() {
             <ErrorLogIcon className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
             <span className="hidden min-[900px]:inline">Nhật ký lỗi</span>
           </Link>
+          <Link
+            href="/classrooms/"
+            prefetch={false}
+            className={linkClass(normalizedPath === '/classrooms')}
+          >
+            <Users className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
+            <span className="hidden min-[900px]:inline">Lớp học</span>
+          </Link>
+          {(userRole === 'teacher' || userRole === 'admin') && (
+            <Link
+              href="/teacher/"
+              prefetch={false}
+              className={linkClass(normalizedPath === '/teacher')}
+            >
+              <GraduationCap className="w-[18px] h-[18px] max-[369px]:h-4 max-[369px]:w-4" />
+              <span className="hidden min-[900px]:inline">Giáo viên</span>
+            </Link>
+          )}
           <Link
             href={unseenResolvedReports > 0 ? '/profile/?tab=reports' : '/profile/'}
             prefetch={false}
